@@ -1,9 +1,8 @@
-/* Runs the IGCSE interpreter off the main thread */
-self.window = self;                // some code may expect window
+self.window = self;
 self.__ide_input_queue = [];
 self.__ide_stop_flag = false;
 
-// simple INPUT source for the interpreter
+// INPUT source for the interpreter
 self.readInput = function () {
   return String(self.__ide_input_queue.length ? self.__ide_input_queue.shift() : "");
 };

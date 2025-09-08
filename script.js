@@ -1,6 +1,6 @@
 (function () {
 
-    // ------------------------ Ace Editor ------------------------
+    // ------------------------ Initialization ------------------------
     const editor = ace.edit('code', {
         mode: 'ace/mode/lang',
         theme: 'ace/theme/monokai', // default
@@ -35,7 +35,7 @@ OUTPUT greet("World")`
 
     editor.focus();
 
-    // ------------------------ Cursor Position ------------------------
+    // ------------------------ Line/Column Info ------------------------
     const cursorInfo = document.getElementById('line-col-info');
 
     function updateCursorPos() {
@@ -56,6 +56,7 @@ OUTPUT greet("World")`
     const settingsOverlay = document.getElementById('settingsOverlay');
     const closeSettings = document.getElementById('closeSettings');
     const changeEditortheme = document.getElementById('changeEditortheme');
+    const downloadEditorBtn = document.getElementById('downloadEditorBtn');
 
     // show/close settings overlay
     settingsBtn.addEventListener('click', () => {
@@ -68,6 +69,40 @@ OUTPUT greet("World")`
         if (e.target === settingsOverlay) {
             settingsOverlay.style.display = 'none';
         }
+    });
+
+    // ------------------------ File Save Function ------------------------
+    async function saveTextAsFile(filename, text) {
+        try {
+            // Show Chrome's Save dialog
+            const handle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{ description: "Text", accept: { "text/plain": [".txt"] } }]
+            });
+
+            const writable = await handle.createWritable();
+            await writable.write(new Blob([text], { type: "text/plain" }));
+            await writable.close();
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Error saving file:', error);
+            }
+        }
+    }
+
+    // ------------------------ Download Editor Code ------------------------
+    downloadEditorBtn.addEventListener('click', async () => {
+        const code = editor.getValue();
+        
+        if (!code.trim()) {
+            return; // Don't download empty files
+        }
+
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `code_${timestamp}.txt`;
+        
+        await saveTextAsFile(filename, code);
     });
 
     // ------------------------ Light/Dark Mode Toggle ------------------------
@@ -113,7 +148,7 @@ OUTPUT greet("World")`
         } else {
             document.documentElement.classList.add('light');
             moonIcon.hidden = false; // show light theme icon
-            sunIcon.hidden = true; // show dark theme icon
+            sunIcon.hidden = true;   // show dark theme icon
             
             // if current theme is dark
             if (darkThemes.includes(currentTheme)) {
@@ -146,8 +181,8 @@ OUTPUT greet("World")`
 
     function getCurrentTabSize(session) {
         return typeof session.getTabSize === 'function'
-        ? session.getTabSize()
-        : (session.$tabSize || 4);
+            ? session.getTabSize()
+            : (session.$tabSize || 4);
     }
 
     // change tab spacing
@@ -215,14 +250,17 @@ OUTPUT greet("World")`
     const fontSizeSlider = document.getElementById('fontSizeSlider');
     const fontSizeValue = document.getElementById('fontSizeValue');
 
-    // make ticks clickable
+    // make ticks clickable (only those with numbers)
     const fontSizeTicks = document.querySelectorAll('#fontSizeSlider + .slider-ticks .tick');
     fontSizeTicks.forEach((tick) => {
-        tick.addEventListener('click', () => {
-            const value = parseInt(tick.textContent); // evens from 10-24
-            fontSizeSlider.value = value;
-            updateFontSize(value);
-        });
+        // only make clickable if tick has content (is a number)
+        if (tick.textContent.trim()) {
+            tick.addEventListener('click', () => {
+                const value = parseInt(tick.textContent); // evens from 10-24
+                fontSizeSlider.value = value;
+                updateFontSize(value);
+            });
+        }
     });
 
     // update font size
@@ -521,18 +559,14 @@ OUTPUT greet("World")`
         else runCode();
     });    
 
-    // ------------------------ Console ------------------------
-    const console = document.querySelector('.console');
-    const consoleSidebar = document.querySelector('.console-sidebar');
-    const consoleMain = document.querySelector('.console-main');
-
+    // ------------------------ Console --------------------------------
     const clearBtn = document.querySelector('.btn.clear');
     const copyBtn = document.querySelector('.btn.copy');
+    const downloadBtn = document.querySelector('.btn.download');
 
     // ---------- Console wiring ----------
     const consoleBody  = document.getElementById('console-body');
     const consolePrompt = document.querySelector('.console-prompt');
-    const cursor = document.querySelector('.cursor');
 
     let currentCommand = '';
     let commandHistory = [];
@@ -552,6 +586,7 @@ OUTPUT greet("World")`
         const hasContent = consoleBody.children.length > 0;
         clearBtn.disabled = !hasContent;
         copyBtn.disabled = !hasContent;
+        downloadBtn.disabled = !hasContent;
     }
 
     function updatePrompt() {
@@ -569,7 +604,7 @@ OUTPUT greet("World")`
         },
     };
 
-    // Minimal command set (type 'help')
+    // console commands
     function execCommand(raw) {
         const line = String(raw || '').trim();
         if (!line) return;
@@ -580,17 +615,17 @@ OUTPUT greet("World")`
         const arg = rest.join(' ');
         const cmdLower = (cmd || '').toLowerCase();
 
-        // Check if it's a valid command
+        // check if command is valid
         const validCommands = ['help', 'run', 'in', 'input', 'clear', 'tab', 'font', 'mode', 'theme', 'stop'];
         const isValidCommand = validCommands.includes(cmdLower);
 
         if (isValidCommand) {
-            // Show command in green, arguments in white
+            // command is green, arguments are white
             const coloredLine = `> <span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
             consoleBody.innerHTML += `<div class="line stdin">${coloredLine}</div>`;
             consoleBody.scrollTop = consoleBody.scrollHeight;
         } else {
-            // Show invalid command normally
+            // show invalid command
             consoleOutput.info(`> ${line}`);
         }
 
@@ -617,13 +652,9 @@ OUTPUT greet("World")`
             break;
 
             case 'stop':
-                if (window.__ide_stop_flag) {
-                    consoleOutput.println('Code execution was already stopped', 'stdout');
-                } else {
-                    window.__ide_stop_flag = true;
-                    stopCode()
-                    consoleOutput.println('Stopping...', 'stdout');
-                }
+                window.__ide_stop_flag = true;
+                stopCode()
+                consoleOutput.println('Stopping...', 'stdout');
             break;
 
             case 'in': // this falls through to the input case
@@ -641,7 +672,7 @@ OUTPUT greet("World")`
             case 'tab': {
                 const n = parseInt(rest[0], 10);
                 if (Number.isInteger(n) && n >= 1 && n <= 8) { // 1-8 spaces
-                    editor.session.setTabSize(n);
+                    refreshTabSpaces(n);
                     consoleOutput.println(`Tab size: ${n}`, 'stdout');
                 } else {
                     consoleOutput.error('Usage: tab <1-8 spaces>');
@@ -653,7 +684,7 @@ OUTPUT greet("World")`
                 const px = parseInt(rest[0], 10);
                 if (Number.isInteger(px)) {
                     editor.setFontSize(px);
-                    consoleOutput.println(`Editor font size: ${px}px`, 'stdout');
+                    consoleOutput.println(`Font size: ${px}px`, 'stdout');
                 } else {
                     consoleOutput.error('Usage: font <10-24px>');
                 }
@@ -664,7 +695,7 @@ OUTPUT greet("World")`
                 const t = (rest[0] || '').toLowerCase();
                 const currentTheme = editor.getTheme();
                 
-                // Add class to disable transitions during mode switch
+                // disable transitions
                 document.documentElement.classList.add('mode-switching');
                 
                 if (t === 'light') {
@@ -696,7 +727,7 @@ OUTPUT greet("World")`
                     return consoleOutput.error('Usage: mode <light|dark>');
                 }
                 
-                // Remove the class after a brief delay to re-enable transitions
+                // enable transitions
                 setTimeout(() => {
                     document.documentElement.classList.remove('mode-switching');
                 }, 50);
@@ -881,53 +912,33 @@ OUTPUT greet("World")`
         const output = consoleBody.textContent;
 
         navigator.clipboard.writeText(output).then(() => {
-            // store original copy icon to change back to
-            const originalcopyIcon = copyBtn.innerHTML;
-
             // animate to copied state
             copyBtn.style.transition = 'background 0.3s, color 0.3s';
-            copyBtn.style.background = 'var(--green-accent)'; // green
+            copyBtn.style.background = 'var(--green-accent)';
             copyBtn.style.color = 'white';
-            copyBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon>';
 
             // animate back to original state
             setTimeout(() => {
                 copyBtn.style.background = '';
                 copyBtn.style.color = '';
-
-                // wait for the transition to finish before changing icon back
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalcopyIcon;
-                }, 20);
             }, 750);
-        }).catch(err => {
-            consoleOutput.error('Failed to copy text: ', err);
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = output;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                // Show success feedback even with fallback
-                const originalcopyIcon = copyBtn.innerHTML;
-                copyBtn.style.transition = 'background 0.3s, color 0.3s';
-                copyBtn.style.background = 'var(--green-accent)';
-                copyBtn.style.color = 'white';
-                copyBtn.innerHTML = '<ion-icon name="checkmark-outline"></ion-icon>';
-                
-                setTimeout(() => {
-                    copyBtn.style.background = '';
-                    copyBtn.style.color = '';
-                    setTimeout(() => {
-                        copyBtn.innerHTML = originalcopyIcon;
-                    }, 20);
-                }, 750);
-            } catch (fallbackErr) {
-                consoleOutput.error('Fallback copy failed: ', fallbackErr);
-            }
-            document.body.removeChild(textArea);
-        });
+        })
+    });
+
+    // download console output
+    downloadBtn.addEventListener('click', async () => {
+        const output = consoleBody.textContent;
+        
+        if (!output.trim()) {
+            consoleOutput.error('No output to download');
+            return;
+        }
+
+        // Create filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `console_output_${timestamp}.txt`;
+        
+        await saveTextAsFile(filename, output);
     });
 
     // load formatter

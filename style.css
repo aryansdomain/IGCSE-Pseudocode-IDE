@@ -12,7 +12,6 @@
   --radius: 14px;
   --radius-xs: 8px;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-  --shadow: 0 10px 30px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.14);
   --gap: 14px;
   --splitter-h: 8px;
 }
@@ -345,7 +344,6 @@ html, body { height: 100%; }
   max-width: 500px;
   background: var(--panel);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   border: 1px solid var(--border);
 }
 
@@ -403,6 +401,7 @@ html, body { height: 100%; }
   border: 3px solid var(--panel);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
+  margin-top: -7px; /* Compensate for border and center on track */
 }
 
 .setting-group input[type="range"]::-webkit-slider-thumb:hover {
@@ -451,7 +450,7 @@ html, body { height: 100%; }
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  padding: 0 10px;
+  padding: 0 4px;
 }
 
 .slider-ticks .tick {
@@ -459,11 +458,15 @@ html, body { height: 100%; }
   color: var(--muted);
   font-weight: 500;
   position: relative;
-  cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.slider-ticks .tick:hover {
+/* Only make ticks with content clickable */
+.slider-ticks .tick:not(:empty) {
+  cursor: pointer;
+}
+
+.slider-ticks .tick:not(:empty):hover {
   color: var(--green-accent);
 }
 
@@ -652,6 +655,25 @@ html, body { height: 100%; }
   transition: all 0.2s ease;
 }
 
+/* Topbar buttons - settings, download, and mode toggle */
+.btn.settings,
+.btn.download-editor,
+.btn.editortheme {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn.settings:hover,
+.btn.download-editor:hover,
+.btn.editortheme:hover {
+  background-color: var(--panel);
+}
+
 /* Theme toggle button - icons in same position */
 .btn.editortheme {
   position: relative;
@@ -663,10 +685,17 @@ html, body { height: 100%; }
   left: 50%;
   transform: translate(-50%, -50%);
   transition: opacity 0.2s ease;
+  font-size: 18px;
 }
 
 .btn.editortheme ion-icon[hidden] {
   display: none;
+}
+
+/* Settings and download icons */
+.btn.settings ion-icon,
+.btn.download-editor ion-icon {
+  font-size: 30px;
 }
 
 /* Light mode console overrides */
