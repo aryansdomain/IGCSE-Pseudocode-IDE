@@ -96,7 +96,7 @@ OUTPUT greet("World")`
         const isLight = document.documentElement.classList.contains('light');
         const currentTheme = editor.getTheme();
         
-        // Add class to disable transitions during mode switch
+        // add class to disable transitions during mode switch
         document.documentElement.classList.add('mode-switching');
         
         // switch from light to dark mode
