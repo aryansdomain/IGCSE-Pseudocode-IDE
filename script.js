@@ -75,20 +75,56 @@ OUTPUT greet("World")`
     const moonIcon = modeToggleBtn.querySelector('.moon-icon');
     const sunIcon = modeToggleBtn.querySelector('.sun-icon');
 
+    // Define light and dark themes
+    const lightThemes = [
+        'ace/theme/chrome', 'ace/theme/clouds', 'ace/theme/dawn', 'ace/theme/dreamweaver',
+        'ace/theme/eclipse', 'ace/theme/github', 'ace/theme/gruvbox_light_hard', 'ace/theme/iplastic',
+        'ace/theme/katzenmilch', 'ace/theme/kuroir', 'ace/theme/solarized_light', 'ace/theme/sqlserver',
+        'ace/theme/textmate', 'ace/theme/tomorrow', 'ace/theme/xcode'
+    ];
+    
+    const darkThemes = [
+        'ace/theme/ambiance', 'ace/theme/chaos', 'ace/theme/clouds_midnight', 'ace/theme/cobalt',
+        'ace/theme/dracula', 'ace/theme/gruvbox', 'ace/theme/gruvbox_dark_hard', 'ace/theme/idle_fingers',
+        'ace/theme/kr_theme', 'ace/theme/merbivore', 'ace/theme/monokai', 'ace/theme/nord_dark',
+        'ace/theme/one_dark', 'ace/theme/pastel_on_dark', 'ace/theme/solarized_dark', 'ace/theme/terminal',
+        'ace/theme/tomorrow_night', 'ace/theme/tomorrow_night_blue', 'ace/theme/tomorrow_night_bright',
+        'ace/theme/tomorrow_night_eighties', 'ace/theme/twilight', 'ace/theme/vibrant_ink'
+    ];
+
     function toggleMode() {
         const isLight = document.documentElement.classList.contains('light');
+        const currentTheme = editor.getTheme();
         
+        // Add class to disable transitions during mode switch
+        document.documentElement.classList.add('mode-switching');
+        
+        // switch from light to dark mode
         if (isLight) {
             document.documentElement.classList.remove('light');
-            editor.setTheme('ace/theme/monokai');
-            moonIcon.hidden = true;
-            sunIcon.hidden = false;
+            moonIcon.hidden = true; // show dark theme icon
+            sunIcon.hidden = false; // show light theme icon
+            
+            // if current theme is light
+            if (lightThemes.includes(currentTheme)) {
+                editor.setTheme('ace/theme/monokai'); // switch to default dark theme
+            }
+        // switch from dark to light mode
         } else {
             document.documentElement.classList.add('light');
-            editor.setTheme('ace/theme/iplastic');
-            moonIcon.hidden = false;
-            sunIcon.hidden = true;
+            moonIcon.hidden = false; // show light theme icon
+            sunIcon.hidden = true; // show dark theme icon
+            
+            // if current theme is dark
+            if (darkThemes.includes(currentTheme)) {
+                editor.setTheme('ace/theme/github'); // switch to default light theme
+            }
         }
+        
+        // re-enable transitions
+        setTimeout(() => {
+            document.documentElement.classList.remove('mode-switching');
+        }, 50);
     }
 
     modeToggleBtn.addEventListener('click', toggleMode);
@@ -626,21 +662,44 @@ OUTPUT greet("World")`
 
             case 'mode': {
                 const t = (rest[0] || '').toLowerCase();
+                const currentTheme = editor.getTheme();
+                
+                // Add class to disable transitions during mode switch
+                document.documentElement.classList.add('mode-switching');
+                
                 if (t === 'light') {
                     document.documentElement.classList.add('light');
-                    editor.setTheme('ace/theme/github');
                     moonIcon.hidden = false;
                     sunIcon.hidden = true;
+                    
+                    // if current theme is already light, keep it
+                    if (lightThemes.includes(currentTheme)) {
+                        consoleOutput.println(`Mode: light`, 'stdout');
+                    } else {
+                        editor.setTheme('ace/theme/github');
+                        consoleOutput.println('Mode: light', 'stdout');
+                    }
                 } else if (t === 'dark') {
                     document.documentElement.classList.remove('light');
-                    editor.setTheme('ace/theme/monokai');
                     moonIcon.hidden = true;
                     sunIcon.hidden = false;
+                    
+                    // if current theme is already dark, keep it
+                    if (darkThemes.includes(currentTheme)) {
+                        consoleOutput.println(`Mode: dark`, 'stdout');
+                    } else {
+                        editor.setTheme('ace/theme/monokai');
+                        consoleOutput.println('Mode: dark', 'stdout');
+                    }
                 } else {
+                    document.documentElement.classList.remove('mode-switching');
                     return consoleOutput.error('Usage: mode <light|dark>');
                 }
-
-                consoleOutput.println(`Mode: ${t}`, 'stdout');
+                
+                // Remove the class after a brief delay to re-enable transitions
+                setTimeout(() => {
+                    document.documentElement.classList.remove('mode-switching');
+                }, 50);
                 break;
             }
 

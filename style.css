@@ -726,3 +726,11 @@ html, body { height: 100%; }
 
 /* Inner flex containers must be allowed to shrink */
 .console, .console-main, #console-body { min-height: 0; }
+
+/* Disable transitions during mode switching */
+html.mode-switching *,
+html.mode-switching *::before,
+html.mode-switching *::after {
+  transition: none !important;
+  animation: none !important;
+}
