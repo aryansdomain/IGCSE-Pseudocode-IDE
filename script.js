@@ -816,47 +816,69 @@ OUTPUT greet("World")`
 
     // ------------------------ Splitter ------------------------
     (function () {
-        const workspace  = document.getElementById('workspace');
-        const editorPane = document.getElementById('editor-pane');
-        const consolePane   = document.getElementById('console-pane');
-        const splitter   = document.getElementById('splitter');
+        const workspace   = document.getElementById('workspace');
+        const editorPane  = document.getElementById('editor-pane');
+        const consolePane = document.getElementById('console-pane');
+        const splitter    = document.getElementById('splitter');
     
-        const SPLITTER_H   = parseFloat(getComputedStyle(splitter).height) || 8;
-        const MIN_EDITOR_H = 120;
-        const MIN_CONSOLE_H   = 120;
-
-        // Height of fixed siblings inside the workspace (run bar + bottom bar)
-        function fixedBarsHeight() {
-            const bb = document.querySelector('.bottombar');
-            const rc = document.querySelector('.run-container');
-            return (bb?.offsetHeight || 0) + (rc?.offsetHeight || 0);
-        }
-
+        const SPLITTER_H      = parseFloat(getComputedStyle(splitter).height) || 8;
+        const MIN_EDITOR_H    = 0;           // your normal floor
+        const MIN_CONSOLE_H   = 120;         // keep console usable
+        const SNAP_BOTTOM_PX  = 50;          // existing "snap editor tall" threshold
+        const SNAP_TOP_PX     = 80;          // new "snap console full" threshold
+        const OVERDRAG_FACTOR = 2;           // how far above the IDE you can pull
+    
         function availableStackHeight() {
             const wsRect = workspace.getBoundingClientRect();
             return wsRect.height;
-          }
+        }
+    
+        // "Max editor" still means the handle near the bottom.
+        function getMaxEditorHeight() {
+            const topbar  = document.querySelector('.topbar');
+            const footer  = document.querySelector('.footer');
+            const pad     = parseFloat(getComputedStyle(document.querySelector('.app')).padding) * 2 || 28;
+            const tbH     = topbar ? topbar.getBoundingClientRect().height : 0;
+            const ftH     = footer ? footer.getBoundingClientRect().height : 0;
+            return window.innerHeight - tbH - ftH - pad;
+        }
     
         function applySplit(editorPx) {
             const avail = availableStackHeight();
-            const maxEditor = Math.max(MIN_EDITOR_H, avail - SPLITTER_H - MIN_CONSOLE_H);
-            const clamped   = Math.min(Math.max(editorPx, MIN_EDITOR_H), maxEditor);
-            const newConsole   = avail - SPLITTER_H - clamped;
+            const maxEditor = getMaxEditorHeight();
+            const maxOverdrag = window.innerHeight * OVERDRAG_FACTOR; // how high above the IDE we allow
+        
+            // --- Bottom snap (favor editor): near the bottom => snap editor tall
+            if (editorPx > maxEditor - SNAP_BOTTOM_PX) {
+                editorPx = maxEditor;
+            }
+        
+            // --- Top snap (favor console): near the very top => snap console to full
+            // Dragging upward reduces editorPx; once we cross a small negative threshold, snap "all the way".
+            if (editorPx < -SNAP_TOP_PX) {
+                editorPx = -maxOverdrag; // push the handle far above; console will cover the IDE
+            }
+        
+            // clamp within [very-negative, maxEditor]
+            const clamped = Math.min(Math.max(editorPx, -maxOverdrag), maxEditor);
+        
+            // compute console height; large negative editorPx => very tall console
+            const newConsole = Math.max(avail - SPLITTER_H - clamped, MIN_CONSOLE_H);
         
             editorPane.style.flex = '0 0 auto';
-            consolePane.style.flex   = '0 0 auto';
+            consolePane.style.flex = '0 0 auto';
             editorPane.style.height = clamped + 'px';
-            consolePane.style.height   = newConsole + 'px';
+            consolePane.style.height = newConsole + 'px';
         
             if (window.editor) window.editor.resize(true);
         }
     
-        // Set a sensible initial split (about 62% editor / 38% console)
+        // sensible initial split
         function layoutInitial() {
-            const avail   = availableStackHeight();
+            const avail = availableStackHeight();
+            const maxEditor = getMaxEditorHeight();
             const targetE = Math.round(
-                Math.max(MIN_EDITOR_H,
-                Math.min(avail - SPLITTER_H - MIN_CONSOLE_H, 0.50 * (avail - SPLITTER_H)))
+                Math.max(MIN_EDITOR_H, Math.min(maxEditor, 0.50 * (avail - SPLITTER_H)))
             );
             applySplit(targetE);
         }
@@ -869,11 +891,12 @@ OUTPUT greet("World")`
             dragging = true;
             startY = e.clientY;
             startEditorH = editorPane.getBoundingClientRect().height;
+            document.body.classList.add('dragging');
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup', endDrag);
             e.preventDefault();
         }
-
+    
         function onDrag(e) {
             if (!dragging) return;
             const dy = e.clientY - startY;
@@ -882,25 +905,26 @@ OUTPUT greet("World")`
     
         function endDrag() {
             dragging = false;
+            document.body.classList.remove('dragging');
             document.removeEventListener('mousemove', onDrag);
             document.removeEventListener('mouseup', endDrag);
         }
-
+    
         splitter.addEventListener('mousedown', beginDrag);
-
-        // Keep proportions on window resize
+    
+        // keep proportions on resize
         window.addEventListener('resize', () => {
             const eH = editorPane.getBoundingClientRect().height;
             const cH = consolePane.getBoundingClientRect().height;
             const total = eH + SPLITTER_H + cH || 1;
             const ratio = eH / total;
             const avail = availableStackHeight();
-            applySplit(Math.round(ratio * (avail - SPLITTER_H)));
+            const maxEditor = getMaxEditorHeight();
+            applySplit(Math.round(Math.min(ratio * (avail - SPLITTER_H), maxEditor)));
         });
     
-        // Do the initial layout once everything paints
         requestAnimationFrame(layoutInitial);
-    })();
+    })();  
 
     // clear
     clearBtn.addEventListener('click', () => {

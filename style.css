@@ -763,3 +763,22 @@ html.mode-switching *::after {
   transition: none !important;
   animation: none !important;
 }
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 8px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+  z-index: 100;
+}
+
+.footer ion-icon {
+  vertical-align: middle;
+}
