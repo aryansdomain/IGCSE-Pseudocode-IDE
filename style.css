@@ -9,6 +9,7 @@
   --green-accent: #22c55e;
   --green-dark: #16a34a;
   --red: #ff7b72;
+  --warning: #ffd700;
   --radius: 14px;
   --radius-xs: 8px;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -27,6 +28,7 @@
   --green-accent: #1a7f37;
   --green-dark: #0d5a1f;
   --red: #d73a49;
+  --warning: #ce8600;
 }
 
 html, body {
@@ -740,6 +742,27 @@ html, body { height: 100%; }
 
 .console-body .line.stderr {
   color: var(--red);
+}
+
+.console-body .line.warning {
+  color: var(--warning); /* Orange in light mode */
+  font-style: italic;
+}
+
+/* Dark mode warning color */
+html[data-theme="dark"] .console-body .line.warning {
+  color: var(--warning); /* Yellow in dark mode */
+}
+
+/* Warning text within output lines */
+.console-body .line .warning-text {
+  color: var(--warning);
+  font-style: italic;
+}
+
+/* Dark mode warning text within output lines */
+html[data-theme="dark"] .console-body .line .warning-text {
+  color: var(--warning);
 }
 
 /* Make the input feel "console-like" */

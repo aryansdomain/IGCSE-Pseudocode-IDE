@@ -2,8 +2,15 @@ function interpretPseudocode(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
     const OUTPUT_BUFFER = [];
+    const WARNING_BUFFER = [];
+    let CAPITALIZATION_WARNINGS = [];
+    const CAPITALIZATION_SEEN = new Set();
     const constants = Object.create(null);
     const globals   = Object.create(null);
+
+    // Clear warning tracking for this run
+    CAPITALIZATION_WARNINGS = [];
+    CAPITALIZATION_SEEN.clear();
 
     // Error throwing helper
     function throwErr(name, message, line) {
@@ -13,44 +20,51 @@ function interpretPseudocode(code) {
     }
 
     function checkCapitalization(text, lineNumber) {
-        // keywords that should be capitalized
-        const keywords = [
-            'PROCEDURE', 'FUNCTION', 'RETURNS', 'ENDPROCEDURE', 'ENDFUNCTION',
-            'DECLARE', 'CONSTANT', 'ARRAY', 'OF', 'INPUT', 'OUTPUT', 'CALL',
-            'IF', 'THEN', 'ELSE', 'ENDIF', 'CASE', 'ENDCASE', 'FOR', 'TO', 'STEP', 'NEXT',
-            'WHILE', 'DO', 'ENDWHILE', 'REPEAT', 'UNTIL', 'RETURN',
-            'TRUE', 'FALSE', 'DIV', 'MOD', 'AND', 'OR', 'NOT',
-            'INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING'
-        ];
-        
-        // Check each keyword
-        keywords.forEach(keyword => {
-            const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-            const matches = text.match(regex);
-            if (matches) {
-                matches.forEach(match => {
-                    if (match !== keyword) {
-                        console.warn(`Warning: ${keyword} is not capitalized (line ${lineNumber})`);
+        // Full keyword set (selection, iteration, decls, I/O, logical, types, builtins)
+        const KEYWORDS = [
+          'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
+          'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
+          'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
+          'INPUT','OUTPUT','DECLARE','CONSTANT',
+          'TRUE','FALSE','AND','OR','NOT',
+          'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY',
+          'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
+        ]
+      
+        for (const kw of KEYWORDS) {
+            // whole-word match, case-insensitive
+            const re = new RegExp(`\\b${kw}\\b`, 'gi');
+            let m;
+            while ((m = re.exec(text)) !== null) {
+            // m[0] is whatever was in source; if it doesn't exactly equal the canonical uppercase, warn once
+                if (m[0] !== kw) {
+                    const sig = `${kw}:${lineNumber}:${m.index}`;
+                    if (!CAPITALIZATION_SEEN.has(sig)) {
+                        CAPITALIZATION_SEEN.add(sig);
+                        // Collect ALL keywords that are not capitalized
+                        CAPITALIZATION_WARNINGS.push({
+                            keyword: kw,
+                            line: lineNumber
+                        });
                     }
-                });
-            }
-        });
-        
-        // Check identifiers (variables, function names, etc.)
-        const identifierRegex = /\b[A-Za-z][A-Za-z0-9_]*\b/g;
-        const identifierMatches = text.match(identifierRegex);
-        if (identifierMatches) {
-            identifierMatches.forEach(match => {
-                // Skip if it's a keyword (already checked above)
-                if (keywords.includes(match.toUpperCase())) return;
-                
-                // Check if identifier should be capitalized (all uppercase)
-                if (/^[a-z]/.test(match)) {
-                    console.warn(`Warning: ${match.toUpperCase()} is not capitalized (line ${lineNumber})`);
                 }
-            });
+            }
+        }
+    } 
+
+    function processCapitalizationWarnings() {
+        if (CAPITALIZATION_WARNINGS.length === 0) return;
+        
+        if (CAPITALIZATION_WARNINGS.length === 1) {
+            // Single keyword issue - show specific warning
+            const warning = CAPITALIZATION_WARNINGS[0];
+            WARNING_BUFFER.push(`Warning: ${warning.keyword} is not capitalized (line ${warning.line})`);
+        } else {
+            // Multiple keyword issues - show consolidated warning
+            WARNING_BUFFER.push(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
         }
     }
+
     const procs = Object.create(null);
     const funcs = Object.create(null);
 
@@ -782,6 +796,10 @@ function interpretPseudocode(code) {
             const raw = lines[i];
             const s = cleanLine(raw);
             if (!s) continue;
+            
+            // Check capitalization for this line before processing
+            checkCapitalization(raw, i + 1);
+            
             let m;
             if ((m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
@@ -812,7 +830,11 @@ function interpretPseudocode(code) {
             const raw  = lines[i];
             const text = (typeof raw === 'object') ? raw.content : raw;
             const s    = cleanLine(text);
-            if (s && endRegex.test(s)) { found = true; break; } // stop on the END* line
+            if (s && endRegex.test(s)) { 
+                checkCapitalization(text, i + 1);
+                found = true; 
+                break; 
+            }
             block.push({ line: i + 1, content: (typeof raw === 'object') ? raw.content : raw });
         }
         if (!found) {
@@ -1214,7 +1236,17 @@ function interpretPseudocode(code) {
     // ------------------------ Execute! ------------------------
     try {
         runBlock(mainLines, globals, 1, false);
-        return OUTPUT_BUFFER.join("\n");
+        
+        // Process all collected capitalization warnings
+        processCapitalizationWarnings();
+        
+        // Combine output and warnings
+        let result = OUTPUT_BUFFER.join("\n");
+        if (WARNING_BUFFER.length > 0) {
+            result = WARNING_BUFFER.join("\n") + (result ? "\n" + result : "");
+        }
+        
+        return result;
     } catch (err) {
         // add line number to error
         const line = (err && err.line) ? err.line : (__LINE_NUMBER || 'unknown');

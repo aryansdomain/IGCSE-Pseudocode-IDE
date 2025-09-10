@@ -20,6 +20,9 @@
         fixedWidthGutter: true
     });
 
+    // Disable default word-based autocomplete to prevent suggesting literal values
+    editor.completers = [];
+
     const Range = ace.require('ace/range').Range;
 
     // initial code
@@ -402,6 +405,7 @@ OUTPUT greet("World")`
     let flipTimer = null;    // delayed flip timer
     let currentLocalRunId = 0;
     let clearIndicators = null;
+    let currentRunningLine = null;  // track the most recent running line
 
     function setRunButton(running) {
         if (running) {
@@ -426,6 +430,7 @@ OUTPUT greet("World")`
             if (isRunning && localRunId === runId) {
                 runningLine = consoleLine('', 'stdin');                  // create a line to update
                 runningLine.style.color = 'var(--green)'; 
+                currentRunningLine = runningLine;  // store globally
                 dotTimer = setInterval(() => {
                     dotPhase = (dotPhase + 1) % 4;                    // cycle
                     runningLine.textContent = '.'.repeat(dotPhase);   // '', '.', '..', '...'
@@ -438,6 +443,7 @@ OUTPUT greet("World")`
             if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
             if (dotTimer)     { clearInterval(dotTimer);    dotTimer = null; }
             if (runningLine)  { runningLine.style.removeProperty('color'); } // reset color
+            currentRunningLine = null;  // clear global reference
         };
 
         // Capture indicators for force-terminate cleanup
@@ -449,34 +455,85 @@ OUTPUT greet("World")`
 
             if (type === 'done') {
                 const out = String(e.data.output || '').trim();
+                
+                // Store reference to running line before clearing indicators
+                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
 
-                if (runningLine) {
-                    runningLine.textContent = out || '(no output)';
-                    runningLine.className = 'line stdout';
+                if (out) {
+                    // Split output into warnings and regular output
+                    const lines = out.split('\n');
+                    const warnings = [];
+                    const regularOutput = [];
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('Warning:')) {
+                            warnings.push(line);
+                        } else {
+                            regularOutput.push(line);
+                        }
+                    });
+                    
+                    // Combine warnings and regular output with proper styling
+                    let allOutput = '';
+                    if (warnings.length > 0) {
+                        allOutput += warnings.map(w => `<span class="warning-text">${w}</span>`).join('\n');
+                    }
+                    if (regularOutput.length > 0) {
+                        if (allOutput) allOutput += '\n';
+                        allOutput += regularOutput.join('\n');
+                    }
+                    allOutput = allOutput.trim();
+                    
+                    if (allOutput) {
+                        if (runningLineToReplace) {
+                            runningLineToReplace.innerHTML = allOutput;
+                            runningLineToReplace.className = 'line stdout';
+                        } else {
+                            consoleOutput.println(allOutput, 'stdout');
+                        }
+                    } else {
+                        // Only show "no output" if there's no output at all
+                        if (runningLineToReplace) {
+                            runningLineToReplace.textContent = '(no output)';
+                            runningLineToReplace.className = 'line stdout';
+                        } else {
+                            consoleOutput.println('(no output)', 'stdout');
+                        }
+                    }
                 } else {
-                    consoleOutput.println(out || '(no output)', 'stdout');
+                    if (runningLineToReplace) {
+                        runningLineToReplace.textContent = '(no output)';
+                        runningLineToReplace.className = 'line stdout';
+                    } else {
+                        consoleOutput.println('(no output)', 'stdout');
+                    }
                 }
                 finishRun(localRunId);
 
             } else if (type === 'error') {
                 const msg = String(e.data.error || 'Unknown error');
+                
+                // Store reference to running line before clearing indicators
+                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
 
-                if (runningLine) {
-                    runningLine.textContent = msg;
-                    runningLine.className = 'line stderr';
+                if (runningLineToReplace) {
+                    runningLineToReplace.textContent = msg;
+                    runningLineToReplace.className = 'line stderr';
                 } else {
                     consoleOutput.error(msg);
                 }
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
+                // Store reference to running line before clearing indicators
+                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
                 
-                if (runningLine) {
-                    runningLine.textContent = 'Execution stopped';
-                    runningLine.className = 'line stderr';
+                if (runningLineToReplace) {
+                    runningLineToReplace.textContent = 'Execution stopped';
+                    runningLineToReplace.className = 'line stderr';
                 } else {
                     consoleOutput.println('Execution stopped', 'stderr');
                 }
@@ -486,11 +543,14 @@ OUTPUT greet("World")`
 
         worker.onerror = (e) => {
             const errorMsg = `Worker error: ${e.message || e.filename || 'unknown'}`;
+            
+            // Store reference to running line before clearing indicators
+            const runningLineToReplace = currentRunningLine;
             clearRunningIndicators();
 
-            if (runningLine) {
-                runningLine.textContent = errorMsg;
-                runningLine.className = 'line stderr';
+            if (runningLineToReplace) {
+                runningLineToReplace.textContent = errorMsg;
+                runningLineToReplace.className = 'line stderr';
             } else {
                 consoleOutput.error(errorMsg);
             }
@@ -514,14 +574,15 @@ OUTPUT greet("World")`
                 try { worker.terminate(); } catch {}
                 worker = null;
             }
+            // Store reference to running line before clearing indicators
+            const runningLineToReplace = currentRunningLine;
             if (typeof clearIndicators === 'function') {
                 clearIndicators(); // stop the green dots
-                // Replace running line with "Execution stopped" if it exists
-                const runningLine = document.querySelector('.line.stdin');
-                if (runningLine) {
-                    runningLine.textContent = 'Execution stopped';
-                    runningLine.className = 'line stderr';
-                }
+            }
+            // Replace the most recent running line with "Execution stopped"
+            if (runningLineToReplace) {
+                runningLineToReplace.textContent = 'Execution stopped';
+                runningLineToReplace.className = 'line stderr';
             }
             finishRun(currentLocalRunId);                                  // flip button back to Run
         }, 300);
@@ -556,7 +617,11 @@ OUTPUT greet("World")`
     // Run/Stop button behavior
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
-        else runCode();
+        else {
+            // Display "> run" command in console for button click
+            consoleOutput.info('> run');
+            runCode();
+        }
     });    
 
     // ------------------------ Console --------------------------------
@@ -620,10 +685,15 @@ OUTPUT greet("World")`
         const isValidCommand = validCommands.includes(cmdLower);
 
         if (isValidCommand) {
-            // command is green, arguments are white
-            const coloredLine = `> <span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
-            consoleBody.innerHTML += `<div class="line stdin">${coloredLine}</div>`;
-            consoleBody.scrollTop = consoleBody.scrollHeight;
+            // Don't display "> stop" command if something is running
+            if (cmdLower === 'stop' && isRunning) {
+                // Skip displaying the command
+            } else {
+                // command is green, arguments are white
+                const coloredLine = `> <span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
+                consoleBody.innerHTML += `<div class="line stdin">${coloredLine}</div>`;
+                consoleBody.scrollTop = consoleBody.scrollHeight;
+            }
         } else {
             // show invalid command
             consoleOutput.info(`> ${line}`);
@@ -652,9 +722,13 @@ OUTPUT greet("World")`
             break;
 
             case 'stop':
-                window.__ide_stop_flag = true;
+                if (!isRunning) {
+                    consoleOutput.error('No running execution to stop');
+                    return;
+                }
+                
+                window.__ide_stop_flag = true;        
                 stopCode()
-                consoleOutput.println('Stopping...', 'stdout');
             break;
 
             case 'in': // this falls through to the input case
