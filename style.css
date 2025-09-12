@@ -58,7 +58,7 @@ html, body { height: 100%; }
 .app {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   padding: var(--gap);
 }
 
@@ -67,6 +67,7 @@ html, body { height: 100%; }
   display: flex;
   flex-direction: column;
   min-height: 0;               /* allow children to shrink */
+  overflow: hidden;           /* prevent accidental growth during drag */
 }
 
 .workspace {
@@ -103,8 +104,10 @@ html, body { height: 100%; }
 #editor-pane,
 #console-pane {
   flex: 0 0 auto;              /* JS sets explicit height while dragging */
-  min-height: 120px;
+  min-height: 0;
 }
+
+#workspace { overflow: hidden; }
 
 /* Editor pane grows */
 #editor-pane {
@@ -123,6 +126,7 @@ html, body { height: 100%; }
   padding: 10px;
   font-size: 13px;
   margin: 0;
+  height: 55px;
   width: 100%;
 }
 
@@ -144,6 +148,9 @@ html, body { height: 100%; }
   cursor: row-resize;
   background: var(--border);
 }
+
+/* Let bars collapse cleanly while we animate heights */
+.topbar, .bottombar { overflow: hidden; }
 
 /* Console pane has explicit height, does NOT grow */
 #console-pane {
@@ -291,6 +298,24 @@ html, body { height: 100%; }
   51%, 100% { opacity: 0; }
 }
 
+/* Draw a full-rectangle cursor using background color */
+#console-body .cursor {
+  display: inline-block;
+  width: 0.65em;           /* roughly one character cell */
+  height: 1.15em;          /* slightly taller than text */
+  background: white;/* use text color directly */
+  vertical-align: -0.15em; /* vertically center with text line */
+  animation: ide-cursor-blink 1s steps(1) infinite;
+  opacity: 1;              /* ensure it's visible */
+}
+
+@keyframes ide-cursor-blink { 50% { opacity: 0; } }
+
+/* Hide cursor when not focused */
+#console-body:not(:focus-within) .cursor {
+  display: none;
+}
+
 #console-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -300,6 +325,8 @@ html, body { height: 100%; }
   white-space: pre-wrap;
   background-color: var(--bg);
   color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
+  caret-color: transparent;
 }
 
 .console-input {
@@ -487,7 +514,6 @@ html, body { height: 100%; }
   width: 100%;
   padding: 12px 16px;
   color: var(--green-accent);
-  border: 2px solid var(--green-accent);
   background: var(--panel);
   font-size: 14px;
   font-weight: 600;
@@ -521,6 +547,14 @@ html, body { height: 100%; }
   outline: none;
   border-color: var(--green-accent);
   box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.font-select optgroup {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 4px 8px;
 }
 
 /* Editor Theme sections */
@@ -655,12 +689,20 @@ html, body { height: 100%; }
 .btn.close:hover {
   background: var(--elev);
   transition: all 0.2s ease;
+} 
+
+/* new utility bar sits above the topbar */
+.utilitybar, .topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px; /* slim */
 }
 
 /* Topbar buttons - settings, download, and mode toggle */
 .btn.settings,
 .btn.download-editor,
-.btn.editortheme {
+.btn.mode-toggle {
   width: 40px;
   height: 40px;
   display: flex;
@@ -672,16 +714,16 @@ html, body { height: 100%; }
 
 .btn.settings:hover,
 .btn.download-editor:hover,
-.btn.editortheme:hover {
+.btn.mode-toggle:hover {
   background-color: var(--panel);
 }
 
 /* Theme toggle button - icons in same position */
-.btn.editortheme {
+.btn.mode-toggle {
   position: relative;
 }
 
-.btn.editortheme ion-icon {
+.btn.mode-toggle ion-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -690,7 +732,7 @@ html, body { height: 100%; }
   font-size: 18px;
 }
 
-.btn.editortheme ion-icon[hidden] {
+.btn.mode-toggle ion-icon[hidden] {
   display: none;
 }
 
@@ -701,7 +743,7 @@ html, body { height: 100%; }
 }
 
 /* Light mode console overrides */
-.light .console-body {
+.light #console-body {
   background-color: #ffffff;
   color: #24292f;
 }
@@ -716,8 +758,16 @@ html, body { height: 100%; }
   color: #24292f;
 }
 
+.light #console-body .line.stdin .command-text {
+  color: #24292f;
+}
+
 .light .cursor {
   color: #24292f;
+}
+
+.light #console-body .cursor {
+  background: #24292f;
 }
 
 .light .prompt-text {
@@ -732,36 +782,40 @@ html, body { height: 100%; }
   padding: 2px 0;
 }
 
-.console-body .line.stdin {
+#console-body .line.stdin {
   color: var(--green);
 }
 
-.console-body .line.stdout {
+#console-body .line.stdin .command-text {
   color: var(--text);
 }
 
-.console-body .line.stderr {
+#console-body .line.stdout {
+  color: var(--text);
+}
+
+#console-body .line.stderr {
   color: var(--red);
 }
 
-.console-body .line.warning {
+#console-body .line.warning {
   color: var(--warning); /* Orange in light mode */
   font-style: italic;
 }
 
 /* Dark mode warning color */
-html[data-theme="dark"] .console-body .line.warning {
+html[data-theme="dark"] #console-body .line.warning {
   color: var(--warning); /* Yellow in dark mode */
 }
 
 /* Warning text within output lines */
-.console-body .line .warning-text {
+#console-body .line .warning-text {
   color: var(--warning);
   font-style: italic;
 }
 
 /* Dark mode warning text within output lines */
-html[data-theme="dark"] .console-body .line .warning-text {
+html[data-theme="dark"] #console-body .line .warning-text {
   color: var(--warning);
 }
 
@@ -789,17 +843,12 @@ html.mode-switching *::after {
 
 /* Footer */
 .footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   text-align: center;
   padding: 8px;
   background: var(--bg);
   border-top: 1px solid var(--border);
   font-size: 11px;
   color: var(--muted);
-  z-index: 100;
 }
 
 .footer ion-icon {

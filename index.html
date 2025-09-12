@@ -23,18 +23,24 @@
 
   <div class="app">
 
+    <!-- Utility Bar -->
+    <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
+      <div class="controls">
+        <button class="btn settings" type="button" title="Settings" id="settingsBtn">
+          <ion-icon name="settings-outline" class="settings-icon"></ion-icon>
+        </button>
+        <button class="btn mode-toggle" type="button" title="Toggle Light/Dark Mode" id="modeToggleBtn">
+          <ion-icon name="moon-outline" class="moon-icon" hidden></ion-icon>
+          <ion-icon name="sunny" class="sun-icon"></ion-icon>
+        </button>
+      </div>
+    </div>
+
     <!-- Top Bar -->
     <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
       <div class="controls">
         <button class="btn format" type="button" title="Format" id="btn-format">
           <span>Format</span>
-        </button>
-        <button class="btn settings" type="button" title="Settings" id="settingsBtn">
-          <ion-icon name="settings-outline" class="settings-icon"></ion-icon>
-        </button>
-        <button class="btn editortheme" type="button" title="Toggle Light/Dark Mode" id="modeToggleBtn">
-          <ion-icon name="moon-outline" class="moon-icon" hidden></ion-icon>
-          <ion-icon name="sunny"  class="sun-icon"></ion-icon>
         </button>
         <button class="btn download-editor" type="button" title="Download Code" id="downloadEditorBtn">
           <ion-icon name="download-outline"></ion-icon>
@@ -57,12 +63,12 @@
           </div>
         </div>
 
+        <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
+
         <!-- Run Button -->
         <div class="run-container">
           <button class="btn run" type="button" title="Run (not wired)">Run</button>
         </div>
-
-        <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
 
         <!-- Console -->
         <section class="console" id="console">
@@ -82,12 +88,6 @@
           
           <div class="console-main">
             <div class="console-body" id="console-body" aria-live="polite"></div>
-            <div class="console-prompt">
-              <span class="prompt-text">
-                > <span class="command-text"></span>
-              </span>
-              <span class="cursor">_</span>
-            </div>
           </div>
         </section>
       </div>
@@ -157,74 +157,56 @@
             <option value="'Hack', monospace">Hack</option>
           </select>
         </div>
-        <button class="btn editortheme-changer" type="button" id="changeEditortheme">
-          Change Editor Theme
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Editor Theme Selection Overlay -->
-  <div id="editorthemeOverlay" class="settings-overlay" style="display: none;">
-    <div class="settings-panel">
-      <div class="settings-header">
-        <h3>Select Theme</h3>
-        <button class="btn close" type="button" id="closeEditortheme">✕</button>
-      </div>
-      <div class="settings-content">
-        <div class="editortheme-list-container">
-          <div class="editortheme-category">
-            <h4 class="editortheme-category-title">Light</h4>
-            <div class="editortheme-list">
-              <div class="editortheme-item" data-editortheme="ace/theme/chrome">Chrome</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/clouds">Clouds</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/dawn">Dawn</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/dreamweaver">Dreamweaver</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/eclipse">Eclipse</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/github">GitHub</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/iplastic">iPlastic</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/katzenmilch">Katzenmilch</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/kuroir">Kuroir</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/solarized_light">Solarized Light</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/sqlserver">SQL Server</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/textmate">TextMate</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/tomorrow">Tomorrow</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/xcode">Xcode</div>
-            </div>
-          </div>
-          
-          <div class="editortheme-category">
-            <h4 class="editortheme-category-title">Dark</h4>
-            <div class="editortheme-list">
-              <div class="editortheme-item" data-editortheme="ace/theme/ambiance">Ambiance</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/chaos">Chaos</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/clouds_midnight">Clouds Midnight</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/cobalt">Cobalt</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/dracula">Dracula</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/gruvbox">Gruvbox</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/idle_fingers">Idle Fingers</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/kr_theme">KR Theme</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/merbivore">Merbivore</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/monokai">Monokai</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/nord_dark">Nord Dark</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/one_dark">One Dark</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/pastel_on_dark">Pastel on Dark</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/solarized_dark">Solarized Dark</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/terminal">Terminal</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/tomorrow_night">Tomorrow Night</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/twilight">Twilight</div>
-              <div class="editortheme-item" data-editortheme="ace/theme/vibrant_ink">Vibrant Ink</div>
-            </div>
-          </div>
+        <div class="setting-group">
+          <label for="editorThemeSelect">Editor Theme:</label>
+          <select id="editorThemeSelect" class="font-select">
+            <optgroup label="LIGHT">
+              <option value="ace/theme/chrome">Chrome</option>
+              <option value="ace/theme/clouds">Clouds</option>
+              <option value="ace/theme/dawn">Dawn</option>
+              <option value="ace/theme/dreamweaver">Dreamweaver</option>
+              <option value="ace/theme/eclipse">Eclipse</option>
+              <option value="ace/theme/github">GitHub</option>
+              <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
+              <option value="ace/theme/iplastic">iPlastic</option>
+              <option value="ace/theme/katzenmilch">Katzenmilch</option>
+              <option value="ace/theme/kuroir">Kuroir</option>
+              <option value="ace/theme/solarized_light">Solarized Light</option>
+              <option value="ace/theme/sqlserver">SQL Server</option>
+              <option value="ace/theme/textmate">TextMate</option>
+              <option value="ace/theme/tomorrow">Tomorrow</option>
+              <option value="ace/theme/xcode">Xcode</option>
+            </optgroup>
+            <optgroup label="DARK">
+              <option value="ace/theme/ambiance">Ambiance</option>
+              <option value="ace/theme/chaos">Chaos</option>
+              <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
+              <option value="ace/theme/cobalt">Cobalt</option>
+              <option value="ace/theme/dracula">Dracula</option>
+              <option value="ace/theme/gruvbox">Gruvbox</option>
+              <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
+              <option value="ace/theme/idle_fingers">Idle Fingers</option>
+              <option value="ace/theme/kr_theme">KR Theme</option>
+              <option value="ace/theme/merbivore">Merbivore</option>
+              <option value="ace/theme/monokai">Monokai</option>
+              <option value="ace/theme/nord_dark">Nord Dark</option>
+              <option value="ace/theme/one_dark">One Dark</option>
+              <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
+              <option value="ace/theme/solarized_dark">Solarized Dark</option>
+              <option value="ace/theme/terminal">Terminal</option>
+              <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
+              <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
+              <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
+              <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
+              <option value="ace/theme/twilight">Twilight</option>
+              <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
+            </optgroup>
+          </select>
         </div>
       </div>
     </div>
   </div>
+
 
   <!-- Footer -->
   <div class="footer">

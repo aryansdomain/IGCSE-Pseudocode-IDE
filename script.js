@@ -20,8 +20,13 @@
         fixedWidthGutter: true
     });
 
-    // Disable default word-based autocomplete to prevent suggesting literal values
-    editor.completers = [];
+    // Use only our language completer (no word-based suggestions)
+    try {
+        const LangModule = ace.require('ace/mode/lang');
+        if (LangModule && LangModule.langCompleter) {
+            editor.completers = [LangModule.langCompleter];
+        }
+    } catch {}
 
     const Range = ace.require('ace/range').Range;
 
@@ -58,7 +63,7 @@ OUTPUT greet("World")`
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsOverlay = document.getElementById('settingsOverlay');
     const closeSettings = document.getElementById('closeSettings');
-    const changeEditortheme = document.getElementById('changeEditortheme');
+    const editorThemeSelect = document.getElementById('editorThemeSelect');
     const downloadEditorBtn = document.getElementById('downloadEditorBtn');
 
     // show/close settings overlay
@@ -293,6 +298,14 @@ OUTPUT greet("World")`
         updateFontFamily(e.target.value);
     });
 
+    // editor theme
+    editorThemeSelect.addEventListener('change', (e) => {
+        editor.setTheme(e.target.value);
+    });
+
+    // set initial theme in dropdown
+    editorThemeSelect.value = editor.getTheme();
+
     // init ui
     const initialTab = getCurrentTabSize(editor.session);
     tabSpacesSlider.value = initialTab;
@@ -303,61 +316,15 @@ OUTPUT greet("World")`
     editor.renderer.on('themeLoaded', refreshEditortheme);
 
     // ------------------------ Editor Theme ------------------------
-    const editorthemeOverlay = document.getElementById('editorthemeOverlay');
-    const closeEditortheme = document.getElementById('closeEditortheme');
-    let editorthemeItemsInitialized = false;
-
-    // show editortheme overlay when clicked
-    changeEditortheme.addEventListener('click', () => {
-        settingsOverlay.style.display = 'none';
-        editorthemeOverlay.style.display = 'flex';
-
-        // initialize editortheme items if not done yet
-        if (!editorthemeItemsInitialized) {
-            const editorthemeItems = document.querySelectorAll('.editortheme-item');
-
-            // on editortheme item click
-            editorthemeItems.forEach(item => {
-                item.addEventListener('click', () => {
-                    const editortheme = item.dataset.editortheme;
-
-                    editor.setTheme(editortheme);
-
-                    // update editortheme state
-                    editorthemeItems.forEach(i => i.classList.remove('selected'));
-                    item.classList.add('selected');
-                });
-            });
-
-            editorthemeItemsInitialized = true;
-        }
-
-        // highlight current editortheme
-        const currentEditortheme = editor.getTheme();
-        const editorthemeItems = document.querySelectorAll('.editortheme-item');
-        editorthemeItems.forEach(item => {
-            item.classList.remove('selected');
-            if (item.dataset.editortheme === currentEditortheme) {
-                item.classList.add('selected');
-            }
-        });
-    });
-
-    // close editortheme overlay and go back to settings
-    closeEditortheme.addEventListener('click', () => {
-        editorthemeOverlay.style.display = 'none';
-        settingsOverlay.style.display = 'flex';
-    });
 
     // update bottom bar and topbar colors
     function refreshEditortheme() {
         const bottomBar = document.querySelector('.bottombar');
         const topBar = document.querySelector('.topbar');
-        const topBarButtons = topBar.querySelectorAll('.topbar .btn');
+      
         const editorthemeObj = editor.renderer.$theme || {};
         const cssClass = editorthemeObj.cssClass || `ace-${(editor.getTheme() || '').split('/').pop()}`;
-
-        // find editortheme colors
+      
         const host = document.createElement('div');
         host.className = `ace_editor ${cssClass}`;
         host.style.cssText = 'position:absolute;left:-99999px;top:-99999px;visibility:hidden;';
@@ -365,36 +332,26 @@ OUTPUT greet("World")`
         gutter.className = 'ace_gutter';
         host.appendChild(gutter);
         document.body.appendChild(host);
-
-        const cs = (el) => window.getComputedStyle(el);
-
-        // read editortheme colors
-        let editorBg;
-        let editorText;
-
+      
         const actualEditor = document.querySelector('#code');
-        editorBg = cs(actualEditor).backgroundColor;
-        editorText = cs(actualEditor).color;
-
-        // apply to bottom bar and topbar
-        bottomBar.style.backgroundColor = editorBg;
-        bottomBar.style.color = editorText;
-
-        topBar.style.backgroundColor = editorBg;
-        topBar.style.color = editorText;
-
-        // color all buttons and icons in topbar
-        topBarButtons.forEach(btn => {
-            btn.style.color = editorText;
-
-            const icons = btn.querySelectorAll('ion-icon');
-            icons.forEach(icon => {
-                icon.style.color = editorText;
-            });
+        const cs = el => window.getComputedStyle(el);
+        const editorBg = cs(actualEditor).backgroundColor;
+        const editorText = cs(actualEditor).color;
+      
+        // apply background/text to both bars
+        [bottomBar, topBar].filter(Boolean).forEach(bar => {
+            bar.style.backgroundColor = editorBg;
+            bar.style.color = editorText;
         });
-
+      
+        // color icons/buttons in both bars
+        document.querySelectorAll('.topbar .btn').forEach(btn => {
+            btn.style.color = editorText;
+            btn.querySelectorAll('ion-icon').forEach(icon => (icon.style.color = editorText));
+        });
+      
         document.body.removeChild(host);
-    }
+    }      
 
     // ------------------------ Run / Stop ------------------------
     const runBtn = document.querySelector('.btn.run');
@@ -490,7 +447,8 @@ OUTPUT greet("World")`
                             runningLineToReplace.innerHTML = allOutput;
                             runningLineToReplace.className = 'line stdout';
                         } else {
-                            consoleOutput.println(allOutput, 'stdout');
+                            const lineEl = consoleLine('', 'stdout');
+                            lineEl.innerHTML = allOutput; // allow <span class="warning-text">…</span>
                         }
                     } else {
                         // Only show "no output" if there's no output at all
@@ -589,7 +547,7 @@ OUTPUT greet("World")`
     }
     
     function runCode() {
-        if (isRunning) return; // ignore double clicks
+        if (isRunning) return; // repeated "run" inputs
         
         const code = editor.getValue();
         const localRunId = ++runId;
@@ -631,7 +589,83 @@ OUTPUT greet("World")`
 
     // ---------- Console wiring ----------
     const consoleBody  = document.getElementById('console-body');
-    const consolePrompt = document.querySelector('.console-prompt');
+
+    // Make body focusable and receive all key events
+    consoleBody.setAttribute('tabindex', '0');
+    consoleBody.addEventListener('click', () => {
+        ensureInputLine();
+        consoleBody.focus();
+    });
+
+    // Paste support (so Cmd/Ctrl+V just inserts into currentCommand)
+    consoleBody.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const t = (e.clipboardData || window.clipboardData).getData('text') || '';
+        currentCommand += t;
+        updatePrompt();
+        resetCursorCycle();
+    });
+
+    // Main keyboard handler
+    consoleBody.addEventListener('keydown', (e) => {
+        ensureInputLine();
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // echo the command with styling just like before
+            execCommand(currentCommand);
+            currentCommand = '';
+            updatePrompt();
+            return;
+        }
+
+        if (e.key === 'Backspace') {
+            e.preventDefault();
+            if (currentCommand.length > 0) {
+                currentCommand = currentCommand.slice(0, -1);
+                updatePrompt();
+                resetCursorCycle();
+            }
+            return;
+        }
+
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (commandHistory.length > 0) {
+                historyIndex = Math.max(0, historyIndex - 1);
+                currentCommand = commandHistory[historyIndex] || '';
+                updatePrompt();
+            }
+            return;
+        }
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (commandHistory.length > 0) {
+                historyIndex = Math.min(commandHistory.length, historyIndex + 1);
+                currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
+                updatePrompt();
+            }
+            return;
+        }
+
+        // Let Tab focus stay on console (optional: treat Tab as 4 spaces)
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            currentCommand += '\t'; // or '    '
+            updatePrompt();
+            resetCursorCycle();
+            return;
+        }
+
+        // regular printable characters
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            currentCommand += e.key;
+            updatePrompt();
+            resetCursorCycle();
+        }
+    });
 
     let currentCommand = '';
     let commandHistory = [];
@@ -641,10 +675,17 @@ OUTPUT greet("World")`
         const div = document.createElement('div');
         div.className = `line ${cls}`;
         div.textContent = text;
-        consoleBody.appendChild(div);
-        consoleBody.scrollTop = consoleBody.scrollHeight;
+
+        // always keep the input line at the very end
+        if (inputLineEl && inputLineEl.isConnected) {
+            consoleBody.insertBefore(div, inputLineEl);
+        } else {
+            consoleBody.appendChild(div);
+        }
+
+        scrollConsoleToBottom();
         updateButtonStates();
-        return div; // Return the element so it can be referenced later
+        return div;
     }
 
     function updateButtonStates() {
@@ -654,17 +695,61 @@ OUTPUT greet("World")`
         downloadBtn.disabled = !hasContent;
     }
 
+    // --- Virtual input line (no separate input element) ---
+    let inputLineEl = null;
+    let inputCmdSpan = null;
+    let cursorSpan = null;
+    let cursorBlink = null;
+
+    function ensureInputLine() {
+        if (inputLineEl && inputLineEl.isConnected) return inputLineEl;
+
+        inputLineEl = document.createElement('div');
+        inputLineEl.className = 'line stdin'; // reuse existing styling
+        inputCmdSpan = document.createElement('span');
+        inputCmdSpan.className = 'command-text';
+        cursorSpan = document.createElement('span');
+        cursorSpan.className = 'cursor';
+
+        inputLineEl.appendChild(inputCmdSpan);
+        inputLineEl.appendChild(cursorSpan);
+        consoleBody.appendChild(inputLineEl);
+        scrollConsoleToBottom();
+
+        return inputLineEl;
+    }
+
+    function scrollConsoleToBottom() {
+        consoleBody.scrollTop = consoleBody.scrollHeight;
+    }
+
+    function resetCursorCycle() {
+        if (cursorSpan) {
+            // Force cursor to be visible immediately
+            cursorSpan.style.animation = 'none';
+            cursorSpan.style.opacity = '1';
+            
+            // Restart animation after a brief moment
+            setTimeout(() => {
+                cursorSpan.style.animation = 'ide-cursor-blink 1s steps(1) infinite';
+            }, 10);
+        }
+    }
+
     function updatePrompt() {
-        const commandText = document.querySelector('.command-text');
-        commandText.textContent = currentCommand;
+        // replaces the old DOM-targeting version
+        ensureInputLine();
+        inputCmdSpan.textContent = currentCommand;
+        scrollConsoleToBottom();
     }
 
     const consoleOutput = {
         println: (t, cls) => consoleLine(t, cls),
         info:    (t) => consoleLine(t, 'stdin'),
         error:   (t) => consoleLine(t, 'stderr'),
-        clear:   () => { 
-            consoleBody.textContent = ''; 
+        clear:   () => {
+            consoleBody.textContent = '';
+            ensureInputLine();
             updateButtonStates();
         },
     };
@@ -691,8 +776,8 @@ OUTPUT greet("World")`
             } else {
                 // command is green, arguments are white
                 const coloredLine = `> <span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
-                consoleBody.innerHTML += `<div class="line stdin">${coloredLine}</div>`;
-                consoleBody.scrollTop = consoleBody.scrollHeight;
+                const line = consoleLine('', 'stdin');
+                line.innerHTML = coloredLine;
             }
         } else {
             // show invalid command
@@ -843,50 +928,12 @@ OUTPUT greet("World")`
         }
     }
 
-    // Keyboard event handling for console
-    function handleKeyDown(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            execCommand(currentCommand);
-            currentCommand = '';
-            updatePrompt();
-        } else if (e.key === 'Backspace') {
-            e.preventDefault();
-            currentCommand = currentCommand.slice(0, -1);
-            updatePrompt();
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (commandHistory.length > 0) {
-                historyIndex = Math.max(0, historyIndex - 1);
-                currentCommand = commandHistory[historyIndex] || '';
-                updatePrompt();
-            }
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (commandHistory.length > 0) {
-                historyIndex = Math.min(commandHistory.length, historyIndex + 1);
-                currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
-                updatePrompt();
-            }
-        } else if (e.key.length === 1) {
-            // Regular character input
-            e.preventDefault();
-            currentCommand += e.key;
-            updatePrompt();
-        }
-}
-
-    // Make console focusable and add keyboard listener
-    consolePrompt.setAttribute('tabindex', '0');
-    consolePrompt.addEventListener('keydown', handleKeyDown);
-
-    // Focus console when clicked
-    consolePrompt.addEventListener('click', () => {
-        consolePrompt.focus();
-    });
-
     // Initialize button states
     updateButtonStates();
+
+    // Initialize virtual input line
+    ensureInputLine();
+    consoleBody.focus();
 
     // ------------------------ Splitter ------------------------
     (function () {
@@ -895,54 +942,88 @@ OUTPUT greet("World")`
         const consolePane = document.getElementById('console-pane');
         const splitter    = document.getElementById('splitter');
     
-        const SPLITTER_H      = parseFloat(getComputedStyle(splitter).height) || 8;
-        const MIN_EDITOR_H    = 0;           // your normal floor
-        const MIN_CONSOLE_H   = 120;         // keep console usable
-        const SNAP_BOTTOM_PX  = 50;          // existing "snap editor tall" threshold
-        const SNAP_TOP_PX     = 80;          // new "snap console full" threshold
-        const OVERDRAG_FACTOR = 2;           // how far above the IDE you can pull
+        // --- Splitter constants ---
+        const SPLITTER_H    = parseFloat(getComputedStyle(splitter).height) || 8;
+        const MIN_CONSOLE_H = 120;
+        const MAX_SPLITTER_FROM_BOTTOM = 175; // min distance from bottom (i.e., min console height)
+        const MAX_SPLITTER_FROM_TOP    = 50;  // min distance from top of topbar to splitter center
+    
+        const app       = document.querySelector('.app');
+        const topBar    = document.querySelector('.topbar');
+        const bottomBar = document.querySelector('.bottombar');
+    
+        // measure once (refresh on resize)
+        let TOPBAR_BASE   = topBar    ? topBar.getBoundingClientRect().height    : 0;
+        let BOTTOM_BASE   = bottomBar ? bottomBar.getBoundingClientRect().height : 0;
+        let BOTTOM_PAD_Y  = bottomBar ? (parseFloat(getComputedStyle(bottomBar).paddingTop) +
+                                        parseFloat(getComputedStyle(bottomBar).paddingBottom)) : 0;
     
         function availableStackHeight() {
             const wsRect = workspace.getBoundingClientRect();
             return wsRect.height;
         }
     
-        // "Max editor" still means the handle near the bottom.
+        // --- Max editor height w.r.t. viewport/footer/topbar/utilitybar ---
         function getMaxEditorHeight() {
-            const topbar  = document.querySelector('.topbar');
-            const footer  = document.querySelector('.footer');
-            const pad     = parseFloat(getComputedStyle(document.querySelector('.app')).padding) * 2 || 28;
-            const tbH     = topbar ? topbar.getBoundingClientRect().height : 0;
-            const ftH     = footer ? footer.getBoundingClientRect().height : 0;
-            return window.innerHeight - tbH - ftH - pad;
+            const topbar     = document.querySelector('.topbar');
+            const utilitybar = document.querySelector('.utilitybar');
+            const footer     = document.querySelector('.footer');
+            const pad        = parseFloat(getComputedStyle(document.querySelector('.app')).padding) * 2 || 28;
+        
+            const tbH = topbar     ? topbar.getBoundingClientRect().height     : 0;
+            const ubH = utilitybar ? utilitybar.getBoundingClientRect().height : 0;
+            const ftH = footer     ? footer.getBoundingClientRect().height     : 0;
+        
+            return window.innerHeight - tbH - ubH - ftH - pad;
         }
     
         function applySplit(editorPx) {
-            const avail = availableStackHeight();
-            const maxEditor = getMaxEditorHeight();
-            const maxOverdrag = window.innerHeight * OVERDRAG_FACTOR; // how high above the IDE we allow
+            const avail = availableStackHeight(); // editor + splitter + console height
         
-            // --- Bottom snap (favor editor): near the bottom => snap editor tall
-            if (editorPx > maxEditor - SNAP_BOTTOM_PX) {
-                editorPx = maxEditor;
+            // ---- Bottom guard (keep console ≥ requiredConsoleMin) ----
+            const requiredConsoleMin = Math.max(MIN_CONSOLE_H, MAX_SPLITTER_FROM_BOTTOM);
+            const editorMaxByBottom  = avail - SPLITTER_H - requiredConsoleMin;
+            const editorMaxViewport  = getMaxEditorHeight();
+            const maxEditor          = Math.min(editorMaxByBottom, editorMaxViewport);
+        
+            // ---- Top guard (keep splitter center ≥ MAX_SPLITTER_FROM_TOP below topbar top) ----
+            const wsTop           = workspace.getBoundingClientRect().top;
+            const topbarTop       = topBar ? topBar.getBoundingClientRect().top : 0;
+            const splitterCenterY = wsTop + editorPx + (SPLITTER_H / 2);
+            const distFromTopbarTop = splitterCenterY - topbarTop;
+        
+            // If too close to the top, clamp to the highest legal editor height
+            let finalEditorPx = editorPx;
+            if (distFromTopbarTop < MAX_SPLITTER_FROM_TOP) {
+                // place the splitter center exactly MAX_SPLITTER_FROM_TOP below topbar top
+                finalEditorPx = (topbarTop + MAX_SPLITTER_FROM_TOP) - wsTop - (SPLITTER_H / 2);
             }
         
-            // --- Top snap (favor console): near the very top => snap console to full
-            // Dragging upward reduces editorPx; once we cross a small negative threshold, snap "all the way".
-            if (editorPx < -SNAP_TOP_PX) {
-                editorPx = -maxOverdrag; // push the handle far above; console will cover the IDE
-            }
+            // ---- Clamp to [0 .. maxEditor] for the actual pane heights ----
+            const clampedEditor = Math.max(0, Math.min(finalEditorPx, maxEditor));
         
-            // clamp within [very-negative, maxEditor]
-            const clamped = Math.min(Math.max(editorPx, -maxOverdrag), maxEditor);
+            // ---- Smooth bottom-bar squeeze for "overdrag" above workspace top ----
+            const over = Math.max(0, -finalEditorPx); // only when dragging past the top
+            const consumeBottom = Math.min(over, BOTTOM_BASE);
+            const newBottomH = BOTTOM_BASE - consumeBottom;
         
-            // compute console height; large negative editorPx => very tall console
-            const newConsole = Math.max(avail - SPLITTER_H - clamped, MIN_CONSOLE_H);
+            // Top bar remains at its base height (no shrinking)
+            const newTopH = TOPBAR_BASE;
         
+            // Apply bars
+            app.style.gridTemplateRows = `auto ${Math.max(0, newTopH)}px 1fr`;
+        
+            bottomBar.style.height = `${Math.max(0, newBottomH)}px`;
+            const padScale = BOTTOM_BASE > 0 ? Math.max(0, newBottomH) / BOTTOM_BASE : 0;
+            const newPad = (BOTTOM_PAD_Y * padScale) / 2; // split across top & bottom
+            bottomBar.style.paddingTop = bottomBar.style.paddingBottom = `${newPad}px`;
+        
+            // Finally, size editor + console (bottom stays anchored)
+            const consoleH = avail - SPLITTER_H - clampedEditor;
             editorPane.style.flex = '0 0 auto';
             consolePane.style.flex = '0 0 auto';
-            editorPane.style.height = clamped + 'px';
-            consolePane.style.height = newConsole + 'px';
+            editorPane.style.height  = clampedEditor + 'px';
+            consolePane.style.height = consoleH + 'px';
         
             if (window.editor) window.editor.resize(true);
         }
@@ -950,10 +1031,7 @@ OUTPUT greet("World")`
         // sensible initial split
         function layoutInitial() {
             const avail = availableStackHeight();
-            const maxEditor = getMaxEditorHeight();
-            const targetE = Math.round(
-                Math.max(MIN_EDITOR_H, Math.min(maxEditor, 0.50 * (avail - SPLITTER_H)))
-            );
+            const targetE = Math.round(Math.min(getMaxEditorHeight(), 0.5 * (avail - SPLITTER_H)));
             applySplit(targetE);
         }
     
@@ -988,6 +1066,12 @@ OUTPUT greet("World")`
     
         // keep proportions on resize
         window.addEventListener('resize', () => {
+            // refresh baselines
+            TOPBAR_BASE  = topBar    ? topBar.getBoundingClientRect().height    : 0;
+            BOTTOM_BASE  = bottomBar ? bottomBar.getBoundingClientRect().height : 0;
+            BOTTOM_PAD_Y = bottomBar ? (parseFloat(getComputedStyle(bottomBar).paddingTop) +
+                                        parseFloat(getComputedStyle(bottomBar).paddingBottom)) : 0;
+        
             const eH = editorPane.getBoundingClientRect().height;
             const cH = consolePane.getBoundingClientRect().height;
             const total = eH + SPLITTER_H + cH || 1;
