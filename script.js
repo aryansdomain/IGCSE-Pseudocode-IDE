@@ -781,7 +781,7 @@ OUTPUT greet("World")`
         if (inputLineEl && inputLineEl.isConnected) return inputLineEl;
 
         inputLineEl = document.createElement('div');
-        inputLineEl.className = 'line program-input'; // gray styling for program input
+        inputLineEl.className = 'line console-input'; // green/white styling for console commands
         inputCmdSpan = document.createElement('span');
         inputCmdSpan.className = 'command-text';
         cursorSpan = document.createElement('span');
@@ -874,7 +874,6 @@ OUTPUT greet("World")`
                     'Commands:',
                     '  run                 Execute code in the editor',
                     '  stop                Stop currently running code',
-                    '  in <value>          Queue an INPUT value for next run',
                     '  clear               Clear console output',
                     '  tab <n>             Set editor tab size (1-8 spaces)',
                     '  font <px>           Set editor font size (10-24px)',
@@ -973,32 +972,32 @@ OUTPUT greet("World")`
             }
 
             case 'theme': {
-                // extract themes
-                const themeItems = document.querySelectorAll('.editortheme-item');
-                const editorThemes = Array.from(themeItems).map(item => {
-                    const aceTheme = item.dataset.editortheme;
-                    return aceTheme.replace('ace/theme/', '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                });
+                const themeSelect = document.getElementById('editorThemeSelect');
+                if (!themeSelect) return consoleOutput.error('Theme dropdown not found');
                 
                 const t = rest.join(' ').toLowerCase().replace(/[_-]/g, ' ');
                 if (!t) return consoleOutput.error('Usage: theme <theme_name>');
                 
-                // find theme in list
-                let themeIndex = -1;
-                for (let i = 0; i < editorThemes.length; i++) {
-                    if (editorThemes[i].toLowerCase() === t) {
-                        themeIndex = i;
+                // find theme in dropdown options
+                const options = Array.from(themeSelect.options);
+                let foundOption = null;
+                
+                for (const option of options) {
+                    const optionText = option.textContent.toLowerCase().replace(/[_-]/g, ' ');
+                    if (optionText === t) {
+                        foundOption = option;
                         break;
                     }
                 }
                 
-                if (themeIndex === -1) {
+                if (!foundOption) {
                     return consoleOutput.error(`Invalid theme: ${t}`);
                 }
                 
                 // set theme
-                editor.setTheme(`ace/theme/${editorThemes[themeIndex].toLowerCase()}`);
-                consoleOutput.println(`Theme: ${editorThemes[themeIndex]}`, 'stdout');
+                themeSelect.value = foundOption.value;
+                editor.setTheme(foundOption.value);
+                consoleOutput.println(`Theme: ${foundOption.textContent}`, 'stdout');
                 break;
             }
 
@@ -1007,10 +1006,8 @@ OUTPUT greet("World")`
         }
     }
 
-    // Initialize button states
+    // init
     updateButtonStates();
-
-    // Initialize virtual input line
     ensureInputLine();
     consoleBody.focus();
 

@@ -1,6 +1,6 @@
 :root {
   --bg: #0f1117;
-  --panel: #26282c;
+  --panel: #000000;
   --elev: #151a22;
   --text: #e6edf3;
   --muted: #8b949e;
@@ -10,6 +10,7 @@
   --green-dark: #16a34a;
   --red: #ff7b72;
   --warning: #ffd700;
+  
   --radius: 14px;
   --radius-xs: 8px;
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -66,18 +67,19 @@ html, body { height: 100%; }
 #workspace {
   display: flex;
   flex-direction: column;
-  min-height: 0;               /* allow children to shrink */
-  overflow: hidden;           /* prevent accidental growth during drag */
+  min-height: 0;
+  overflow: hidden;
 }
 
 .workspace {
   display: flex;
   flex-direction: column;
-  min-height: 0;           /* critical so children can shrink */
+  min-height: 0;
 }
 
 /* topbar */
 .topbar {
+  height: 37px;
   padding: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -103,7 +105,7 @@ html, body { height: 100%; }
 /* Panes + splitter */
 #editor-pane,
 #console-pane {
-  flex: 0 0 auto;              /* JS sets explicit height while dragging */
+  flex: 0 0 auto;
   min-height: 0;
 }
 
@@ -147,6 +149,11 @@ html, body { height: 100%; }
   flex: 0 0 var(--splitter-h);
   cursor: row-resize;
   background: var(--border);
+  transition: background-color 0.2s ease;
+}
+
+#splitter:hover {
+  background: #3e444f;
 }
 
 /* Let bars collapse cleanly while we animate heights */
@@ -215,6 +222,7 @@ html, body { height: 100%; }
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   flex: 1 1 auto;
+  background-color: black;
 }
 
 .console-sidebar {
@@ -259,7 +267,7 @@ html, body { height: 100%; }
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
-  min-height: 0;               /* critical: lets .console-body be the scroller */
+  min-height: 0;
   height: 100%;
 }
 
@@ -299,14 +307,38 @@ html, body { height: 100%; }
 }
 
 /* Draw a full-rectangle cursor using background color */
+/* Input line is laid out tightly with zero gap */
+.console .input-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0;
+}
+
+/* The text part (what the user typed) */
+.console .input-line .cmd {
+  white-space: pre;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The cursor block */
+.console .input-line .cursor {
+  display: inline-block;
+  width: 1ch;
+  height: 1em;
+  background: currentColor;
+}
+
 #console-body .cursor {
   display: inline-block;
-  width: 0.65em;           /* roughly one character cell */
-  height: 1.15em;          /* slightly taller than text */
-  background: white;/* use text color directly */
-  vertical-align: -0.15em; /* vertically center with text line */
+  width: 1ch;
+  height: 1em;
+  background: currentColor;
   animation: ide-cursor-blink 1s steps(1) infinite;
-  opacity: 1;              /* ensure it's visible */
+  opacity: 1;
 }
 
 @keyframes ide-cursor-blink { 50% { opacity: 0; } }
@@ -323,7 +355,7 @@ html, body { height: 100%; }
   padding: 12px;
   font: 13px/1.5 var(--mono);
   white-space: pre-wrap;
-  background-color: var(--bg);
+  background-color: #000000;
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
   caret-color: transparent;
@@ -334,7 +366,6 @@ html, body { height: 100%; }
   grid-template-columns: auto 1fr auto;
   gap: 10px;
   padding: 10px;
-  border-top: 1px solid var(--border);
 }
 
 .prompt {
@@ -430,7 +461,7 @@ html, body { height: 100%; }
   border: 3px solid var(--panel);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
-  margin-top: -7px; /* Compensate for border and center on track */
+  margin-top: -7px;
 }
 
 .setting-group input[type="range"]::-webkit-slider-thumb:hover {
@@ -696,7 +727,7 @@ html, body { height: 100%; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px; /* slim */
+  padding: 4px 12px;
 }
 
 /* Topbar buttons - settings, download, and mode toggle */
@@ -790,6 +821,14 @@ html, body { height: 100%; }
   color: var(--text);
 }
 
+#console-body .line.console-input {
+  color: var(--green);
+}
+
+#console-body .line.console-input .command-text {
+  color: var(--text);
+}
+
 #console-body .line.program-input {
   color: var(--muted);
 }
@@ -807,13 +846,13 @@ html, body { height: 100%; }
 }
 
 #console-body .line.warning {
-  color: var(--warning); /* Orange in light mode */
+  color: var(--warning);
   font-style: italic;
 }
 
 /* Dark mode warning color */
 html[data-theme="dark"] #console-body .line.warning {
-  color: var(--warning); /* Yellow in dark mode */
+  color: var(--warning);
 }
 
 /* Warning text within output lines */
