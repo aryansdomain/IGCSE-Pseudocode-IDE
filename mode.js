@@ -1,141 +1,141 @@
 ace.define('ace/mode/lang', ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/rules'],
 function(require, exports, module) {
-  const oop = require('ace/lib/oop');
-  const TextMode = require('ace/mode/text').Mode;
-  const LangHighlightRules = require('ace/mode/rules').LangHighlightRules;
+    const oop = require('ace/lib/oop');
+    const TextMode = require('ace/mode/text').Mode;
+    const LangHighlightRules = require('ace/mode/rules').LangHighlightRules;
 
-  class Mode extends TextMode {
-    constructor() {
-      super();
-      this.HighlightRules = LangHighlightRules;
-      this.$id = 'ace/mode/lang';
+    class Mode extends TextMode {
+        constructor() {
+            super();
+            this.HighlightRules = LangHighlightRules;
+            this.$id = 'ace/mode/lang';
+        }
     }
-  }
 
-  // Custom autocomplete completer that only suggests keywords and built-ins
-  const langCompleter = {
-    getCompletions: function(editor, session, pos, prefix, callback) {
-      // Only suggest keywords and built-in functions, not literal values
-      const completions = [
-        // Keywords
-        { name: 'IF',         value: 'IF',         score: 1000, meta: 'keyword' },
-        { name: 'THEN',       value: 'THEN',       score: 1000, meta: 'keyword' },
-        { name: 'ELSE',       value: 'ELSE',       score: 1000, meta: 'keyword' },
-        { name: 'ENDIF',      value: 'ENDIF',      score: 1000, meta: 'keyword' },
-        { name: 'CASE',       value: 'CASE',       score: 1000, meta: 'keyword' },
-        { name: 'OF',         value: 'OF',         score: 1000, meta: 'keyword' },
-        { name: 'OTHERWISE',  value: 'OTHERWISE',  score: 1000, meta: 'keyword' },
-        { name: 'ENDCASE',    value: 'ENDCASE',    score: 1000, meta: 'keyword' },
-        { name: 'FOR',        value: 'FOR',        score: 1000, meta: 'keyword' },
-        { name: 'TO',         value: 'TO',         score: 1000, meta: 'keyword' },
-        { name: 'STEP',       value: 'STEP',       score: 1000, meta: 'keyword' },
-        { name: 'NEXT',       value: 'NEXT',       score: 1000, meta: 'keyword' },
-        { name: 'WHILE',      value: 'WHILE',      score: 1000, meta: 'keyword' },
-        { name: 'DO',         value: 'DO',         score: 1000, meta: 'keyword' },
-        { name: 'ENDWHILE',   value: 'ENDWHILE',   score: 1000, meta: 'keyword' },
-        { name: 'REPEAT',     value: 'REPEAT',     score: 1000, meta: 'keyword' },
-        { name: 'UNTIL',      value: 'UNTIL',      score: 1000, meta: 'keyword' },
-        { name: 'PROCEDURE',  value: 'PROCEDURE',  score: 1000, meta: 'keyword' },
-        { name: 'FUNCTION',   value: 'FUNCTION',   score: 1000, meta: 'keyword' },
-        { name: 'RETURNS',    value: 'RETURNS',    score: 1000, meta: 'keyword' },
-        { name: 'RETURN',     value: 'RETURN',     score: 1000, meta: 'keyword' },
-        { name: 'CALL',       value: 'CALL',       score: 1000, meta: 'keyword' },
-        { name: 'ENDPROCEDURE', value: 'ENDPROCEDURE', score: 1000, meta: 'keyword' },
-        { name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword' },
-        { name: 'INPUT',      value: 'INPUT',      score: 1000, meta: 'keyword' },
-        { name: 'OUTPUT',     value: 'OUTPUT',     score: 1000, meta: 'keyword' },
-        { name: 'DECLARE',    value: 'DECLARE',    score: 1000, meta: 'keyword' },
-        { name: 'CONSTANT',   value: 'CONSTANT',   score: 1000, meta: 'keyword' },
-        { name: 'TRUE',       value: 'TRUE',       score: 1000, meta: 'keyword' },
-        { name: 'FALSE',      value: 'FALSE',      score: 1000, meta: 'keyword' },
-        { name: 'AND',        value: 'AND',        score: 1000, meta: 'keyword' },
-        { name: 'OR',         value: 'OR',         score: 1000, meta: 'keyword' },
-        { name: 'NOT',        value: 'NOT',        score: 1000, meta: 'keyword' },
+    // Custom autocomplete completer that only suggests keywords and built-ins
+    const langCompleter = {
+        getCompletions: function(editor, session, pos, prefix, callback) {
+            // Only suggest keywords and built-in functions, not literal values
+            const completions = [
+                // Keywords
+                { name: 'IF',         value: 'IF',         score: 1000, meta: 'keyword' },
+                { name: 'THEN',       value: 'THEN',       score: 1000, meta: 'keyword' },
+                { name: 'ELSE',       value: 'ELSE',       score: 1000, meta: 'keyword' },
+                { name: 'ENDIF',      value: 'ENDIF',      score: 1000, meta: 'keyword' },
+                { name: 'CASE',       value: 'CASE',       score: 1000, meta: 'keyword' },
+                { name: 'OF',         value: 'OF',         score: 1000, meta: 'keyword' },
+                { name: 'OTHERWISE',  value: 'OTHERWISE', score: 1000, meta: 'keyword' },
+                { name: 'ENDCASE',    value: 'ENDCASE',   score: 1000, meta: 'keyword' },
+                { name: 'FOR',        value: 'FOR',        score: 1000, meta: 'keyword' },
+                { name: 'TO',         value: 'TO',         score: 1000, meta: 'keyword' },
+                { name: 'STEP',       value: 'STEP',      score: 1000, meta: 'keyword' },
+                { name: 'NEXT',       value: 'NEXT',      score: 1000, meta: 'keyword' },
+                { name: 'WHILE',      value: 'WHILE',     score: 1000, meta: 'keyword' },
+                { name: 'DO',         value: 'DO',        score: 1000, meta: 'keyword' },
+                { name: 'ENDWHILE',   value: 'ENDWHILE', score: 1000, meta: 'keyword' },
+                { name: 'REPEAT',     value: 'REPEAT',   score: 1000, meta: 'keyword' },
+                { name: 'UNTIL',      value: 'UNTIL',     score: 1000, meta: 'keyword' },
+                { name: 'PROCEDURE',  value: 'PROCEDURE', score: 1000, meta: 'keyword' },
+                { name: 'FUNCTION',   value: 'FUNCTION', score: 1000, meta: 'keyword' },
+                { name: 'RETURNS',    value: 'RETURNS',  score: 1000, meta: 'keyword' },
+                { name: 'RETURN',     value: 'RETURN',   score: 1000, meta: 'keyword' },
+                { name: 'CALL',       value: 'CALL',      score: 1000, meta: 'keyword' },
+                { name: 'ENDPROCEDURE', value: 'ENDPROCEDURE', score: 1000, meta: 'keyword' },
+                { name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword' },
+                { name: 'INPUT',      value: 'INPUT',     score: 1000, meta: 'keyword' },
+                { name: 'OUTPUT',     value: 'OUTPUT',    score: 1000, meta: 'keyword' },
+                { name: 'DECLARE',    value: 'DECLARE',   score: 1000, meta: 'keyword' },
+                { name: 'CONSTANT',   value: 'CONSTANT', score: 1000, meta: 'keyword' },
+                { name: 'TRUE',       value: 'TRUE',      score: 1000, meta: 'keyword' },
+                { name: 'FALSE',      value: 'FALSE',     score: 1000, meta: 'keyword' },
+                { name: 'AND',        value: 'AND',        score: 1000, meta: 'keyword' },
+                { name: 'OR',         value: 'OR',        score: 1000, meta: 'keyword' },
+                { name: 'NOT',        value: 'NOT',        score: 1000, meta: 'keyword' },
+                
+                // Types
+                { name: 'INTEGER',    value: 'INTEGER',    score: 900,  meta: 'type' },
+                { name: 'REAL',       value: 'REAL',       score: 900,  meta: 'type' },
+                { name: 'BOOLEAN',    value: 'BOOLEAN',    score: 900,  meta: 'type' },
+                { name: 'CHAR',       value: 'CHAR',       score: 900,  meta: 'type' },
+                { name: 'STRING',     value: 'STRING',     score: 900,  meta: 'type' },
+                { name: 'ARRAY',      value: 'ARRAY',      score: 900,  meta: 'type' },
+                
+                // Built-in functions
+                { name: 'ROUND',      value: 'ROUND',      score: 800,  meta: 'function' },
+                { name: 'RANDOM',     value: 'RANDOM',     score: 800,  meta: 'function' },
+                { name: 'LENGTH',     value: 'LENGTH',     score: 800,  meta: 'function' },
+                { name: 'LCASE',      value: 'LCASE',      score: 800,  meta: 'function' },
+                { name: 'UCASE',      value: 'UCASE',      score: 800,  meta: 'function' },
+                { name: 'SUBSTRING',  value: 'SUBSTRING',  score: 800,  meta: 'function' },
+                { name: 'DIV',        value: 'DIV',        score: 800,  meta: 'function' },
+                { name: 'MOD',        value: 'MOD',        score: 800,  meta: 'function' }
+            ];
+            
+            // Filter completions based on prefix
+            const filtered = completions.filter(completion => 
+                completion.name.toLowerCase().startsWith(prefix.toLowerCase())
+            );
+            
+            callback(null, filtered);
+        }
+    };
+
+    // Register the completer
+    ace.require('ace/ext/language_tools').addCompleter(langCompleter);
+
+    // comments
+    Mode.prototype.lineCommentStart = '//';
+
+    // indent rules
+    Mode.prototype.getNextLineIndent = function(state, line, tab) {
+        let indent = this.$getIndent(line);
+        const trimmed = line.trim();
+
+        // increase indent after opening keywords
+        const openers = [
+            /^IF\b/i,
+            /^THEN\b/i,
+            /^ELSE\b/i,
+            /^CASE\b/i,
+            /^OF\b/i,
+            /^FOR\b.*\bTO\b/i,
+            /^WHILE\b.*\bDO\b/i,
+            /^REPEAT\b/i,
+            /^PROCEDURE\b/i,
+            /^FUNCTION\b/i
+        ];
+
+        if (openers.some(r => r.test(trimmed))) {
+            indent += tab;
+        }
+
+        return indent;
+    };
+
+    // remove indent after closing keywords
+    Mode.prototype.checkOutdent = function(state, line, input) {
+        if (!/^\s+$/.test(line)) return false;
+        const closing = /^(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i;
+        return closing.test(input.trim());
+    };
+
+    Mode.prototype.autoOutdent = function(state, doc, row) {
+        const line = doc.getLine(row);
+        const match = line.match(/^(\s*)(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i);
+        if (!match) return;
+
+        let openIndent = '';
+        for (let r = row - 1; r >= 0; r--) {
+            const prev = doc.getLine(r);
+            if (!prev.trim()) continue;
+            openIndent = prev.match(/^\s*/)[0];
+            break;
+        }
         
-        // Types
-        { name: 'INTEGER',    value: 'INTEGER',    score: 900,  meta: 'type' },
-        { name: 'REAL',       value: 'REAL',       score: 900,  meta: 'type' },
-        { name: 'BOOLEAN',    value: 'BOOLEAN',    score: 900,  meta: 'type' },
-        { name: 'CHAR',       value: 'CHAR',       score: 900,  meta: 'type' },
-        { name: 'STRING',     value: 'STRING',     score: 900,  meta: 'type' },
-        { name: 'ARRAY',      value: 'ARRAY',      score: 900,  meta: 'type' },
-        
-        // Built-in functions
-        { name: 'ROUND',      value: 'ROUND',      score: 800,  meta: 'function' },
-        { name: 'RANDOM',     value: 'RANDOM',     score: 800,  meta: 'function' },
-        { name: 'LENGTH',     value: 'LENGTH',     score: 800,  meta: 'function' },
-        { name: 'LCASE',      value: 'LCASE',      score: 800,  meta: 'function' },
-        { name: 'UCASE',      value: 'UCASE',      score: 800,  meta: 'function' },
-        { name: 'SUBSTRING',  value: 'SUBSTRING',  score: 800,  meta: 'function' },
-        { name: 'DIV',        value: 'DIV',        score: 800,  meta: 'function' },
-        { name: 'MOD',        value: 'MOD',        score: 800,  meta: 'function' }
-      ];
-      
-      // Filter completions based on prefix
-      const filtered = completions.filter(completion => 
-        completion.name.toLowerCase().startsWith(prefix.toLowerCase())
-      );
-      
-      callback(null, filtered);
-    }
-  };
+        if (openIndent != null) {
+            doc.replace({start: {row, column: 0}, end: {row, column: match[1].length}}, openIndent);
+        }
+    };
 
-  // Register the completer
-  ace.require('ace/ext/language_tools').addCompleter(langCompleter);
-
-  // comments
-  Mode.prototype.lineCommentStart = '//';
-
-  // indent rules
-  Mode.prototype.getNextLineIndent = function(state, line, tab) {
-    let indent = this.$getIndent(line);
-    const trimmed = line.trim();
-
-    // increase indent after opening keywords
-    const openers = [
-      /^IF\b/i,
-      /^THEN\b/i,
-      /^ELSE\b/i,
-      /^CASE\b/i,
-      /^OF\b/i,
-      /^FOR\b.*\bTO\b/i,
-      /^WHILE\b.*\bDO\b/i,
-      /^REPEAT\b/i,
-      /^PROCEDURE\b/i,
-      /^FUNCTION\b/i
-    ];
-
-    if (openers.some(r => r.test(trimmed))) {
-      indent += tab;
-    }
-
-    return indent;
-  };
-
-  // remove indent after closing keywords
-  Mode.prototype.checkOutdent = function(state, line, input) {
-    if (!/^\s+$/.test(line)) return false;
-    const closing = /^(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i;
-    return closing.test(input.trim());
-  };
-
-  Mode.prototype.autoOutdent = function(state, doc, row) {
-    const line = doc.getLine(row);
-    const match = line.match(/^(\s*)(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i);
-    if (!match) return;
-
-    let openIndent = '';
-    for (let r = row - 1; r >= 0; r--) {
-      const prev = doc.getLine(r);
-      if (!prev.trim()) continue;
-      openIndent = prev.match(/^\s*/)[0];
-      break;
-    }
-    
-    if (openIndent != null) {
-      doc.replace({start: {row, column: 0}, end: {row, column: match[1].length}}, openIndent);
-    }
-  };
-
-  exports.Mode = Mode;
+    exports.Mode = Mode;
 });
