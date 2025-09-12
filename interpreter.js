@@ -4,6 +4,7 @@ async function interpretPseudocode(code) {
     const OUTPUT_BUFFER = [];
     const WARNING_BUFFER = [];
     let CAPITALIZATION_WARNINGS = [];
+    let __capSummaryEmitted = false;
     const CAPITALIZATION_SEEN = new Set();
     const constants = Object.create(null);
     const globals   = Object.create(null);
@@ -11,12 +12,19 @@ async function interpretPseudocode(code) {
     // Clear warning tracking for this run
     CAPITALIZATION_WARNINGS = [];
     CAPITALIZATION_SEEN.clear();
+    __capSummaryEmitted = false;  // NEW
 
     // Error throwing helper
     function throwErr(name, message, line) {
         const e = new Error(message + name);
         e.line = line;
         throw e;
+    }
+
+    function emitWarning(text) {
+        if (typeof self !== 'undefined' && self.postMessage) {
+            try { self.postMessage({ type: 'warning', message: text }); } catch {}
+        }
     }
 
     function checkCapitalization(text, lineNumber) {
@@ -41,29 +49,16 @@ async function interpretPseudocode(code) {
                     const sig = `${kw}:${lineNumber}:${m.index}`;
                     if (!CAPITALIZATION_SEEN.has(sig)) {
                         CAPITALIZATION_SEEN.add(sig);
-                        // Collect ALL keywords that are not capitalized
-                        CAPITALIZATION_WARNINGS.push({
-                            keyword: kw,
-                            line: lineNumber
-                        });
+                        // Emit the classic single summary the first time we notice any issue
+                        if (!__capSummaryEmitted) {
+                            emitWarning(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
+                            __capSummaryEmitted = true;
+                        }
                     }
                 }
             }
         }
     } 
-
-    function processCapitalizationWarnings() {
-        if (CAPITALIZATION_WARNINGS.length === 0) return;
-        
-        if (CAPITALIZATION_WARNINGS.length === 1) {
-            // Single keyword issue - show specific warning
-            const warning = CAPITALIZATION_WARNINGS[0];
-            WARNING_BUFFER.push(`Warning: ${warning.keyword} is not capitalized (line ${warning.line})`);
-        } else {
-            // Multiple keyword issues - show consolidated warning
-            WARNING_BUFFER.push(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
-        }
-    }
 
     const procs = Object.create(null);
     const funcs = Object.create(null);
@@ -535,15 +530,6 @@ async function interpretPseudocode(code) {
     
     // Validate arithmetic operators have numeric operands
     function validateArithmeticOperators(expr) {
-        // Helper function to check if an expression is numeric
-        function isNumericExpr(text) {
-            const t = text.trim();
-            if (/^\uE000\d+\uE001$/.test(t)) return false; // protected literals are not numeric
-            if (/^\d+(\.\d+)?([eE][+-]?\d+)?$/.test(t)) return true;
-            if (/^['"]/.test(t)) return false;
-            return true;
-        }
-        
         // Check for +, -, *, /, ^ operators
         const operators = ['+', '-', '*', '/', '^'];
         for (const op of operators) {
@@ -1232,17 +1218,7 @@ async function interpretPseudocode(code) {
     // ------------------------ Execute! ------------------------
     try {
         await runBlock(mainLines, globals, 1, false);
-        
-        // Process all collected capitalization warnings
-        processCapitalizationWarnings();
-        
-        // Combine output and warnings
-        let result = OUTPUT_BUFFER.join("\n");
-        if (WARNING_BUFFER.length > 0) {
-            result = WARNING_BUFFER.join("\n") + (result ? "\n" + result : "");
-        }
-        
-        return result;
+        return OUTPUT_BUFFER.join("\n");
     } catch (err) {
         // add line number to error
         const line = (err && err.line) ? err.line : (__LINE_NUMBER || 'unknown');

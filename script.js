@@ -421,66 +421,21 @@ OUTPUT greet("World")`
                 clearRunningIndicators();
 
                 if (out) {
-                    // Split output into warnings and regular output
-                    const lines = out.split('\n');
-                    const warnings = [];
-                    const regularOutput = [];
-                    
-                    lines.forEach(line => {
-                        if (line.startsWith('Warning:')) {
-                            warnings.push(line);
-                        } else {
-                            regularOutput.push(line);
-                        }
-                    });
-                    
-                    // Display warnings first (each on its own line)
-                    if (warnings.length > 0) {
-                        warnings.forEach(warning => {
-                            if (runningLineToReplace) {
-                                // Replace the running line with first warning
-                                runningLineToReplace.innerHTML = `<span class="warning-text">${warning}</span>`;
-                                runningLineToReplace.className = 'line stdout';
-                                runningLineToReplace = null; // Don't replace again
-                            } else {
-                                const lineEl = consoleLine('', 'stdout');
-                                lineEl.innerHTML = `<span class="warning-text">${warning}</span>`;
-                            }
-                        });
-                    }
-                    
-                    // Then display regular output
-                    if (regularOutput.length > 0) {
-                        const regularText = regularOutput.join('\n').trim();
-                        if (regularText) {
-                            if (runningLineToReplace) {
-                                runningLineToReplace.textContent = regularText;
-                                runningLineToReplace.className = 'line stdout';
-                            } else {
-                                consoleOutput.println(regularText, 'stdout');
-                            }
-                        }
-                    }
-                    
-                    // Only show "no output" if there's no output at all
-                    if (warnings.length === 0 && regularOutput.length === 0) {
-                        if (runningLineToReplace) {
-                            runningLineToReplace.textContent = '(no output)';
-                            runningLineToReplace.className = 'line stdout';
-                        } else {
-                            consoleOutput.println('(no output)', 'stdout');
-                        }
+                    if (runningLineToReplace) {
+                        runningLineToReplace.textContent = out;
+                        runningLineToReplace.className = 'line stdout';
+                    } else {
+                        consoleOutput.println(out, 'stdout');
                     }
                 } else {
                     if (runningLineToReplace) {
-                        runningLineToReplace.textContent = '(no output)';
-                        runningLineToReplace.className = 'line stdout';
+                    runningLineToReplace.textContent = '(no output)';
+                    runningLineToReplace.className = 'line stdout';
                     } else {
-                        consoleOutput.println('(no output)', 'stdout');
+                    consoleOutput.println('(no output)', 'stdout');
                     }
                 }
-                
-                prioritizeDiagnostics();
+
                 // Create a new input line after program finishes
                 ensureInputLine();
                 finishRun(localRunId);
@@ -499,7 +454,6 @@ OUTPUT greet("World")`
                     consoleOutput.error(msg);
                 }
                 
-                prioritizeDiagnostics();
                 // Create a new input line after program finishes
                 ensureInputLine();
                 finishRun(localRunId);
@@ -516,7 +470,6 @@ OUTPUT greet("World")`
                     consoleOutput.println('Execution stopped', 'stderr');
                 }
                 
-                prioritizeDiagnostics();
                 // Create a new input line after program finishes
                 ensureInputLine();
                 finishRun(localRunId);
@@ -536,13 +489,20 @@ OUTPUT greet("World")`
 
                 // Show "> " prompt and put the caret on the input line
                 ensureInputLine();
+                if (inputLineEl) {
+                    inputLineEl.className = 'line program-input'; // gray styling for program input
+                }
                 if (inputCmdSpan) {
                     inputCmdSpan.textContent = '> ';
                 }
                 consoleBody.focus();
                 scrollConsoleToBottom();
 
-                // IMPORTANT: do NOT add another keydown listener here.
+            } else if (type === 'warning') {
+                const msg = (e.data && (e.data.message ?? e.data.text)) || '';
+                if (!msg) return;
+                const lineEl = consoleLine('', 'warning');
+                lineEl.innerHTML = `<span class="warning-text">${msg}</span>`;
             }
         };
 
@@ -840,29 +800,6 @@ OUTPUT greet("World")`
 
     function scrollConsoleToBottom() {
         consoleBody.scrollTop = consoleBody.scrollHeight;
-    }
-
-    function prioritizeDiagnostics() {
-        if (!currentRunContainer) return;
-        const nodes = Array.from(currentRunContainer.querySelectorAll('.line'));
-        if (nodes.length === 0) return;
-
-        const isDiagnostic = (el) => {
-            const t = (el.textContent || '').trim();
-            return el.classList.contains('stderr') ||     // explicit errors
-                   el.classList.contains('warning') ||    // any warning class you print
-                   t.startsWith('Warning:') ||            // textual warnings
-                   t.startsWith('Error:') ||              // textual errors
-                   el.querySelector('.warning-text');     // styled warnings
-        };
-
-        const diags = nodes.filter(isDiagnostic);
-        const rest  = nodes.filter(el => !isDiagnostic(el));
-
-        // rebuild in desired order
-        currentRunContainer.innerHTML = '';
-        diags.forEach(el => currentRunContainer.appendChild(el));
-        rest.forEach(el => currentRunContainer.appendChild(el));
     }
 
     function resetCursorCycle() {
