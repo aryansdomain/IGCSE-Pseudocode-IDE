@@ -1,4 +1,4 @@
-function interpretPseudocode(code) {
+async function interpretPseudocode(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
     const OUTPUT_BUFFER = [];
@@ -203,25 +203,13 @@ function interpretPseudocode(code) {
     ensureDeclSet(globals);
     ensureTypeMap(globals);
 
-    const LOOP_LIMIT = 100000;
+    const LOOP_LIMIT = 1000000;
     let __LINE_NUMBER = 0;
 
     // output buffer
     function out(values) {
         const s = values.map(v => toString(v)).join("");
         OUTPUT_BUFFER.push(s);
-    }
-
-    function readInput() {
-        // Always read from the console queue
-        if (typeof window !== 'undefined') {
-            if (!Array.isArray(window.__ide_input_queue)) window.__ide_input_queue = [];
-            if (window.__ide_input_queue.length) return window.__ide_input_queue.shift();
-        }
-        // No fallback prompt — instruct the user to use the console
-        const e = new Error('INPUT requested: type `in <value>` in the Console, then run again.');
-        e.line = __LINE_NUMBER;
-        throw e;
     }
 
     // parse input value
@@ -578,7 +566,7 @@ function interpretPseudocode(code) {
     }
 
     // ------------------------ Expression evaluation ------------------------
-    function evalExpr(expr, scope) {
+    async function evalExpr(expr, scope) {
 
         if (typeof window !== 'undefined' && window.__ide_stop_flag) {
             throw new Error('Code execution stopped by user');
@@ -669,7 +657,7 @@ function interpretPseudocode(code) {
                 scopeProxy,
                 builtins.DIV,
                 builtins.MOD,
-                (name, ...args) => callFunction(name, args),
+                async (name, ...args) => await callFunction(name, args),
                 (name, ...idx) => {
                     if (!isDeclared(scope, name)) {
                         const e = new Error('Undeclared array ' + name);
@@ -690,7 +678,7 @@ function interpretPseudocode(code) {
         }
     }
 
-    function getLValue(ref, scope) {
+    async function getLValue(ref, scope) {
 
         // ref is identifier, or identifier[index], or identifier[i,j]
 
@@ -708,8 +696,8 @@ function interpretPseudocode(code) {
 
             // split by comma
             const parts = splitArgs(idxRaw);
-            const i = evalExpr(parts[0], scope);
-            const j = parts[1] != null ? evalExpr(parts[1], scope) : undefined;
+            const i = await evalExpr(parts[0], scope);
+            const j = parts[1] != null ? await evalExpr(parts[1], scope) : undefined;
             return {
                 name: name,
                 get: () => arrGet(scope[name], i, j),
@@ -860,7 +848,7 @@ function interpretPseudocode(code) {
 
     const mainLines = extractDefs(lines);
 
-    function runBlock(blockLines, scope, startLineNumber = 1, allowReturn = false) {
+    async function runBlock(blockLines, scope, startLineNumber = 1, allowReturn = false) {
         let m;
         for (let i = 0; i < blockLines.length; i++) {
             // Check for stop flag
@@ -900,8 +888,8 @@ function interpretPseudocode(code) {
             // CALL Procedure(args?)
             if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
-                const args = (m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope));
-                callProcedure(name, args, scope);
+                const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
+                await callProcedure(name, args, scope);
                 continue;
             }
 
@@ -949,8 +937,8 @@ function interpretPseudocode(code) {
                 }
             
                 i = j; // continue after ENDIF
-                if (toBool(evalExpr(condExpr, scope))) runBlock(thenBlock, scope, undefined, allowReturn);
-                else runBlock(elseBlock, scope, undefined, allowReturn);
+                if (toBool(await evalExpr(condExpr, scope))) await runBlock(thenBlock, scope, undefined, allowReturn);
+                else await runBlock(elseBlock, scope, undefined, allowReturn);
                 continue;
             }
 
@@ -963,7 +951,7 @@ function interpretPseudocode(code) {
                     e.line = currentLine; throw e;
                 }
                 i = next;
-                const val = evalExpr(identExpr, scope);
+                const val = await evalExpr(identExpr, scope);
                 let chosen = null, otherwise = null;
                 for (let k = 0; k < block.length; k++) {
                     const rawk = block[k];
@@ -973,25 +961,25 @@ function interpretPseudocode(code) {
                     if ((mm = ln.match(/^OTHERWISE\s+(.+)$/i))) {
                         otherwise = [block[k]]; // run via runBlock for consistency
                     } else if ((mm = ln.match(/^(.+?)\s*:\s*(.+)$/))) {
-                        const caseVal = evalExpr(mm[1], scope);
+                        const caseVal = await evalExpr(mm[1], scope);
                         if (chosen == null && eq(val, caseVal)) { chosen = [block[k]]; }
                     } else {
                         // treat as a normal statement in the case body (allow multi-line via following lines until next case)
                     }
                 }
                 // Simple one-liner cases: execute the single statement after ':'
-                function execCaseLine(line) {
+                async function execCaseLine(line) {
                     const txt = (typeof line === 'object') ? line.content : line;
                     const mm = cleanLine(txt).match(/^(.+?)\s*:\s*(.+)$/);
                     if (!mm) return;
-                    runBlock([mm[2]], scope, undefined, allowReturn);
+                    await runBlock([mm[2]], scope, undefined, allowReturn);
                 }
-                if (chosen) execCaseLine(chosen[0]);
+                if (chosen) await execCaseLine(chosen[0]);
 
                 else if (otherwise) {
                     const othTxt = cleanLine(typeof otherwise[0] === 'object' ? otherwise[0].content : otherwise[0]);
                     const mm = othTxt.match(/^OTHERWISE\s+(.+)$/i);
-                    if (mm) runBlock([mm[1]], scope, undefined, allowReturn);
+                    if (mm) await runBlock([mm[1]], scope, undefined, allowReturn);
                 }
                 continue;
             }
@@ -1018,9 +1006,9 @@ function interpretPseudocode(code) {
                 i = next;
 
                 // evaluate bounds
-                const start = Number(evalExpr(startExpr, scope));
-                const end   = Number(evalExpr(toExpr,   scope));
-                const step  = Number(evalExpr(stepExpr, scope));
+                const start = Number(await evalExpr(startExpr, scope));
+                const end   = Number(await evalExpr(toExpr,   scope));
+                const step  = Number(await evalExpr(stepExpr, scope));
                 if (![start, end, step].every(Number.isFinite)) {
                     throwErr('', 'FOR bounds and STEP must be numeric', currentLine);
                 }
@@ -1035,13 +1023,13 @@ function interpretPseudocode(code) {
                 if (step > 0) {
                     for (scope[varName] = start; scope[varName] <= end; scope[varName] += step) {
                         if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                        runBlock(block, scope, undefined, allowReturn);
+                        await runBlock(block, scope, undefined, allowReturn);
                         if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
                     }
                 } else {
                     for (scope[varName] = start; scope[varName] >= end; scope[varName] += step) {
                         if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                        runBlock(block, scope, undefined, allowReturn);
+                        await runBlock(block, scope, undefined, allowReturn);
                         if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
                     }
                 }
@@ -1058,9 +1046,9 @@ function interpretPseudocode(code) {
                 i = next;
                 
                 let count = 0;
-                while (toBool(evalExpr(cond, scope))) {
+                while (toBool(await evalExpr(cond, scope))) {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                    runBlock(block, scope, undefined, allowReturn);
+                    await runBlock(block, scope, undefined, allowReturn);
                     if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
                 }
                 continue;
@@ -1078,9 +1066,9 @@ function interpretPseudocode(code) {
                 let count = 0;
                 do {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                    runBlock(block, scope, undefined, allowReturn);
+                    await runBlock(block, scope, undefined, allowReturn);
                     if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
-                } while (!toBool(evalExpr(mm[1], scope)));
+                } while (!toBool(await evalExpr(mm[1], scope)));
                 continue;
             }
 
@@ -1090,7 +1078,7 @@ function interpretPseudocode(code) {
                     throwErr('', 'RETURN used outside FUNCTION', currentLine);
                 }
                 const parts = splitArgs(m[1]);
-                const vals  = parts.map(p => evalExpr(p, scope));
+                const vals  = await Promise.all(parts.map(p => evalExpr(p, scope)));
                 const ret = (vals.length === 1) ? vals[0] : vals.map(v => toString(v)).join("");
                 throw { __return: true, value: ret };
             }
@@ -1105,57 +1093,65 @@ function interpretPseudocode(code) {
                 }) ],
                 
                 [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)$/i,
-                    (m,scope)=>{ constants[m[1]]=true; scope[m[1]]=evalExpr(m[2],scope); declareName(scope,m[1]); 
+                    async (m,scope)=>{ constants[m[1]]=true; scope[m[1]]=await evalExpr(m[2],scope); declareName(scope,m[1]); 
                         const val = scope[m[1]];
                         const t = (typeof val === 'number') ? (Number.isInteger(val) ? 'INTEGER' : 'REAL') : (typeof val === 'boolean') ? 'BOOLEAN' : 'STRING';
                         setType(scope,m[1],t);
                     } ],
 
                 [ /^INPUT\s+(.+)$/i,
-                    (m, scope) => {
-                        const lv = getLValue(m[1].trim(), scope);
+                    async (m, scope) => {
+                        const lv = await getLValue(m[1].trim(), scope);
                         if (!isDeclared(scope, lv.name)) {
                             throwErr(lv.name, 'Undeclared variable ', __LINE_NUMBER);
                         }
-
-                        const raw = String(readInput());
+                    
+                        // Flush any pending OUTPUT so prompts appear before the caret
+                        if (typeof self !== 'undefined' && self.postMessage) {
+                            try {
+                                self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join("\n") });
+                                OUTPUT_BUFFER.length = 0;
+                            } catch {}
+                        }
+                    
+                        const raw = String(await readInput());
                         const value = parseInput(raw);
-
+                    
                         assignChecked(lv, scope, `INPUT:${raw}`, value, true);
                     }
-                ],
+                ],                      
                   
                 [ /^OUTPUT\s+(.+)$/i,
-                    (m, scope) => {
+                    async (m, scope) => {
                         const parts = splitArgs(m[1]);
-                        const vals = parts.map(p => {
-                            const v = evalExpr(p, scope);
+                        const vals = await Promise.all(parts.map(async p => {
+                            const v = await evalExpr(p, scope);
                             const name = p.trim();
                             if (/^[A-Za-z][A-Za-z0-9]*$/.test(name) && getType(scope, name) === 'REAL' && typeof v === 'number') {
                                 return realToString(v);
                             }
                             return v;
-                        });
+                        }));
                         out(vals);
                     }
                 ],
 
                 // assignment
                 [ /^(.+?)\s*(?:\u2190|<-)\s*(.+)$/,
-                    (m,scope)=>{ 
-                        const lv=getLValue(m[1].trim(),scope); 
+                    async (m,scope)=>{ 
+                        const lv=await getLValue(m[1].trim(),scope); 
                         const rhsExpr = m[2];
-                        const value = evalExpr(rhsExpr,scope);
+                        const value = await evalExpr(rhsExpr,scope);
 
                         assignChecked(lv, scope, rhsExpr, value, false);
                     } ],
             ];
 
-            function execSimple(line, scope){
+            async function execSimple(line, scope){
                 for (const [re, fn] of SIMPLE) {
                     const m = line.match(re);
                     if (m) {
-                        fn(m, scope);
+                        await fn(m, scope);
                         return true;
                     }
                 }
@@ -1163,11 +1159,11 @@ function interpretPseudocode(code) {
             }
 
             // eval simple statements first
-            if (execSimple(s, scope)) continue;
+            if (await execSimple(s, scope)) continue;
 
             if (/^[A-Za-z][A-Za-z0-9]*\s*\(/.test(s)) {
                 try {
-                    evalExpr(s, scope);
+                    await evalExpr(s, scope);
                 } catch (err) {
                     if (err && !err.line) err.line = currentLine;
                     throw err;
@@ -1193,18 +1189,18 @@ function interpretPseudocode(code) {
     }
 
     // calls a PROCEDURE
-    function callProcedure(name, args, callerScope) {
+    async function callProcedure(name, args, callerScope) {
         const def = procs[name];
         if (!def) throwErr(name, 'Unknown procedure ', 0);
         const scope = Object.create(globals);
         ensureDeclSet(scope);
         ensureTypeMap(scope);
         bindParams(def.params, args, scope);
-        runBlock(def.body, scope, 1, false);
+        await runBlock(def.body, scope, 1, false);
     }
 
     // calls a FUNCTION
-    function callFunction(name, args) {
+    async function callFunction(name, args) {
         const def = funcs[name];
         if (!def) throwErr(name, 'Unknown function ', 0);
         const scope = Object.create(globals);
@@ -1212,7 +1208,7 @@ function interpretPseudocode(code) {
         ensureTypeMap(scope);
         bindParams(def.params, args, scope);
         try {
-            runBlock(def.body, scope, 1, true);
+            await runBlock(def.body, scope, 1, true);
         } catch (e) {
             if (e && e.__return) return e.value;
             throw e;
@@ -1235,7 +1231,7 @@ function interpretPseudocode(code) {
 
     // ------------------------ Execute! ------------------------
     try {
-        runBlock(mainLines, globals, 1, false);
+        await runBlock(mainLines, globals, 1, false);
         
         // Process all collected capitalization warnings
         processCapitalizationWarnings();

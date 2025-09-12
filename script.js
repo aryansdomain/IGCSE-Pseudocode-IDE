@@ -363,6 +363,8 @@ OUTPUT greet("World")`
     let currentLocalRunId = 0;
     let clearIndicators = null;
     let currentRunningLine = null;  // track the most recent running line
+    let currentRunContainer = null;
+    let __flushedPrefix = '';
 
     function setRunButton(running) {
         if (running) {
@@ -411,7 +413,8 @@ OUTPUT greet("World")`
             const { type } = e.data || {};
 
             if (type === 'done') {
-                const out = String(e.data.output || '').trim();
+                const full = String(e.data.output || '');
+                const out  = (full.startsWith(__flushedPrefix) ? full.slice(__flushedPrefix.length) : full).trim();
                 
                 // Store reference to running line before clearing indicators
                 const runningLineToReplace = currentRunningLine;
@@ -431,27 +434,36 @@ OUTPUT greet("World")`
                         }
                     });
                     
-                    // Combine warnings and regular output with proper styling
-                    let allOutput = '';
+                    // Display warnings first (each on its own line)
                     if (warnings.length > 0) {
-                        allOutput += warnings.map(w => `<span class="warning-text">${w}</span>`).join('\n');
+                        warnings.forEach(warning => {
+                            if (runningLineToReplace) {
+                                // Replace the running line with first warning
+                                runningLineToReplace.innerHTML = `<span class="warning-text">${warning}</span>`;
+                                runningLineToReplace.className = 'line stdout';
+                                runningLineToReplace = null; // Don't replace again
+                            } else {
+                                const lineEl = consoleLine('', 'stdout');
+                                lineEl.innerHTML = `<span class="warning-text">${warning}</span>`;
+                            }
+                        });
                     }
-                    if (regularOutput.length > 0) {
-                        if (allOutput) allOutput += '\n';
-                        allOutput += regularOutput.join('\n');
-                    }
-                    allOutput = allOutput.trim();
                     
-                    if (allOutput) {
-                        if (runningLineToReplace) {
-                            runningLineToReplace.innerHTML = allOutput;
-                            runningLineToReplace.className = 'line stdout';
-                        } else {
-                            const lineEl = consoleLine('', 'stdout');
-                            lineEl.innerHTML = allOutput; // allow <span class="warning-text">…</span>
+                    // Then display regular output
+                    if (regularOutput.length > 0) {
+                        const regularText = regularOutput.join('\n').trim();
+                        if (regularText) {
+                            if (runningLineToReplace) {
+                                runningLineToReplace.textContent = regularText;
+                                runningLineToReplace.className = 'line stdout';
+                            } else {
+                                consoleOutput.println(regularText, 'stdout');
+                            }
                         }
-                    } else {
-                        // Only show "no output" if there's no output at all
+                    }
+                    
+                    // Only show "no output" if there's no output at all
+                    if (warnings.length === 0 && regularOutput.length === 0) {
                         if (runningLineToReplace) {
                             runningLineToReplace.textContent = '(no output)';
                             runningLineToReplace.className = 'line stdout';
@@ -467,6 +479,10 @@ OUTPUT greet("World")`
                         consoleOutput.println('(no output)', 'stdout');
                     }
                 }
+                
+                prioritizeDiagnostics();
+                // Create a new input line after program finishes
+                ensureInputLine();
                 finishRun(localRunId);
 
             } else if (type === 'error') {
@@ -482,6 +498,10 @@ OUTPUT greet("World")`
                 } else {
                     consoleOutput.error(msg);
                 }
+                
+                prioritizeDiagnostics();
+                // Create a new input line after program finishes
+                ensureInputLine();
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
@@ -495,7 +515,34 @@ OUTPUT greet("World")`
                 } else {
                     consoleOutput.println('Execution stopped', 'stderr');
                 }
+                
+                prioritizeDiagnostics();
+                // Create a new input line after program finishes
+                ensureInputLine();
                 finishRun(localRunId);
+            } else if (type === 'flush') {
+                const s = String(e.data.output || '');
+                // Only print the part we haven't shown yet
+                const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
+                __flushedPrefix = s;
+                if (newPart.trim()) {
+                    const lineEl = consoleLine('', 'stdout');
+                    lineEl.textContent = newPart.trim();
+                }
+            } else if (type === 'input_request') {
+                // Clear running indicators since program is paused waiting for input
+                clearRunningIndicators();
+                awaitingProgramInput = true;
+
+                // Show "> " prompt and put the caret on the input line
+                ensureInputLine();
+                if (inputCmdSpan) {
+                    inputCmdSpan.textContent = '> ';
+                }
+                consoleBody.focus();
+                scrollConsoleToBottom();
+
+                // IMPORTANT: do NOT add another keydown listener here.
             }
         };
 
@@ -522,6 +569,7 @@ OUTPUT greet("World")`
         if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
         setRunButton(false);
         if (worker) { worker.terminate(); worker = null; }
+        currentRunContainer = null;
     }
 
     function stopCode() {
@@ -559,17 +607,23 @@ OUTPUT greet("World")`
             if (isRunning && localRunId === runId) setRunButton(true);
         }, 30);
 
-        // snapshot the current INPUT queue; the worker will consume it
-        const inputQueue = Array.isArray(window.__ide_input_queue)
-            ? window.__ide_input_queue.slice()
-            : [];
+        // No input queue needed - input will be handled interactively
+
+        // create a container for this run's output so we can reorder it later
+        currentRunContainer = document.createElement('div');
+        currentRunContainer.className = 'run-chunk';
+        if (inputLineEl && inputLineEl.isConnected) {
+            consoleBody.insertBefore(currentRunContainer, inputLineEl);
+        } else {
+            consoleBody.appendChild(currentRunContainer);
+        }
 
         // start worker
         worker = new Worker('runner.js');
         attachWorkerHandlers(localRunId);
 
         // send job
-        worker.postMessage({ type: 'run', code, inputQueue });
+        worker.postMessage({ type: 'run', code });
     }
 
     // Run/Stop button behavior
@@ -577,7 +631,7 @@ OUTPUT greet("World")`
         if (runBtn.classList.contains('stop')) stopCode();
         else {
             // Display "> run" command in console for button click
-            consoleOutput.info('> run');
+            consoleOutput.info('run');
             runCode();
         }
     });    
@@ -610,10 +664,64 @@ OUTPUT greet("World")`
     consoleBody.addEventListener('keydown', (e) => {
         ensureInputLine();
 
+        // Handle Enter differently if the program is waiting for input:
+        if (awaitingProgramInput && e.key === 'Enter') {
+            e.preventDefault();
+
+            const value = currentCommand;  // whatever buffer you already use for the caret line
+            
+            // Show the input after the "> " prompt on the same line
+            if (inputCmdSpan) {
+                inputCmdSpan.textContent = `> ${value}`;
+            }
+            
+            // "Freeze" the current input line by removing the cursor
+            if (cursorSpan) {
+                cursorSpan.style.display = 'none';
+            }
+
+            if (currentRunContainer && inputLineEl && inputLineEl.parentNode) {
+                currentRunContainer.appendChild(inputLineEl);
+                // Force a new input line to be created after the run finishes
+                inputLineEl = null;
+                inputCmdSpan = null;
+                cursorSpan = null;
+            }
+            
+            worker.postMessage({ type: 'input_response', value });
+
+            currentCommand = '';
+            awaitingProgramInput = false;
+            return; // don't fall through to "exec a console command"
+        }
+
+        // If we're waiting for INPUT but it's not Enter, just update currentCommand as usual and return.
+        if (awaitingProgramInput) {
+            // Handle normal typing while waiting for input
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                if (currentCommand.length > 0) {
+                    currentCommand = currentCommand.slice(0, -1);
+                    updatePrompt();
+                    resetCursorCycle();
+                }
+                return;
+            }
+
+            // regular printable characters
+            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                currentCommand += e.key;
+                updatePrompt();
+                resetCursorCycle();
+            }
+            return;
+        }
+
+        // Normal console behaviour when not waiting for program input:
         if (e.key === 'Enter') {
             e.preventDefault();
-            // echo the command with styling just like before
-            execCommand(currentCommand);
+            execCommand(currentCommand); // your existing path
             currentCommand = '';
             updatePrompt();
             return;
@@ -670,17 +778,24 @@ OUTPUT greet("World")`
     let currentCommand = '';
     let commandHistory = [];
     let historyIndex = -1;
+    let awaitingProgramInput = false;   // program paused at INPUT
 
     function consoleLine(text, cls = 'stdout') {
         const div = document.createElement('div');
         div.className = `line ${cls}`;
         div.textContent = text;
 
-        // always keep the input line at the very end
-        if (inputLineEl && inputLineEl.isConnected) {
-            consoleBody.insertBefore(div, inputLineEl);
+        const parent = currentRunContainer || consoleBody;
+
+        if (parent === consoleBody) {
+            // legacy behavior: keep the line above the virtual input
+            if (inputLineEl && inputLineEl.isConnected) {
+                consoleBody.insertBefore(div, inputLineEl);
+            } else {
+                consoleBody.appendChild(div);
+            }
         } else {
-            consoleBody.appendChild(div);
+            parent.appendChild(div);
         }
 
         scrollConsoleToBottom();
@@ -702,10 +817,11 @@ OUTPUT greet("World")`
     let cursorBlink = null;
 
     function ensureInputLine() {
+        // Only create if there isn't already one
         if (inputLineEl && inputLineEl.isConnected) return inputLineEl;
 
         inputLineEl = document.createElement('div');
-        inputLineEl.className = 'line stdin'; // reuse existing styling
+        inputLineEl.className = 'line program-input'; // gray styling for program input
         inputCmdSpan = document.createElement('span');
         inputCmdSpan.className = 'command-text';
         cursorSpan = document.createElement('span');
@@ -713,7 +829,10 @@ OUTPUT greet("World")`
 
         inputLineEl.appendChild(inputCmdSpan);
         inputLineEl.appendChild(cursorSpan);
+        
+        // Always append to consoleBody at the very bottom
         consoleBody.appendChild(inputLineEl);
+        
         scrollConsoleToBottom();
 
         return inputLineEl;
@@ -721,6 +840,29 @@ OUTPUT greet("World")`
 
     function scrollConsoleToBottom() {
         consoleBody.scrollTop = consoleBody.scrollHeight;
+    }
+
+    function prioritizeDiagnostics() {
+        if (!currentRunContainer) return;
+        const nodes = Array.from(currentRunContainer.querySelectorAll('.line'));
+        if (nodes.length === 0) return;
+
+        const isDiagnostic = (el) => {
+            const t = (el.textContent || '').trim();
+            return el.classList.contains('stderr') ||     // explicit errors
+                   el.classList.contains('warning') ||    // any warning class you print
+                   t.startsWith('Warning:') ||            // textual warnings
+                   t.startsWith('Error:') ||              // textual errors
+                   el.querySelector('.warning-text');     // styled warnings
+        };
+
+        const diags = nodes.filter(isDiagnostic);
+        const rest  = nodes.filter(el => !isDiagnostic(el));
+
+        // rebuild in desired order
+        currentRunContainer.innerHTML = '';
+        diags.forEach(el => currentRunContainer.appendChild(el));
+        rest.forEach(el => currentRunContainer.appendChild(el));
     }
 
     function resetCursorCycle() {
@@ -739,7 +881,11 @@ OUTPUT greet("World")`
     function updatePrompt() {
         // replaces the old DOM-targeting version
         ensureInputLine();
-        inputCmdSpan.textContent = currentCommand;
+        if (awaitingProgramInput) {
+            inputCmdSpan.textContent = `> ${currentCommand}`;
+        } else {
+            inputCmdSpan.textContent = currentCommand;
+        }
         scrollConsoleToBottom();
     }
 
@@ -766,7 +912,7 @@ OUTPUT greet("World")`
         const cmdLower = (cmd || '').toLowerCase();
 
         // check if command is valid
-        const validCommands = ['help', 'run', 'in', 'input', 'clear', 'tab', 'font', 'mode', 'theme', 'stop'];
+        const validCommands = ['help', 'run', 'clear', 'tab', 'font', 'mode', 'theme', 'stop'];
         const isValidCommand = validCommands.includes(cmdLower);
 
         if (isValidCommand) {
@@ -775,13 +921,13 @@ OUTPUT greet("World")`
                 // Skip displaying the command
             } else {
                 // command is green, arguments are white
-                const coloredLine = `> <span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
+                const coloredLine = `<span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
                 const line = consoleLine('', 'stdin');
                 line.innerHTML = coloredLine;
             }
         } else {
             // show invalid command
-            consoleOutput.info(`> ${line}`);
+            consoleOutput.info(`${line}`);
         }
 
         switch (cmdLower) {
@@ -816,36 +962,32 @@ OUTPUT greet("World")`
                 stopCode()
             break;
 
-            case 'in': // this falls through to the input case
-            case 'input':
-                if (!arg) return consoleOutput.error('Usage: input <value>');
-                if (!Array.isArray(window.__ide_input_queue)) window.__ide_input_queue = [];
-                window.__ide_input_queue.push(arg);
-                consoleOutput.println(`Queued input: ${arg}`, 'stdout');
-                break;
-
             case 'clear':
                 consoleOutput.clear();
             break;
 
             case 'tab': {
                 const n = parseInt(rest[0], 10);
-                if (Number.isInteger(n) && n >= 1 && n <= 8) { // 1-8 spaces
+                if (Number.isInteger(n) && n >= 0 && n <= 8) {
                     refreshTabSpaces(n);
                     consoleOutput.println(`Tab size: ${n}`, 'stdout');
+                    if (n === 0) {
+                        consoleOutput.println('Warning: using the "tab" command again will not reverse this change.', 'warning');
+                        consoleOutput.println('Press Cmd/Ctrl+Z to restore.', 'warning');
+                    }
                 } else {
-                    consoleOutput.error('Usage: tab <1-8 spaces>');
+                    consoleOutput.error('Usage: tab <0-8 spaces>');
                 }
                 break;
             }
 
             case 'font': {
                 const px = parseInt(rest[0], 10);
-                if (Number.isInteger(px)) {
+                if (Number.isInteger(px) && px >= 6 && px <= 50) {
                     editor.setFontSize(px);
                     consoleOutput.println(`Font size: ${px}px`, 'stdout');
                 } else {
-                    consoleOutput.error('Usage: font <10-24px>');
+                    consoleOutput.error('Usage: font <6-50px>');
                 }
                 break;
             }

@@ -1,38 +1,33 @@
 self.window = self;
-self.__ide_input_queue = [];
 self.__ide_stop_flag = false;
 
-// INPUT source for the interpreter
+// Ask main thread for a line of input
 self.readInput = function () {
-    return String(self.__ide_input_queue.length ? self.__ide_input_queue.shift() : "");
+    self.postMessage({ type: 'input_request' });
+    return new Promise((resolve) => {
+        const handle = (e) => {
+            if (e.data && e.data.type === 'input_response') {
+                self.removeEventListener('message', handle);
+                resolve(String(e.data.value || ''));
+            }
+        };
+        self.addEventListener('message', handle);
+    });
 };
 
 let imported = false;
 
 self.onmessage = async (e) => {
-    const { type } = e.data || {};
-    if (type === 'run') {
-        const { code, inputQueue } = e.data;
-        // fresh run state
-        self.__ide_stop_flag = false;
-        self.__ide_input_queue = Array.isArray(inputQueue) ? inputQueue.slice() : [];
-
+    if (e.data?.type === 'run') {
         try {
-            if (!imported) {
-                importScripts('interpreter.js');
-                imported = true;
-            }
-
-            // run the program
-            const output = self.interpretPseudocode(code);
+            if (!imported) { importScripts('interpreter.js'); imported = true; }
+            const output = await self.interpretPseudocode(e.data.code); // <-- await
             self.postMessage({ type: 'done', output: String(output ?? '') });
         } catch (err) {
-            self.postMessage({ type: 'error', error: (err && err.message) ? err.message : String(err) });
+            self.postMessage({ type: 'error', error: err?.message || String(err) });
         }
-    } else if (type === 'stop') {
-        // cooperative stop (your interpreter should check __ide_stop_flag periodically)
+    } else if (e.data?.type === 'stop') {
         self.__ide_stop_flag = true;
-        // optional: if the interpreter ignores the flag, the main thread may terminate us.
         self.postMessage({ type: 'stopped' });
     }
 };

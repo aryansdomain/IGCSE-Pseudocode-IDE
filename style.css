@@ -790,6 +790,14 @@ html, body { height: 100%; }
   color: var(--text);
 }
 
+#console-body .line.program-input {
+  color: var(--muted);
+}
+
+#console-body .line.program-input .command-text {
+  color: var(--muted);
+}
+
 #console-body .line.stdout {
   color: var(--text);
 }
@@ -846,7 +854,6 @@ html.mode-switching *::after {
   text-align: center;
   padding: 8px;
   background: var(--bg);
-  border-top: 1px solid var(--border);
   font-size: 11px;
   color: var(--muted);
 }
