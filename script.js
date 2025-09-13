@@ -135,6 +135,55 @@ OUTPUT greet("World")`
         'ace/theme/tomorrow_night_eighties', 'ace/theme/twilight', 'ace/theme/vibrant_ink'
     ];
 
+    function updateTerminalTheme() {
+        const isLight = document.documentElement.classList.contains('light');
+        const terminalTheme = isLight ? {
+            background: '#ffffff',
+            foreground: '#000000',
+            cursor: '#000000',
+            selection: '#00000030',
+            black: '#000000',
+            red: '#ff0000',
+            green: '#00ff00',
+            yellow: '#ffff00',
+            blue: '#0000ff',
+            magenta: '#ff00ff',
+            cyan: '#00ffff',
+            white: '#ffffff',
+            brightBlack: '#808080',
+            brightRed: '#ff8080',
+            brightGreen: '#80ff80',
+            brightYellow: '#ffff80',
+            brightBlue: '#8080ff',
+            brightMagenta: '#ff80ff',
+            brightCyan: '#80ffff',
+            brightWhite: '#ffffff'
+        } : {
+            background: '#000000',
+            foreground: '#ffffff',
+            cursor: '#ffffff',
+            selection: '#ffffff30',
+            black: '#000000',
+            red: '#ff0000',
+            green: '#00ff00',
+            yellow: '#ffff00',
+            blue: '#0000ff',
+            magenta: '#ff00ff',
+            cyan: '#00ffff',
+            white: '#ffffff',
+            brightBlack: '#808080',
+            brightRed: '#ff8080',
+            brightGreen: '#80ff80',
+            brightYellow: '#ffff80',
+            brightBlue: '#8080ff',
+            brightMagenta: '#ff80ff',
+            brightCyan: '#80ffff',
+            brightWhite: '#ffffff'
+        };
+        
+        terminal.options.theme = terminalTheme;
+    }
+
     function toggleMode() {
         const isLight = document.documentElement.classList.contains('light');
         const currentTheme = editor.getTheme();
@@ -163,6 +212,9 @@ OUTPUT greet("World")`
                 editor.setTheme('ace/theme/github'); // switch to default light theme
             }
         }
+        
+        // update terminal theme
+        updateTerminalTheme();
         
         // re-enable transitions
         setTimeout(() => {
@@ -537,11 +589,6 @@ OUTPUT greet("World")`
         // create a container for this run's output so we can reorder it later
         currentRunContainer = document.createElement('div');
         currentRunContainer.className = 'run-chunk';
-        if (inputLineEl && inputLineEl.isConnected) {
-            consoleBody.insertBefore(currentRunContainer, inputLineEl);
-        } else {
-            consoleBody.appendChild(currentRunContainer);
-        }
 
         // start worker
         worker = new Worker('runner.js');
@@ -555,7 +602,6 @@ OUTPUT greet("World")`
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
         else {
-            // Display "> run" command in console for button click
             consoleOutput.info('run');
             runCode();
         }
@@ -711,9 +757,6 @@ OUTPUT greet("World")`
                 // command is green, arguments are white
                 terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`);
             }
-        } else {
-            // show invalid command
-            consoleOutput.info(`${line}`);
         }
 
         switch (cmdLower) {
@@ -721,13 +764,13 @@ OUTPUT greet("World")`
             consoleOutput.println(
                 [
                     'Commands:',
-                    '  run                 Execute code in the editor',
-                    '  stop                Stop currently running code',
-                    '  clear               Clear console output',
-                    '  tab <n>             Set editor tab size (1-8 spaces)',
-                    '  font <px>           Set editor font size (10-24px)',
-                    '  mode <light|dark>   Switch mode to light or dark',
-                    '  theme <theme>       Switch editor theme',
+                    'run                 Execute code in the editor',
+                    'stop                Stop currently running code',
+                    'clear               Clear console output',
+                    'tab <n>             Set editor tab size (1-8 spaces)',
+                    'font <px>           Set editor font size (10-24px)',
+                    'mode <light|dark>   Switch mode to light or dark',
+                    'theme <theme>       Switch editor theme',
                 ].join('\n'),
                 'stdout'
             );
@@ -813,6 +856,9 @@ OUTPUT greet("World")`
                     return consoleOutput.error('Usage: mode <light|dark>');
                 }
                 
+                // update terminal theme
+                updateTerminalTheme();
+                
                 // enable transitions
                 setTimeout(() => {
                     document.documentElement.classList.remove('mode-switching');
@@ -857,159 +903,90 @@ OUTPUT greet("World")`
 
     // init
     updateButtonStates();
-    ensureInputLine();
-    consoleBody.focus();
 
     // ------------------------ Splitter ------------------------
-    (function () {
+    (function initSplitter() {
         const workspace   = document.getElementById('workspace');
         const editorPane  = document.getElementById('editor-pane');
         const consolePane = document.getElementById('console-pane');
         const splitter    = document.getElementById('splitter');
-    
-        // --- Splitter constants ---
-        const SPLITTER_H    = parseFloat(getComputedStyle(splitter).height) || 8;
-        const MIN_CONSOLE_H = 120;
-        const MAX_SPLITTER_FROM_BOTTOM = 175; // min distance from bottom (i.e., min console height)
-        const MAX_SPLITTER_FROM_TOP    = 50;  // min distance from top of topbar to splitter center
-    
-        const app       = document.querySelector('.app');
-        const topBar    = document.querySelector('.topbar');
-        const bottomBar = document.querySelector('.bottombar');
-    
-        // measure once (refresh on resize)
-        let TOPBAR_BASE   = topBar    ? topBar.getBoundingClientRect().height    : 0;
-        let BOTTOM_BASE   = bottomBar ? bottomBar.getBoundingClientRect().height : 0;
-        let BOTTOM_PAD_Y  = bottomBar ? (parseFloat(getComputedStyle(bottomBar).paddingTop) +
-                                        parseFloat(getComputedStyle(bottomBar).paddingBottom)) : 0;
-    
-        function availableStackHeight() {
-            const wsRect = workspace.getBoundingClientRect();
-            return wsRect.height;
-        }
-    
-        // --- Max editor height w.r.t. viewport/footer/topbar/utilitybar ---
-        function getMaxEditorHeight() {
-            const topbar     = document.querySelector('.topbar');
-            const utilitybar = document.querySelector('.utilitybar');
-            const footer     = document.querySelector('.footer');
-            const pad        = parseFloat(getComputedStyle(document.querySelector('.app')).padding) * 2 || 28;
-        
-            const tbH = topbar     ? topbar.getBoundingClientRect().height     : 0;
-            const ubH = utilitybar ? utilitybar.getBoundingClientRect().height : 0;
-            const ftH = footer     ? footer.getBoundingClientRect().height     : 0;
-        
-            return window.innerHeight - tbH - ubH - ftH - pad;
-        }
-    
-        function applySplit(editorPx) {
-            const avail = availableStackHeight(); // editor + splitter + console height
-        
-            // ---- Bottom guard (keep console ≥ requiredConsoleMin) ----
-            const requiredConsoleMin = Math.max(MIN_CONSOLE_H, MAX_SPLITTER_FROM_BOTTOM);
-            const editorMaxByBottom  = avail - SPLITTER_H - requiredConsoleMin;
-            const editorMaxViewport  = getMaxEditorHeight();
-            const maxEditor          = Math.min(editorMaxByBottom, editorMaxViewport);
-        
-            // ---- Top guard (keep splitter center ≥ MAX_SPLITTER_FROM_TOP below topbar top) ----
-            const wsTop           = workspace.getBoundingClientRect().top;
-            const topbarTop       = topBar ? topBar.getBoundingClientRect().top : 0;
-            const splitterCenterY = wsTop + editorPx + (SPLITTER_H / 2);
-            const distFromTopbarTop = splitterCenterY - topbarTop;
-        
-            // If too close to the top, clamp to the highest legal editor height
-            let finalEditorPx = editorPx;
-            if (distFromTopbarTop < MAX_SPLITTER_FROM_TOP) {
-                // place the splitter center exactly MAX_SPLITTER_FROM_TOP below topbar top
-                finalEditorPx = (topbarTop + MAX_SPLITTER_FROM_TOP) - wsTop - (SPLITTER_H / 2);
-            }
-        
-            // ---- Clamp to [0 .. maxEditor] for the actual pane heights ----
-            const clampedEditor = Math.max(0, Math.min(finalEditorPx, maxEditor));
-        
-            // ---- Smooth bottom-bar squeeze for "overdrag" above workspace top ----
-            const over = Math.max(0, -finalEditorPx); // only when dragging past the top
-            const consumeBottom = Math.min(over, BOTTOM_BASE);
-            const newBottomH = BOTTOM_BASE - consumeBottom;
-        
-            // Top bar remains at its base height (no shrinking)
-            const newTopH = TOPBAR_BASE;
-        
-            // Apply bars
-            app.style.gridTemplateRows = `auto ${Math.max(0, newTopH)}px 1fr`;
-        
-            bottomBar.style.height = `${Math.max(0, newBottomH)}px`;
-            const padScale = BOTTOM_BASE > 0 ? Math.max(0, newBottomH) / BOTTOM_BASE : 0;
-            const newPad = (BOTTOM_PAD_Y * padScale) / 2; // split across top & bottom
-            bottomBar.style.paddingTop = bottomBar.style.paddingBottom = `${newPad}px`;
-        
-            // Finally, size editor + console (bottom stays anchored)
-            const consoleH = avail - SPLITTER_H - clampedEditor;
-            editorPane.style.flex = '0 0 auto';
-            consolePane.style.flex = '0 0 auto';
-            editorPane.style.height  = clampedEditor + 'px';
+
+        if (!workspace || !editorPane || !consolePane || !splitter) return;
+
+        const SPLITTER_H = 8;
+        const MIN_EDITOR_H  = 0;
+        const MIN_CONSOLE_H = 200;
+
+        // If you already have applySplit(), keep it; otherwise use this one:
+        function applySplit(editorH) {
+            const totalH   = workspace.clientHeight;
+            const maxEdH   = totalH - SPLITTER_H - MIN_CONSOLE_H;
+            const clamped  = Math.max(MIN_EDITOR_H, Math.min(editorH, maxEdH));
+            const consoleH = totalH - SPLITTER_H - clamped;
+
+            editorPane.style.height  = clamped  + 'px';
             consolePane.style.height = consoleH + 'px';
-        
-            if (window.editor) window.editor.resize(true);
-            fitTerm();
+
+            // Resize editors/terminal if present
+            if (window.editor && typeof window.editor.resize === 'function') {
+                window.editor.resize(true);
+            }
+            if (typeof fitTerm === 'function') fitTerm();
         }
-    
-        // initial split
-        function layoutInitial() {
-            const avail = availableStackHeight();
-            const targetE = Math.round(Math.min(getMaxEditorHeight(), 0.5 * (avail - SPLITTER_H)));
-            applySplit(targetE);
-            fitTerm();
-        }
-    
-        let dragging = false;
+
+        // Initial layout (keep your existing logic if you have one)
+        applySplit(Math.round((workspace.clientHeight - SPLITTER_H) * 0.6));
+
+        let pointerId = null;
         let startY = 0;
         let startEditorH = 0;
-    
-        function beginDrag(e) {
-            dragging = true;
-            startY = e.clientY;
-            startEditorH = editorPane.getBoundingClientRect().height;
-            document.body.classList.add('dragging');
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', endDrag);
+
+        function onPointerDown(e) {
+            // Only handle primary button
+            if (e.button !== undefined && e.button !== 0) return;
+
+            pointerId = e.pointerId ?? 1;
+            try { splitter.setPointerCapture(pointerId); } catch {}
+
             e.preventDefault();
+            document.body.classList.add('dragging');
+
+            startY = e.clientY;
+            // Use rendered height as baseline
+            startEditorH = editorPane.getBoundingClientRect().height;
         }
-    
-        function onDrag(e) {
-            if (!dragging) return;
+
+        function onPointerMove(e) {
+            if (pointerId == null) return;
+            // delta (positive when dragging down)
             const dy = e.clientY - startY;
+
             applySplit(startEditorH + dy);
         }
-    
+
         function endDrag() {
-            dragging = false;
+            if (pointerId == null) return;
+            try { splitter.releasePointerCapture(pointerId); } catch {}
+            pointerId = null;
             document.body.classList.remove('dragging');
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('mouseup', endDrag);
         }
-    
-        splitter.addEventListener('mousedown', beginDrag);
-    
-        // keep proportions on resize
+
+        splitter.addEventListener('pointerdown', onPointerDown);
+        splitter.addEventListener('pointermove', onPointerMove);
+        splitter.addEventListener('pointerup', endDrag);
+        splitter.addEventListener('pointercancel', endDrag);
+        splitter.addEventListener('lostpointercapture', endDrag);
+
+        // Keep proportions on window resize
         window.addEventListener('resize', () => {
-            // refresh baselines
-            TOPBAR_BASE  = topBar    ? topBar.getBoundingClientRect().height    : 0;
-            BOTTOM_BASE  = bottomBar ? bottomBar.getBoundingClientRect().height : 0;
-            BOTTOM_PAD_Y = bottomBar ? (parseFloat(getComputedStyle(bottomBar).paddingTop) +
-                                        parseFloat(getComputedStyle(bottomBar).paddingBottom)) : 0;
-        
-            const eH = editorPane.getBoundingClientRect().height;
-            const cH = consolePane.getBoundingClientRect().height;
-            const total = eH + SPLITTER_H + cH || 1;
-            const ratio = eH / total;
-            const avail = availableStackHeight();
-            const maxEditor = getMaxEditorHeight();
-            applySplit(Math.round(Math.min(ratio * (avail - SPLITTER_H), maxEditor)));
-            fitTerm();
+            // Recompute based on current ratio
+            const edH = editorPane.getBoundingClientRect().height;
+            const coH = consolePane.getBoundingClientRect().height;
+            const total = edH + SPLITTER_H + coH || 1;
+            const ratio = edH / total;
+            const newEdH = Math.round((workspace.clientHeight - SPLITTER_H) * ratio);
+            applySplit(newEdH);
         });
-    
-        requestAnimationFrame(layoutInitial);
     })();  
 
     // clear
@@ -1019,7 +996,7 @@ OUTPUT greet("World")`
 
     // copy console output
     copyBtn.addEventListener('click', () => {
-        const output = consoleBody.textContent;
+        const output = terminal.getSelection() || terminal.buffer.active.getLine(terminal.buffer.active.cursorY).translateToString();
 
         navigator.clipboard.writeText(output).then(() => {
             // animate to copied state
@@ -1037,7 +1014,11 @@ OUTPUT greet("World")`
 
     // download console output
     downloadBtn.addEventListener('click', async () => {
-        const output = consoleBody.textContent;
+        // Get all terminal content
+        let output = '';
+        for (let i = 0; i < terminal.buffer.active.length; i++) {
+            output += terminal.buffer.active.getLine(i).translateToString() + '\n';
+        }
         
         if (!output.trim()) {
             consoleOutput.error('No output to download');

@@ -1,6 +1,6 @@
 :root {
   --bg: #0f1117;
-  --panel: #000000;
+  --panel: #1a1a1a;
   --elev: #151a22;
   --text: #e6edf3;
   --muted: #8b949e;
@@ -133,6 +133,8 @@ html, body { height: 100%; }
   margin: 0;
   height: 55px;
   width: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .bottombar .info {
@@ -150,12 +152,13 @@ html, body { height: 100%; }
 #splitter {
   position: relative;
   z-index: 1000;
-  height: 8px;
+  height: 8px;                /* must match the JS constant */
   flex: 0 0 var(--splitter-h);
   cursor: row-resize;
   pointer-events: auto;
-  background: #252323;
-  transition: background-color 0.2s ease;
+  background: transparent;
+  /* CRITICAL: prevents touch from turning the drag into a page scroll */
+  touch-action: none;
 }
 
 #splitter:hover {
@@ -174,9 +177,9 @@ html, body { height: 100%; }
   flex-direction: column;
 }
 
-/* While dragging, avoid text selection */
-.dragging, .dragging * {
-  user-select: none !important;
+/* While dragging, avoid text selection and keep the resize cursor */
+body.dragging {
+  user-select: none;
   cursor: row-resize !important;
 }
 
@@ -277,118 +280,7 @@ html, body { height: 100%; }
   height: 100%;
 }
 
-.console-prompt {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: var(--bg);
-  border-top: 1px solid var(--border);
-  font: 13px/1.5 var(--mono);
-  color: var(--text);
-  cursor: text;
-}
 
-.prompt-text {
-  color: var(--green);
-  margin-right: 8px;
-}
-
-.prompt-text .command-text {
-  color: var(--text);
-}
-
-.cursor {
-  color: var(--text);
-  opacity: 0;
-  transition: opacity 0.1s ease;
-}
-
-.console-prompt:focus .cursor {
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
-}
-
-/* Draw a full-rectangle cursor using background color */
-/* Input line is laid out tightly with zero gap */
-.console .input-line {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: 0;
-}
-
-/* The text part (what the user typed) */
-.console .input-line .cmd {
-  white-space: pre;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-/* The cursor block */
-.console .input-line .cursor {
-  display: inline-block;
-  width: 1ch;
-  height: 1em;
-  background: currentColor;
-}
-
-#console-body .cursor {
-  display: inline-block;
-  width: 1ch;
-  height: 1em;
-  background: currentColor;
-  animation: ide-cursor-blink 1s steps(1) infinite;
-  opacity: 1;
-}
-
-@keyframes ide-cursor-blink { 50% { opacity: 0; } }
-
-/* Hide cursor when not focused */
-#console-body:not(:focus-within) .cursor {
-  display: none;
-}
-
-#console-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 12px;
-  font: 13px/1.5 var(--mono);
-  white-space: pre-wrap;
-  background-color: #000000;
-  color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;
-  caret-color: transparent;
-}
-
-.console-input {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  padding: 10px;
-}
-
-.prompt {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  background: var(--elev);
-  color: var(--muted);
-  font-family: var(--mono);
-}
-
-.input {
-  border: 1px solid var(--border);
-  background: var(--elev);
-  color: var(--text);
-  padding: 8px 10px;
-  font: 13px var(--mono);
-}
 
 /* settings */
 .settings-overlay {
@@ -811,80 +703,13 @@ html, body { height: 100%; }
   color: var(--green);
 }
 
-/* Console lines */
-#console-body .line { 
-  margin: 0; 
-  white-space: pre-wrap;
-  font: 13px/1.5 var(--mono);
-  padding: 2px 0;
-}
 
-#console-body .line.stdin {
-  color: var(--green);
-}
-
-#console-body .line.stdin .command-text {
-  color: var(--text);
-}
-
-#console-body .line.console-input {
-  color: var(--green);
-}
-
-#console-body .line.console-input .command-text {
-  color: var(--text);
-}
-
-#console-body .line.program-input {
-  color: var(--muted);
-}
-
-#console-body .line.program-input .command-text {
-  color: var(--muted);
-}
-
-#console-body .line.stdout {
-  color: var(--text);
-}
-
-#console-body .line.stderr {
-  color: var(--red);
-}
-
-#console-body .line.warning {
-  color: var(--warning);
-  font-style: italic;
-}
-
-/* Dark mode warning color */
-html[data-theme="dark"] #console-body .line.warning {
-  color: var(--warning);
-}
-
-/* Warning text within output lines */
-#console-body .line .warning-text {
-  color: var(--warning);
-  font-style: italic;
-}
-
-/* Dark mode warning text within output lines */
-html[data-theme="dark"] #console-body .line .warning-text {
-  color: var(--warning);
-}
-
-/* Make the input feel "console-like" */
-.console-input .prompt {
-  min-width: 1.2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
 
 /* Make sure the stack can actually shrink and there's no top padding */
 #workspace { min-height: 0; }
 
 /* Inner flex containers must be allowed to shrink */
-.console, .console-main, #console-body { min-height: 0; }
+.console, .console-main { min-height: 0; }
 
 /* Disable transitions during mode switching */
 html.mode-switching *,
