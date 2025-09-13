@@ -69,6 +69,7 @@ html, body { height: 100%; }
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .workspace {
@@ -107,6 +108,8 @@ html, body { height: 100%; }
 #console-pane {
   flex: 0 0 auto;
   min-height: 0;
+  position: relative;
+  z-index: 0;
 }
 
 #workspace { overflow: hidden; }
@@ -145,10 +148,13 @@ html, body { height: 100%; }
 }
 
 #splitter {
-  height: var(--splitter-h);
+  position: relative;
+  z-index: 1000;
+  height: 8px;
   flex: 0 0 var(--splitter-h);
   cursor: row-resize;
-  background: var(--border);
+  pointer-events: auto;
+  background: #252323;
   transition: background-color 0.2s ease;
 }
 
@@ -899,4 +905,26 @@ html.mode-switching *::after {
 
 .footer ion-icon {
   vertical-align: middle;
+}
+
+/* Terminal styling */
+#terminal {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 0;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.light #terminal {
+  background-color: #ffffff;
+  color: #000000;
 }

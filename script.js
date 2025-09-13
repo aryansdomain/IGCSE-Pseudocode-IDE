@@ -363,8 +363,6 @@ OUTPUT greet("World")`
     let currentLocalRunId = 0;
     let clearIndicators = null;
     let currentRunningLine = null;  // track the most recent running line
-    let currentRunContainer = null;
-    let __flushedPrefix = '';
 
     function setRunButton(running) {
         if (running) {
@@ -382,7 +380,7 @@ OUTPUT greet("World")`
         let runningLine = null;
         let runningTimer = null;
         let dotTimer = null;
-        let dotPhase = 0; // 0..3 => '' '.' '..' '...'
+        let dotPhase = 0;
 
         // Set up animated dot ticker
         runningTimer = setTimeout(() => {
@@ -416,88 +414,51 @@ OUTPUT greet("World")`
                 const full = String(e.data.output || '');
                 const out  = (full.startsWith(__flushedPrefix) ? full.slice(__flushedPrefix.length) : full).trim();
                 
-                // Store reference to running line before clearing indicators
-                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
 
                 if (out) {
-                    if (runningLineToReplace) {
-                        runningLineToReplace.textContent = out;
-                        runningLineToReplace.className = 'line stdout';
-                    } else {
-                        consoleOutput.println(out, 'stdout');
-                    }
+                    terminalWrite(out + '\r\n');
                 } else {
-                    if (runningLineToReplace) {
-                    runningLineToReplace.textContent = '(no output)';
-                    runningLineToReplace.className = 'line stdout';
-                    } else {
-                    consoleOutput.println('(no output)', 'stdout');
+                    // If we already flushed any output earlier, don't print "(no output)"
+                    if (!hadFlushOutput) {
+                        terminalWrite('(no output)\r\n');
                     }
                 }
 
-                // Create a new input line after program finishes
-                ensureInputLine();
                 finishRun(localRunId);
 
             } else if (type === 'error') {
                 const msg = String(e.data.error || 'Unknown error');
                 
-                // Store reference to running line before clearing indicators
-                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
-
-                if (runningLineToReplace) {
-                    runningLineToReplace.textContent = msg;
-                    runningLineToReplace.className = 'line stderr';
-                } else {
-                    consoleOutput.error(msg);
-                }
+                terminalWrite(msg + '\r\n', '31'); // red
                 
-                // Create a new input line after program finishes
-                ensureInputLine();
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
-                // Store reference to running line before clearing indicators
-                const runningLineToReplace = currentRunningLine;
                 clearRunningIndicators();
+                terminalWrite('Execution stopped\r\n', '31'); // red
                 
-                if (runningLineToReplace) {
-                    runningLineToReplace.textContent = 'Execution stopped';
-                    runningLineToReplace.className = 'line stderr';
-                } else {
-                    consoleOutput.println('Execution stopped', 'stderr');
-                }
-                
-                // Create a new input line after program finishes
-                ensureInputLine();
                 finishRun(localRunId);
-            } else if (type === 'flush') {
-                const s = String(e.data.output || '');
-                // Only print the part we haven't shown yet
-                const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
-                __flushedPrefix = s;
-                if (newPart.trim()) {
-                    const lineEl = consoleLine('', 'stdout');
-                    lineEl.textContent = newPart.trim();
-                }
             } else if (type === 'input_request') {
-                // Clear running indicators since program is paused waiting for input
+                // Clear "running..." dots and switch to program input mode
                 clearRunningIndicators();
                 awaitingProgramInput = true;
 
-                // Show "> " prompt and put the caret on the input line
-                ensureInputLine();
-                if (inputLineEl) {
-                    inputLineEl.className = 'line program-input'; // gray styling for program input
-                }
-                if (inputCmdSpan) {
-                    inputCmdSpan.textContent = '> ';
-                }
-                consoleBody.focus();
-                scrollConsoleToBottom();
+            } else if (type === 'flush') {
+                const s = String(e.data.output || '');
+                const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
+                __flushedPrefix += newPart;
 
+                newPart.split('\n').forEach(part => {
+                    hadFlushOutput = true; // we printed something this run
+                    if (part === '') {
+                        consoleLine('', 'stdout');      // real blank line
+                    } else {
+                        const lineEl = consoleLine('', 'stdout');
+                        lineEl.textContent = part;
+                    }
+                });
             } else if (type === 'warning') {
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
@@ -557,6 +518,10 @@ OUTPUT greet("World")`
     function runCode() {
         if (isRunning) return; // repeated "run" inputs
         
+        __flushedPrefix = '';        // <-- add this
+        lastStdoutEl = null;
+        inputPromptBase = '';
+        hadFlushOutput = false;
         const code = editor.getValue();
         const localRunId = ++runId;
         isRunning = true;
@@ -601,240 +566,126 @@ OUTPUT greet("World")`
     const copyBtn = document.querySelector('.btn.copy');
     const downloadBtn = document.querySelector('.btn.download');
 
-    // ---------- Console wiring ----------
-    const consoleBody  = document.getElementById('console-body');
-
-    // Make body focusable and receive all key events
-    consoleBody.setAttribute('tabindex', '0');
-    consoleBody.addEventListener('click', () => {
-        ensureInputLine();
-        consoleBody.focus();
+    // ---------- Terminal wiring ----------
+    const terminal = new Terminal({
+        theme: {
+            background: '#000000',
+            foreground: '#ffffff',
+            cursor: '#ffffff',
+            selection: '#ffffff30',
+            black: '#000000',
+            red: '#ff0000',
+            green: '#00ff00',
+            yellow: '#ffff00',
+            blue: '#0000ff',
+            magenta: '#ff00ff',
+            cyan: '#00ffff',
+            white: '#ffffff',
+            brightBlack: '#808080',
+            brightRed: '#ff8080',
+            brightGreen: '#80ff80',
+            brightYellow: '#ffff80',
+            brightBlue: '#8080ff',
+            brightMagenta: '#ff80ff',
+            brightCyan: '#80ffff',
+            brightWhite: '#ffffff'
+        },
+        fontSize: 14,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        cursorBlink: true,
+        cursorStyle: 'block'
     });
+    
+    terminal.open(document.getElementById('terminal'));
 
-    // Paste support (so Cmd/Ctrl+V just inserts into currentCommand)
-    consoleBody.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const t = (e.clipboardData || window.clipboardData).getData('text') || '';
-        currentCommand += t;
-        updatePrompt();
-        resetCursorCycle();
-    });
+    let fitAddon = null;
+    try {
+      const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
+      fitAddon = new FitCtor();
+      terminal.loadAddon(fitAddon);
+      // initial fit after the terminal attaches
+      setTimeout(() => fitAddon.fit(), 0);
+    } catch (e) {
+      // Optional: console.warn('xterm-addon-fit not loaded; terminal won't auto-resize');
+    }
 
-    // Main keyboard handler
-    consoleBody.addEventListener('keydown', (e) => {
-        ensureInputLine();
+    function fitTerm() { if (fitAddon) fitAddon.fit(); }
 
-        // Handle Enter differently if the program is waiting for input:
-        if (awaitingProgramInput && e.key === 'Enter') {
-            e.preventDefault();
-
-            const value = currentCommand;  // whatever buffer you already use for the caret line
-            
-            // Show the input after the "> " prompt on the same line
-            if (inputCmdSpan) {
-                inputCmdSpan.textContent = `> ${value}`;
-            }
-            
-            // "Freeze" the current input line by removing the cursor
-            if (cursorSpan) {
-                cursorSpan.style.display = 'none';
-            }
-
-            if (currentRunContainer && inputLineEl && inputLineEl.parentNode) {
-                currentRunContainer.appendChild(inputLineEl);
-                // Force a new input line to be created after the run finishes
-                inputLineEl = null;
-                inputCmdSpan = null;
-                cursorSpan = null;
-            }
-            
-            worker.postMessage({ type: 'input_response', value });
-
-            currentCommand = '';
-            awaitingProgramInput = false;
-            return; // don't fall through to "exec a console command"
-        }
-
-        // If we're waiting for INPUT but it's not Enter, just update currentCommand as usual and return.
-        if (awaitingProgramInput) {
-            // Handle normal typing while waiting for input
-            if (e.key === 'Backspace') {
-                e.preventDefault();
-                if (currentCommand.length > 0) {
-                    currentCommand = currentCommand.slice(0, -1);
-                    updatePrompt();
-                    resetCursorCycle();
-                }
-                return;
-            }
-
-            // regular printable characters
-            if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-                currentCommand += e.key;
-                updatePrompt();
-                resetCursorCycle();
-            }
-            return;
-        }
-
-        // Normal console behaviour when not waiting for program input:
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            execCommand(currentCommand); // your existing path
-            currentCommand = '';
-            updatePrompt();
-            return;
-        }
-
-        if (e.key === 'Backspace') {
-            e.preventDefault();
-            if (currentCommand.length > 0) {
-                currentCommand = currentCommand.slice(0, -1);
-                updatePrompt();
-                resetCursorCycle();
-            }
-            return;
-        }
-
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (commandHistory.length > 0) {
-                historyIndex = Math.max(0, historyIndex - 1);
-                currentCommand = commandHistory[historyIndex] || '';
-                updatePrompt();
-            }
-            return;
-        }
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            if (commandHistory.length > 0) {
-                historyIndex = Math.min(commandHistory.length, historyIndex + 1);
-                currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
-                updatePrompt();
-            }
-            return;
-        }
-
-        // Let Tab focus stay on console (optional: treat Tab as 4 spaces)
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            currentCommand += '\t'; // or '    '
-            updatePrompt();
-            resetCursorCycle();
-            return;
-        }
-
-        // regular printable characters
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            currentCommand += e.key;
-            updatePrompt();
-            resetCursorCycle();
-        }
-    });
-
+    // Terminal state
     let currentCommand = '';
     let commandHistory = [];
     let historyIndex = -1;
-    let awaitingProgramInput = false;   // program paused at INPUT
+    let awaitingProgramInput = false;
 
-    function consoleLine(text, cls = 'stdout') {
-        const div = document.createElement('div');
-        div.className = `line ${cls}`;
-        div.textContent = text;
-
-        const parent = currentRunContainer || consoleBody;
-
-        if (parent === consoleBody) {
-            // legacy behavior: keep the line above the virtual input
-            if (inputLineEl && inputLineEl.isConnected) {
-                consoleBody.insertBefore(div, inputLineEl);
-            } else {
-                consoleBody.appendChild(div);
+    // Terminal data handler
+    terminal.onData(data => {
+        if (awaitingProgramInput) {
+            // Handle program input
+            if (data === '\r') { // Enter
+                terminal.write('\r\n');
+                worker.postMessage({ type: 'input_response', value: currentCommand });
+                currentCommand = '';
+                awaitingProgramInput = false;
+            } else if (data === '\u007f') { // Backspace
+                if (currentCommand.length > 0) {
+                    currentCommand = currentCommand.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (data.length === 1 && data >= ' ') { // Printable characters
+                currentCommand += data;
+                terminal.write(data);
             }
         } else {
-            parent.appendChild(div);
+            // Handle console commands
+            if (data === '\r') { // Enter
+                terminal.write('\r\n');
+                execCommand(currentCommand);
+                currentCommand = '';
+            } else if (data === '\u007f') { // Backspace
+                if (currentCommand.length > 0) {
+                    currentCommand = currentCommand.slice(0, -1);
+                    terminal.write('\b \b');
+                }
+            } else if (data === '\u001b[A') { // Arrow Up
+                if (commandHistory.length > 0) {
+                    historyIndex = Math.max(0, historyIndex - 1);
+                    currentCommand = commandHistory[historyIndex] || '';
+                    terminal.write('\r\x1b[K' + currentCommand);
+                }
+            } else if (data === '\u001b[B') { // Arrow Down
+                if (commandHistory.length > 0) {
+                    historyIndex = Math.min(commandHistory.length, historyIndex + 1);
+                    currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
+                    terminal.write('\r\x1b[K' + currentCommand);
+                }
+            } else if (data.length === 1 && data >= ' ') { // Printable characters
+                currentCommand += data;
+                terminal.write(data);
+            }
         }
+    });
 
-        scrollConsoleToBottom();
-        updateButtonStates();
-        return div;
+    function terminalWrite(text, color = null) {
+        if (color) {
+            terminal.write(`\x1b[${color}m${text}\x1b[0m`);
+        } else {
+            terminal.write(text);
+        }
     }
 
     function updateButtonStates() {
-        const hasContent = consoleBody.children.length > 0;
-        clearBtn.disabled = !hasContent;
-        copyBtn.disabled = !hasContent;
-        downloadBtn.disabled = !hasContent;
+        // Terminal always has content, so buttons are always enabled
+        clearBtn.disabled = false;
+        copyBtn.disabled = false;
+        downloadBtn.disabled = false;
     }
 
-    // --- Virtual input line (no separate input element) ---
-    let inputLineEl = null;
-    let inputCmdSpan = null;
-    let cursorSpan = null;
-    let cursorBlink = null;
-
-    function ensureInputLine() {
-        // Only create if there isn't already one
-        if (inputLineEl && inputLineEl.isConnected) return inputLineEl;
-
-        inputLineEl = document.createElement('div');
-        inputLineEl.className = 'line console-input'; // green/white styling for console commands
-        inputCmdSpan = document.createElement('span');
-        inputCmdSpan.className = 'command-text';
-        cursorSpan = document.createElement('span');
-        cursorSpan.className = 'cursor';
-
-        inputLineEl.appendChild(inputCmdSpan);
-        inputLineEl.appendChild(cursorSpan);
-        
-        // Always append to consoleBody at the very bottom
-        consoleBody.appendChild(inputLineEl);
-        
-        scrollConsoleToBottom();
-
-        return inputLineEl;
-    }
-
-    function scrollConsoleToBottom() {
-        consoleBody.scrollTop = consoleBody.scrollHeight;
-    }
-
-    function resetCursorCycle() {
-        if (cursorSpan) {
-            // Force cursor to be visible immediately
-            cursorSpan.style.animation = 'none';
-            cursorSpan.style.opacity = '1';
-            
-            // Restart animation after a brief moment
-            setTimeout(() => {
-                cursorSpan.style.animation = 'ide-cursor-blink 1s steps(1) infinite';
-            }, 10);
-        }
-    }
-
-    function updatePrompt() {
-        // replaces the old DOM-targeting version
-        ensureInputLine();
-        if (awaitingProgramInput) {
-            inputCmdSpan.textContent = `> ${currentCommand}`;
-        } else {
-            inputCmdSpan.textContent = currentCommand;
-        }
-        scrollConsoleToBottom();
-    }
-
+    // Terminal output functions
     const consoleOutput = {
-        println: (t, cls) => consoleLine(t, cls),
-        info:    (t) => consoleLine(t, 'stdin'),
-        error:   (t) => consoleLine(t, 'stderr'),
-        clear:   () => {
-            consoleBody.textContent = '';
-            ensureInputLine();
-            updateButtonStates();
-        },
+        println: (t, cls) => terminalWrite(t + '\r\n'),
+        info:    (t) => terminalWrite(t + '\r\n'),
+        error:   (t) => terminalWrite(t + '\r\n', '31'), // red
+        clear:   () => terminal.clear(),
     };
 
     // console commands
@@ -858,9 +709,7 @@ OUTPUT greet("World")`
                 // Skip displaying the command
             } else {
                 // command is green, arguments are white
-                const coloredLine = `<span style="color: var(--green);">${cmd}</span>${arg ? ` <span style="color: var(--text);">${arg}</span>` : ''}`;
-                const line = consoleLine('', 'stdin');
-                line.innerHTML = coloredLine;
+                terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`);
             }
         } else {
             // show invalid command
@@ -896,7 +745,7 @@ OUTPUT greet("World")`
                 
                 window.__ide_stop_flag = true;        
                 stopCode()
-            break;
+                break;
 
             case 'clear':
                 consoleOutput.clear();
@@ -1102,13 +951,15 @@ OUTPUT greet("World")`
             consolePane.style.height = consoleH + 'px';
         
             if (window.editor) window.editor.resize(true);
+            fitTerm();
         }
     
-        // sensible initial split
+        // initial split
         function layoutInitial() {
             const avail = availableStackHeight();
             const targetE = Math.round(Math.min(getMaxEditorHeight(), 0.5 * (avail - SPLITTER_H)));
             applySplit(targetE);
+            fitTerm();
         }
     
         let dragging = false;
@@ -1155,6 +1006,7 @@ OUTPUT greet("World")`
             const avail = availableStackHeight();
             const maxEditor = getMaxEditorHeight();
             applySplit(Math.round(Math.min(ratio * (avail - SPLITTER_H), maxEditor)));
+            fitTerm();
         });
     
         requestAnimationFrame(layoutInitial);
@@ -1199,7 +1051,7 @@ OUTPUT greet("World")`
         await saveTextAsFile(filename, output);
     });
 
-    // load formatter
+    // load formatter and setup resize
     document.addEventListener('DOMContentLoaded', () => {
         if (window.pseudoFormatter) {
             window.pseudoFormatter.wireFormatterButton();

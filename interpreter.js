@@ -27,7 +27,34 @@ async function interpretPseudocode(code) {
         }
     }
 
+    function stripStringsAndComments(src) {
+        let out = '';
+        let inStr = false, quote = '';
+        for (let i = 0; i < src.length; i++) {
+            const c = src[i], p = src[i-1];
+            // line comment
+            if (!inStr && c === '/' && src[i+1] === '/') {
+                // replace the rest with spaces to preserve indices
+                while (i < src.length) { out += ' '; i++; }
+                break;
+            }
+            if (!inStr && (c === '"' || c === "'")) {
+                inStr = true; quote = c; out += ' ';
+                continue;
+            }
+            if (inStr) {
+                // leave a single space for each char so regex indices stay sane
+                if (c === quote && p !== '\\') { inStr = false; quote = ''; }
+                out += ' ';
+            } else {
+                out += c;
+            }
+        }
+        return out;
+    }
+
     function checkCapitalization(text, lineNumber) {
+        const scan = stripStringsAndComments(text);  // <-- add this line
         // Full keyword set (selection, iteration, decls, I/O, logical, types, builtins)
         const KEYWORDS = [
           'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
@@ -43,7 +70,7 @@ async function interpretPseudocode(code) {
             // whole-word match, case-insensitive
             const re = new RegExp(`\\b${kw}\\b`, 'gi');
             let m;
-            while ((m = re.exec(text)) !== null) {
+            while ((m = re.exec(scan)) !== null) {
             // m[0] is whatever was in source; if it doesn't exactly equal the canonical uppercase, warn once
                 if (m[0] !== kw) {
                     const sig = `${kw}:${lineNumber}:${m.index}`;
@@ -879,52 +906,77 @@ async function interpretPseudocode(code) {
                 continue;
             }
 
-            // IF ... THEN ... ENDIF  (+ optional ELSE) - two-line form
+            // IF ... (two-line form: THEN on its own line) with nesting support
             if (/^IF\b/i.test(s) && !/\bTHEN\b/i.test(s)) {
                 const condExpr = s.replace(/^IF\s+/i, '').trim();
-            
-                // find next non-empty line; it must be exactly "THEN"
+
+                // Find the standalone THEN
                 let t = i + 1;
                 while (t < blockLines.length) {
-                    const tRaw  = blockLines[t];
-                    const tText = cleanLine(typeof tRaw === 'object' ? tRaw.content : tRaw);
-                    if (tText) break;
+                    const r  = blockLines[t];
+                    const tt = cleanLine(typeof r === 'object' ? r.content : r);
+                    if (tt) break;
                     t++;
                 }
                 if (t >= blockLines.length) {
                     const e = new Error(`Missing THEN after IF starting at line ${currentLine}`);
                     e.line = currentLine; throw e;
                 }
-            
-                const tRaw2  = blockLines[t];
-                const tText2 = cleanLine(typeof tRaw2 === 'object' ? tRaw2.content : tRaw2);
-                if (!/^THEN$/i.test(tText2)) {
+                const thenToken = cleanLine(typeof blockLines[t] === 'object' ? blockLines[t].content : blockLines[t]);
+                if (!/^THEN$/i.test(thenToken)) {
                     const e = new Error(`Expected THEN after IF at line ${currentLine}`);
                     e.line = currentLine; throw e;
                 }
-            
-                // collect THEN block from the line after THEN to ELSE/ENDIF
-                const { block: thenBlock, next: afterThen } = collectUntil(blockLines, t + 1, /^(ELSE|ENDIF)\b/i, currentLine);
-                let elseBlock = [];
-                let j = afterThen;
-            
-                if (j < blockLines.length) {
-                    const tagRaw = blockLines[j];
-                    const tag    = cleanLine(typeof tagRaw === 'object' ? tagRaw.content : tagRaw);
-                    if (/^ELSE\b/i.test(tag)) {
-                        const res = collectUntil(blockLines, j + 1, /^(ENDIF)\b/i, currentLine);
-                        elseBlock = res.block;
-                        j = res.next;
+
+                // Depth-aware collect: build THEN and ELSE blocks until ENDIF at depth 0
+                const thenBlock = [];
+               const elseBlock = [];
+                let inElse = false;
+                let depth  = 0; // nested IF (two-line form) depth
+                let k = t + 1;
+                for (; k < blockLines.length; k++) {
+                    const rawK = blockLines[k];
+                    const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
+                    const c    = cleanLine(txt);
+                    if (!c) { (inElse ? elseBlock : thenBlock).push(rawK); continue; }
+
+                    // Detect nested two-line IF starts/ends
+                    if (/^IF\b/i.test(c) && !/\bTHEN\b/i.test(c)) {
+                        depth++;
+                        (inElse ? elseBlock : thenBlock).push(rawK);
+                        continue;
                     }
+                    if (/^ENDIF\b/i.test(c)) {
+                        if (depth > 0) {
+                            depth--;
+                            (inElse ? elseBlock : thenBlock).push(rawK);
+                            continue;
+                        }
+                        // depth == 0: this ENDIF closes the OUTER IF
+                        break;
+                    }
+                    if (/^ELSE\b/i.test(c) && depth === 0) {
+                        // switch to ELSE (do not include the ELSE token)
+                        inElse = true;
+                        continue;
+                    }
+
+                    // Regular line (or THEN token from nested IF) — include it
+                    (inElse ? elseBlock : thenBlock).push(rawK);
                 }
-                if (j >= blockLines.length) {
+
+                if (k >= blockLines.length) {
                     const e = new Error(`Missing ENDIF for IF starting at line ${currentLine}`);
                     e.line = currentLine; throw e;
                 }
-            
-                i = j; // continue after ENDIF
-                if (toBool(await evalExpr(condExpr, scope))) await runBlock(thenBlock, scope, undefined, allowReturn);
-                else await runBlock(elseBlock, scope, undefined, allowReturn);
+
+                // Execute and continue after the ENDIF we just consumed
+                i = k;
+                if (toBool(await evalExpr(condExpr, scope))) {
+                    await runBlock(thenBlock, scope, undefined, allowReturn);
+                } else {
+                    await runBlock(elseBlock, scope, undefined, allowReturn);
+                }
                 continue;
             }
 
@@ -1118,7 +1170,16 @@ async function interpretPseudocode(code) {
                             }
                             return v;
                         }));
-                        out(vals);
+
+                        // print newline first then text
+                        OUTPUT_BUFFER.push('');
+                        OUTPUT_BUFFER.push(vals.map(v => toString(v)).join(""));
+
+                        // stream immediately
+                        if (OUTPUT_BUFFER.length) {
+                            self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join('\n') });
+                            OUTPUT_BUFFER.length = 0;
+                        }
                     }
                 ],
 
