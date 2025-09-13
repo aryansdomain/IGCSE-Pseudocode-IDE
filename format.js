@@ -47,6 +47,7 @@ function formatOnce(src) {
         return '    ';
     };
     const indentUnit = getIndentUnit();
+    const tabSize = window.editor && window.editor.session ? window.editor.session.getTabSize() : 4;
 
     let lines = src.replace(/\r\n?/g, '\n').split('\n');
 
@@ -402,17 +403,15 @@ function formatOnce(src) {
     const reFor       = /^\s*FOR\b/i;
     const reRepeat    = /^\s*REPEAT\s*$/i;
     const reCase      = /^\s*CASE\s+OF\b/i;
+    const reCaseOption = /^\s*\d+\s*:\s*/i; // matches CASE options like "1 : OUTPUT 1"
 
     for (let i = 0; i < normalized.length; i++) {
         let codeProt = normalized[i].code;
         const comment = normalized[i].comment;
-
-        // Make sure THEN line itself is indented under IF
-        if (reThen.test(codeProt)) indent += 1;
-
+        
         // close blocks before printing current line
         if (reEndIf.test(codeProt)) {
-            indent = Math.max(0, indent - 2); // close ELSE/body and IF/THEN levels
+            indent = Math.max(0, indent - 1);
         } else if (
             reElse.test(codeProt) ||
             reEndWhile.test(codeProt) ||
@@ -447,7 +446,13 @@ function formatOnce(src) {
              .replace(/(^|\(|,|=|\bTO\b)\s*-\s+(?=[0-9.])/gi, (m, p1) => p1 + '-');
         restored = restore(p);
 
-        let lineOut = indentUnit.repeat(indent) + restored;
+        let lineOut;
+        if (reThen.test(codeProt) || reElse.test(codeProt) || reCaseOption.test(codeProt)) {
+            const halfUnit  = ' '.repeat(Math.floor(tabSize / 2));          // half the tab size
+            lineOut = indentUnit.repeat(indent) + halfUnit + restored;
+        } else {
+            lineOut = indentUnit.repeat(indent) + restored;
+        }
 
         // keep inline comment with a space
         if (comment) {

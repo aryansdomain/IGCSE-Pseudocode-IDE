@@ -442,6 +442,7 @@ OUTPUT greet("World")`
         runningTimer = setTimeout(() => {
             if (isRunning && localRunId === runId && !hadFlushOutput) {
                 indicatorShown = true;
+                terminalWrite('\r\n'); // Add newline before showing dots
                 dotTimer = setInterval(() => {
                     dotPhase = (dotPhase + 1) % 4;    // cycle
                     terminalWrite('\b'.repeat(7) + '.'.repeat(dotPhase));   // '', '.', '..', '...'
@@ -570,7 +571,7 @@ OUTPUT greet("World")`
                 runningLineToReplace.textContent = 'Execution stopped';
                 runningLineToReplace.className = 'line stderr';
             }
-            finishRun(currentLocalRunId);                                  // flip button back to Run
+            // Don't call finishRun() here - let the worker 'stopped' message handle it
         }, 300);
     }
     
@@ -819,7 +820,11 @@ OUTPUT greet("World")`
                 // delete the last line
                 terminalWrite(`\x1b[1A\x1b[2K\x1b[90m% \x1b[0m`);
                 // output colored command with prompt
-                terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for all commands
+                if (cmdLower === 'run') {
+                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}`); // no newline for run
+                } else {
+                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for other commands
+                }
             }
         }
 

@@ -16,7 +16,7 @@ async function interpretPseudocode(code) {
 
     // Error throwing helper
     function throwErr(name, message, line) {
-        const e = new Error(message + name);
+        const e = new Error(name + message);
         e.line = line;
         throw e;
     }
@@ -181,7 +181,7 @@ async function interpretPseudocode(code) {
                     throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to BOOLEAN', __LINE_NUMBER);
                 return;
             case 'CHAR':
-                if (!isInput && hasRhsText && !isSingleQuoted(rhsExpr))
+                if (!isInput && hasRhsText && isDoubleQuoted(rhsExpr))
                     throwErr('', 'Type mismatch: expected CHAR literal in single quotes', __LINE_NUMBER);
                 if (toString(value).length !== 1)
                     throwErr('', 'CHAR literal must be a single character', __LINE_NUMBER);
@@ -189,7 +189,7 @@ async function interpretPseudocode(code) {
             case 'STRING':
                 if (typeof value !== 'string')
                     throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to STRING', __LINE_NUMBER);
-                if (!isInput && hasRhsText && !isDoubleQuoted(rhsExpr))
+                if (!isInput && hasRhsText && isSingleQuoted(rhsExpr))
                     throwErr('', 'Type mismatch: STRING literals must use double quotes', __LINE_NUMBER);
                 return;
         }
@@ -371,23 +371,24 @@ async function interpretPseudocode(code) {
         
     };
 
+    // Helper function to check if an expression is numeric
+    function isNumericExpr(text) {
+        const t = text.trim();
+        // Protected string/char literals must NOT be treated as numeric
+        if (/^\uE000\d+\uE001$/.test(t)) return false;
+        // Numeric literal
+        if (/^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(t)) return true;
+        // Anything starting with a quote would have been protected already
+        if (/^['"]/.test(t)) return false;
+        // Variables/func calls (unchecked here)
+        return true;
+    }
+
     // ------------------------ Handle ^ replacement ------------------------
     function replacePowerOperators(expr) {
         const START = '\uE000';   // protected literal start
         const END   = '\uE001';   // protected literal end
         const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
-    
-        function isNumericExpr(text) {
-            const t = text.trim();
-            // Protected string/char literals must NOT be treated as numeric
-            if (/^\uE000\d+\uE001$/.test(t)) return false;
-            // Numeric literal
-            if (/^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(t)) return true;
-            // Anything starting with a quote would have been protected already
-            if (/^['"]/.test(t)) return false;
-            // Variables/func calls (unchecked here)
-            return true;
-        }
     
         function grabLeft(s, caretIdx) {
             let i = caretIdx - 1;
@@ -526,14 +527,6 @@ async function interpretPseudocode(code) {
             return { end: i, text: s.slice(start, i).trim() };
         }
 
-        // Helper function to check if an expression is numeric
-        function isNumericExpr(text) {
-            const t = text.trim();
-            if (/^\uE000\d+\uE001$/.test(t)) return false; // protected literals are not numeric
-            if (/^\d+(\.\d+)?([eE][+-]?\d+)?$/.test(t)) return true;
-            if (/^['"]/.test(t)) return false;
-            return true;
-        }
         
         let s = expr;
         const re = new RegExp(`\\b${word}\\b`, 'i'); // case-insensitive token
@@ -572,10 +565,56 @@ async function interpretPseudocode(code) {
                 }
                 
                 if (!isNumericExpr(left) || !isNumericExpr(right)) {
-                    throwErr('', `Arithmetic operator ${op} requires numeric operands`, __LINE_NUMBER);
+                    throwErr('', `Arithmetic operator ${op} requires numeric operands.\r\nDid you mean to concatenate strings? Use commas instead.`, __LINE_NUMBER);
                 }
             }
         }
+    }
+
+    // Helper function to replace commas with + only outside parentheses
+    function replaceCommas(s) {
+        let result = '';
+        let depth = 0;
+        let inString = false;
+        let quote = '';
+        
+        for (let i = 0; i < s.length; i++) {
+            const ch = s[i];
+            if (inString) {
+                result += ch;
+                if (ch === quote && s[i - 1] !== '\\') {
+                    inString = false;
+                }
+                continue;
+            }
+            
+            if (ch === '"' || ch === "'") {
+                inString = true;
+                quote = ch;
+                result += ch;
+                continue;
+            }
+            
+            if (ch === '(' || ch === '[') {
+                depth++;
+                result += ch;
+                continue;
+            }
+            
+            if (ch === ')' || ch === ']') {
+                depth--;
+                result += ch;
+                continue;
+            }
+            
+            if (ch === ',' && depth === 0) {
+                result += ' + ';
+                continue;
+            }
+            
+            result += ch;
+        }
+        return result;
     }
 
     // ------------------------ Expression evaluation ------------------------
@@ -606,8 +645,10 @@ async function interpretPseudocode(code) {
         // not-equal
         s = s.replace(/<>/g, '!=');
 
-        // Check arithmetic operators for numeric operands BEFORE conversion
         validateArithmeticOperators(s);
+
+        // commas + for string concatenation (but not inside function calls)
+        s = replaceCommas(s);
 
         // power
         s = replacePowerOperators(s);
@@ -836,7 +877,8 @@ async function interpretPseudocode(code) {
                 found = true; 
                 break; 
             }
-            block.push({ line: i + 1, content: (typeof raw === 'object') ? raw.content : raw });
+            const lineNum = (typeof raw === 'object') ? raw.line : (i + 1);
+            block.push({ line: lineNum, content: (typeof raw === 'object') ? raw.content : raw });
         }
         if (!found) {
             let endMessage = 'closing statement';
@@ -903,6 +945,19 @@ async function interpretPseudocode(code) {
                 const name = m[1];
                 const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
                 await callProcedure(name, args, scope);
+                continue;
+            }
+
+            // IF ... THEN ... (single-line form)
+            if ((m = s.match(/^IF\s+(.+)\s+THEN\s+(.+)$/i))) {
+
+                consoleOutput.warning('Put THEN on a separate line.');
+                const cond = m[1];
+                const thenStmt = m[2];
+                
+                if (toBool(await evalExpr(cond, scope))) {
+                    await runLine(thenStmt, scope, allowReturn);
+                }
                 continue;
             }
 
@@ -1024,6 +1079,7 @@ async function interpretPseudocode(code) {
 
             // FOR i <- a TO b [STEP s] ... NEXT i
             if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
+                const forStartLine = __LINE_NUMBER; // capture the exact line where FOR appeared
                 const varName   = m[1];
                 const startExpr = m[2], toExpr = m[3], stepExpr = m[4] || '1';
 
@@ -1036,10 +1092,10 @@ async function interpretPseudocode(code) {
                 }
 
                 // collect body
-                const endRE = new RegExp(`^(?:NEXT\\s+${varName}|NEXT)$`, 'i');
-                const { block, next } = collectUntil(blockLines, i + 1, endRE);
+                const endRE = new RegExp(`^(?:NEXT\\s+${varName}|NEXT|ENDFOR\\s+${varName}|ENDFOR)$`, 'i');
+                const { block, next } = collectUntil(blockLines, i + 1, endRE, forStartLine);
                 if (next >= blockLines.length) {
-                    throwErr('', `Missing NEXT ${varName} for FOR starting at line ${currentLine}`, currentLine);
+                    throwErr('', `Missing NEXT/ENDFOR ${varName} for FOR starting at line ${forStartLine}`, forStartLine);
                 }
                 i = next;
 
@@ -1162,19 +1218,11 @@ async function interpretPseudocode(code) {
                   
                 [ /^OUTPUT\s+(.+)$/i,
                     async (m, scope) => {
-                        const parts = splitArgs(m[1]);
-                        const vals = await Promise.all(parts.map(async p => {
-                            const v = await evalExpr(p, scope);
-                            const name = p.trim();
-                            if (/^[A-Za-z][A-Za-z0-9]*$/.test(name) && getType(scope, name) === 'REAL' && typeof v === 'number') {
-                                return realToString(v);
-                            }
-                            return v;
-                        }));
-
+                        const val = await evalExpr(m[1], scope);
+                        
                         // print newline first then text
                         OUTPUT_BUFFER.push('');
-                        OUTPUT_BUFFER.push(vals.map(v => toString(v)).join(""));
+                        OUTPUT_BUFFER.push(toString(val));
 
                         // stream immediately
                         if (OUTPUT_BUFFER.length) {
