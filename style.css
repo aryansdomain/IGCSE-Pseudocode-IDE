@@ -124,6 +124,7 @@ html, body { height: 100%; }
 #code {
   position: absolute;
   inset: 0;
+  overflow: hidden;
 }
 
 /* bottom bar */
@@ -172,7 +173,7 @@ html, body { height: 100%; }
 #console-pane {
   padding-top: 0;
   min-height: 120px;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -232,6 +233,7 @@ body.dragging {
   border-radius: var(--radius-xs);
   flex: 1 1 auto;
   background-color: black;
+  overflow: hidden;
 }
 
 .console-sidebar {
@@ -703,8 +705,6 @@ body.dragging {
   color: var(--green);
 }
 
-
-
 /* Make sure the stack can actually shrink and there's no top padding */
 #workspace { min-height: 0; }
 
@@ -745,6 +745,7 @@ html.mode-switching *::after {
   line-height: 1.5;
   padding: 8px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
 }

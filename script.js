@@ -138,14 +138,15 @@ OUTPUT greet("World")`
     function updateTerminalTheme() {
         const isLight = document.documentElement.classList.contains('light');
         const terminalTheme = isLight ? {
+            // LIGHT MODE
             background: '#ffffff',
             foreground: '#000000',
             cursor: '#000000',
             selection: '#00000030',
             black: '#000000',
-            red: '#ff0000',
+            red: '#ff7b72',
             green: '#00ff00',
-            yellow: '#ffff00',
+            yellow: '#ce8600',
             blue: '#0000ff',
             magenta: '#ff00ff',
             cyan: '#00ffff',
@@ -159,14 +160,15 @@ OUTPUT greet("World")`
             brightCyan: '#80ffff',
             brightWhite: '#ffffff'
         } : {
+            // DARK MODE
             background: '#000000',
             foreground: '#ffffff',
             cursor: '#ffffff',
             selection: '#ffffff30',
             black: '#000000',
-            red: '#ff0000',
+            red: '#d73a49',
             green: '#00ff00',
-            yellow: '#ffff00',
+            yellow: '#ffd700',
             blue: '#0000ff',
             magenta: '#ff00ff',
             cyan: '#00ffff',
@@ -514,8 +516,7 @@ OUTPUT greet("World")`
             } else if (type === 'warning') {
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
-                const lineEl = consoleLine('', 'warning');
-                lineEl.innerHTML = `<span class="warning-text">${msg}</span>`;
+                consoleOutput.warning(msg);
             }
         };
 
@@ -614,28 +615,6 @@ OUTPUT greet("World")`
 
     // ---------- Terminal wiring ----------
     const terminal = new Terminal({
-        theme: {
-            background: '#000000',
-            foreground: '#ffffff',
-            cursor: '#ffffff',
-            selection: '#ffffff30',
-            black: '#000000',
-            red: '#ff0000',
-            green: '#00ff00',
-            yellow: '#ffff00',
-            blue: '#0000ff',
-            magenta: '#ff00ff',
-            cyan: '#00ffff',
-            white: '#ffffff',
-            brightBlack: '#808080',
-            brightRed: '#ff8080',
-            brightGreen: '#80ff80',
-            brightYellow: '#ffff80',
-            brightBlue: '#8080ff',
-            brightMagenta: '#ff80ff',
-            brightCyan: '#80ffff',
-            brightWhite: '#ffffff'
-        },
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
@@ -643,6 +622,9 @@ OUTPUT greet("World")`
     });
     
     terminal.open(document.getElementById('terminal'));
+    
+    updateTerminalTheme();
+    writePrompt();
 
     let fitAddon = null;
     try {
@@ -662,51 +644,128 @@ OUTPUT greet("World")`
     let commandHistory = [];
     let historyIndex = -1;
     let awaitingProgramInput = false;
+    let cursorPosition = 0; // Track cursor position within current command
+
+    // Helper functions for cursor movement
+    function moveCursorLeft() {
+        if (cursorPosition > 0) {
+            cursorPosition--;
+            terminal.write('\x1b[D'); // Move cursor left
+        }
+    }
+
+    function moveCursorRight() {
+        if (cursorPosition < currentCommand.length) {
+            cursorPosition++;
+            terminal.write('\x1b[C'); // Move cursor right
+        }
+    }
+
+    function updateCommandDisplay() {
+        // Clear current line and rewrite command with prompt
+        terminal.write('\r\x1b[K');
+        writePrompt();
+        terminal.write(currentCommand);
+        // move cursor
+        if (cursorPosition < currentCommand.length) {
+            terminal.write('\x1b[' + (currentCommand.length - cursorPosition) + 'D');
+        }
+    }
 
     // Terminal data handler
     terminal.onData(data => {
         if (awaitingProgramInput) {
             // Handle program input
-            if (data === '\r') { // Enter
-                terminal.write('\r\n');
+            if (data === '\r') { // enter
+                terminalWrite('\r\n');
                 worker.postMessage({ type: 'input_response', value: currentCommand });
                 currentCommand = '';
+                cursorPosition = 0;
                 awaitingProgramInput = false;
-            } else if (data === '\u007f') { // Backspace
-                if (currentCommand.length > 0) {
-                    currentCommand = currentCommand.slice(0, -1);
-                    terminal.write('\b \b');
+                writePrompt(); // add prompt for next command
+
+            } else if (data === '\u007f') { // backspace
+                if (cursorPosition > 0) {
+                    currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
+                    cursorPosition--;
+                    // Always use efficient backspace for end-of-line deletion
+                    if (cursorPosition === currentCommand.length) {
+                        terminal.write('\b \b');
+                    } else {
+                        // For middle deletion, move cursor back and delete character
+                        terminal.write('\b');
+                        terminal.write(currentCommand.slice(cursorPosition) + ' ');
+                        terminal.write('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
+                    }
                 }
-            } else if (data.length === 1 && data >= ' ') { // Printable characters
-                currentCommand += data;
-                terminal.write(data);
+
+            } else if (data === '\u001b[D') { // left arrow
+                moveCursorLeft();
+            } else if (data === '\u001b[C') { // right arrow
+                moveCursorRight();
+                
+            } else if (data.length === 1 && data >= ' ') { // printable characters
+                // Insert character at cursor position
+                currentCommand = currentCommand.slice(0, cursorPosition) + data + currentCommand.slice(cursorPosition);
+                cursorPosition++;
+                updateCommandDisplay();
             }
         } else {
             // Handle console commands
-            if (data === '\r') { // Enter
-                terminal.write('\r\n');
+            if (data === '\r') { // enter
+                terminalWrite('\r\n');
                 execCommand(currentCommand);
                 currentCommand = '';
-            } else if (data === '\u007f') { // Backspace
-                if (currentCommand.length > 0) {
-                    currentCommand = currentCommand.slice(0, -1);
-                    terminal.write('\b \b');
+                cursorPosition = 0;
+                writePrompt(); // add prompt for next command
+            } else if (data === '\u007f') { // backspace
+                if (cursorPosition > 0) {
+                    currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
+                    cursorPosition--;
+                    // Always use efficient backspace for end-of-line deletion
+                    if (cursorPosition === currentCommand.length) {
+                        terminal.write('\b \b');
+                    } else {
+                        // For middle deletion, move cursor back and delete character
+                        terminal.write('\b');
+                        terminal.write(currentCommand.slice(cursorPosition) + ' ');
+                        terminal.write('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
+                    }
                 }
-            } else if (data === '\u001b[A') { // Arrow Up
+            } else if (data === '\u001b[A') { // up arrow
                 if (commandHistory.length > 0) {
                     historyIndex = Math.max(0, historyIndex - 1);
                     currentCommand = commandHistory[historyIndex] || '';
-                    terminal.write('\r\x1b[K' + currentCommand);
+                    cursorPosition = currentCommand.length; // Move cursor to end
+                    terminal.write('\r\x1b[K');
+                    writePrompt();
+                    terminal.write(currentCommand);
                 }
-            } else if (data === '\u001b[B') { // Arrow Down
+            } else if (data === '\u001b[B') { // down arrow
                 if (commandHistory.length > 0) {
                     historyIndex = Math.min(commandHistory.length, historyIndex + 1);
                     currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
-                    terminal.write('\r\x1b[K' + currentCommand);
+                    cursorPosition = currentCommand.length; // Move cursor to end
+                    terminal.write('\r\x1b[K');
+                    writePrompt();
+                    terminal.write(currentCommand);
                 }
-            } else if (data.length === 1 && data >= ' ') { // Printable characters
-                currentCommand += data;
-                terminal.write(data);
+            } else if (data === '\u001b[D') { // left arrow
+                moveCursorLeft();
+            } else if (data === '\u001b[C') { // right arrow
+                moveCursorRight();
+            } else if (data.length === 1 && data >= ' ') { // printable characters
+                // Insert character at cursor position
+                currentCommand = currentCommand.slice(0, cursorPosition) + data + currentCommand.slice(cursorPosition);
+                cursorPosition++;
+                
+                // If inserting at the end, just write the character
+                if (cursorPosition === currentCommand.length) {
+                    terminal.write(data);
+                } else {
+                    // If inserting in the middle, rewrite the line
+                    updateCommandDisplay();
+                }
             }
         }
     });
@@ -719,6 +778,10 @@ OUTPUT greet("World")`
         }
     }
 
+    function writePrompt() {
+        terminalWrite('% ', '90'); // Muted gray color for prompt
+    }
+
     function updateButtonStates() {
         // Terminal always has content, so buttons are always enabled
         clearBtn.disabled = false;
@@ -728,10 +791,11 @@ OUTPUT greet("World")`
 
     // Terminal output functions
     const consoleOutput = {
-        println: (t, cls) => terminalWrite(t + '\r\n'),
+        println: (t) => terminalWrite(t + '\r\n'),
         info:    (t) => terminalWrite(t + '\r\n'),
         error:   (t) => terminalWrite(t + '\r\n', '31'), // red
-        clear:   () => terminal.clear(),
+        warning: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // italics yellow
+        clear:   ()  => terminal.clear(),
     };
 
     // console commands
@@ -749,32 +813,31 @@ OUTPUT greet("World")`
         const validCommands = ['help', 'run', 'clear', 'tab', 'font', 'mode', 'theme', 'stop'];
         const isValidCommand = validCommands.includes(cmdLower);
 
+        // command is green, arguments are white
         if (isValidCommand) {
-            // Don't display "> stop" command if something is running
-            if (cmdLower === 'stop' && isRunning) {
-                // Skip displaying the command
-            } else {
-                // command is green, arguments are white
-                terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`);
+            if (!(cmdLower === 'stop' && isRunning) && cmdLower !== 'clear') {
+                // delete the last line
+                terminalWrite(`\x1b[1A\x1b[2K`);
+                // output colored command with prompt
+                terminalWrite(`\x1b[90m% \x1b[0m\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`);
             }
         }
 
         switch (cmdLower) {
-            case 'help':
-            consoleOutput.println(
-                [
-                    'Commands:',
-                    'run                 Execute code in the editor',
-                    'stop                Stop currently running code',
-                    'clear               Clear console output',
-                    'tab <n>             Set editor tab size (1-8 spaces)',
-                    'font <px>           Set editor font size (10-24px)',
-                    'mode <light|dark>   Switch mode to light or dark',
-                    'theme <theme>       Switch editor theme',
-                ].join('\n'),
-                'stdout'
-            );
+            case 'help': {
+                const output =
+                    'run                  Execute the code currently in the editor. If the program needs input, type and press Enter.\r\n' +
+                    'stop                 Stop the running program\r\n' +
+                    'clear                Clear console\r\n' +
+                    'tab <n>              Set editor tab size (1-8 spaces)\r\n' +
+                    'font <px>            Set editor font size (6-50 px)\r\n' +
+                    'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
+                    'theme <theme>        Change the editor color theme ("Monokai", "Github Dark", "Dracula", etc.)\r\n\r\n'
+
+                terminalWrite('\x1b[1mCommands:\x1b[0m\r\n');
+                terminalWrite(output);
             break;
+            }
 
             case 'run':
                 runCode();
@@ -800,8 +863,8 @@ OUTPUT greet("World")`
                     refreshTabSpaces(n);
                     consoleOutput.println(`Tab size: ${n}`, 'stdout');
                     if (n === 0) {
-                        consoleOutput.println('Warning: using the "tab" command again will not reverse this change.', 'warning');
-                        consoleOutput.println('Press Cmd/Ctrl+Z to restore.', 'warning');
+                        consoleOutput.warning('Warning: using the "tab" command again will not reverse this change.');
+                        consoleOutput.warning('Press Cmd/Ctrl+Z to restore.');
                     }
                 } else {
                     consoleOutput.error('Usage: tab <0-8 spaces>');
@@ -910,7 +973,7 @@ OUTPUT greet("World")`
         const editorPane  = document.getElementById('editor-pane');
         const consolePane = document.getElementById('console-pane');
         const splitter    = document.getElementById('splitter');
-
+    
         if (!workspace || !editorPane || !consolePane || !splitter) return;
 
         const SPLITTER_H = 8;
@@ -935,7 +998,7 @@ OUTPUT greet("World")`
         }
 
         // Initial layout (keep your existing logic if you have one)
-        applySplit(Math.round((workspace.clientHeight - SPLITTER_H) * 0.6));
+        applySplit(Math.round((workspace.clientHeight - SPLITTER_H) * 0.4));
 
         let pointerId = null;
         let startY = 0;
@@ -955,7 +1018,7 @@ OUTPUT greet("World")`
             // Use rendered height as baseline
             startEditorH = editorPane.getBoundingClientRect().height;
         }
-
+    
         function onPointerMove(e) {
             if (pointerId == null) return;
             // delta (positive when dragging down)
@@ -963,7 +1026,7 @@ OUTPUT greet("World")`
 
             applySplit(startEditorH + dy);
         }
-
+    
         function endDrag() {
             if (pointerId == null) return;
             try { splitter.releasePointerCapture(pointerId); } catch {}
