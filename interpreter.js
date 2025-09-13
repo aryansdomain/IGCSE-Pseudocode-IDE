@@ -1022,7 +1022,7 @@ async function interpretPseudocode(code) {
                 continue;
             }
 
-            // FOR i ← a TO b [STEP s] ... NEXT i
+            // FOR i <- a TO b [STEP s] ... NEXT i
             if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
                 const varName   = m[1];
                 const startExpr = m[2], toExpr = m[3], stepExpr = m[4] || '1';

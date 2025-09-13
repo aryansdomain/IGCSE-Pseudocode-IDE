@@ -161,7 +161,7 @@ OUTPUT greet("World")`
             brightWhite: '#ffffff'
         } : {
             // DARK MODE
-            background: '#0f1117', // --bg
+            background: '#000000', // pitch black
             foreground: '#e6edf3', // --text
             cursor: '#e6edf3', // --text
             selection: '#2b313b30', // --border with transparency
@@ -431,6 +431,8 @@ OUTPUT greet("World")`
     }
 
     function attachWorkerHandlers(localRunId) {
+        let indicatorShown = false;
+
         let runningLine = null;
         let runningTimer = null;
         let dotTimer = null;
@@ -438,10 +440,10 @@ OUTPUT greet("World")`
 
         // Set up animated dot ticker
         runningTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId) {
-                terminalWrite('Running', '32'); // green color
+            if (isRunning && localRunId === runId && !hadFlushOutput) {
+                indicatorShown = true;
                 dotTimer = setInterval(() => {
-                    dotPhase = (dotPhase + 1) % 4;                    // cycle
+                    dotPhase = (dotPhase + 1) % 4;    // cycle
                     terminalWrite('\b'.repeat(7) + '.'.repeat(dotPhase));   // '', '.', '..', '...'
                     if (dotPhase == 0) terminalWrite('\b'.repeat(7) + '\u00A0')
                 }, 300);
@@ -451,8 +453,11 @@ OUTPUT greet("World")`
         const clearRunningIndicators = () => {
             if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
             if (dotTimer)     { clearInterval(dotTimer);    dotTimer = null; }
-            // Clear the running indicator from terminal
-            terminalWrite('\b'.repeat(7) + ' '.repeat(7) + '\b'.repeat(7));
+            // Clear the running indicator ONLY if it was shown
+            if (indicatorShown) {
+                terminalWrite('\b'.repeat(7) + ' '.repeat(7) + '\b'.repeat(7));
+                indicatorShown = false;
+            }
         };
 
         // Capture indicators for force-terminate cleanup
@@ -469,7 +474,7 @@ OUTPUT greet("World")`
                 clearRunningIndicators();
 
                 if (out) {
-                    terminalWrite(out + '\r\n');
+                    terminalWrite(out);
                 } else {
                     // If we already flushed any output earlier, don't print "(no output)"
                     if (!hadFlushOutput) {
@@ -502,17 +507,18 @@ OUTPUT greet("World")`
                 const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
                 __flushedPrefix += newPart;
                 if (newPart.length) hadFlushOutput = true;
+                
                 newPart.split('\n').forEach(part => {
                     if (part === '') {
                         terminalWrite('\r\n');
                     } else {
-                        terminalWrite(part + '\r\n');
+                        terminalWrite(part);
                     }
                 });
             } else if (type === 'warning') {
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
-                consoleOutput.warning(msg);
+                consoleOutput.warningln(msg);
             }
         };
 
@@ -527,7 +533,7 @@ OUTPUT greet("World")`
                 runningLineToReplace.textContent = errorMsg;
                 runningLineToReplace.className = 'line stderr';
             } else {
-                consoleOutput.error(errorMsg);
+                consoleOutput.errorln(errorMsg);
             }
             finishRun(localRunId);
         };
@@ -542,6 +548,7 @@ OUTPUT greet("World")`
         currentRunContainer = null;
         // show next prompt now that all warnings/flushes are printed
         deferPrompt = false;
+        terminalWrite('\r\n');
         writePrompt();
     }
 
@@ -602,7 +609,7 @@ OUTPUT greet("World")`
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
         else {
-            terminalWrite('run', '32'); // green color
+            consoleOutput.print('run', '32'); // green color 
             runCode();
         }
     });    
@@ -682,8 +689,6 @@ OUTPUT greet("World")`
                 currentCommand = '';
                 cursorPosition = 0;
                 awaitingProgramInput = false;
-                writePrompt(); // add prompt for next command
-
             } else if (data === '\u007f') { // backspace
                 if (cursorPosition > 0) {
                     currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
@@ -705,10 +710,10 @@ OUTPUT greet("World")`
                 moveCursorRight();
                 
             } else if (data.length === 1 && data >= ' ') { // printable characters
-                // Insert character at cursor position
-                currentCommand = currentCommand.slice(0, cursorPosition) + data + currentCommand.slice(cursorPosition);
-                cursorPosition++;
-                updateCommandDisplay();
+                // Append at end (simple, reliable in program-input mode)
+                currentCommand += data;
+                cursorPosition = currentCommand.length;
+                terminalWrite(data);
             }
         } else {
             // Handle console commands
@@ -782,19 +787,14 @@ OUTPUT greet("World")`
         terminalWrite('% ', '90'); // Muted gray color for prompt
     }
 
-    function updateButtonStates() {
-        // Terminal always has content, so buttons are always enabled
-        clearBtn.disabled = false;
-        copyBtn.disabled = false;
-        downloadBtn.disabled = false;
-    }
-
     // Terminal output functions
     const consoleOutput = {
-        println: (t) => terminalWrite(t + '\r\n'),
-        info:    (t) => terminalWrite(t + '\r\n'),
-        error:   (t) => terminalWrite(t + '\r\n', '31'), // red
-        warning: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
+        print:   (t, color = null) => terminalWrite(t,          color),
+        println: (t, color = null) => terminalWrite(t + '\r\n', color),
+        error:   (t) => terminalWrite(t,          '31'), // red
+        errorln: (t) => terminalWrite(t + '\r\n', '31'), // red
+        warning:   (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
+        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
         clear:   ()  => terminal.clear(),
     };
 
@@ -819,11 +819,7 @@ OUTPUT greet("World")`
                 // delete the last line
                 terminalWrite(`\x1b[1A\x1b[2K\x1b[90m% \x1b[0m`);
                 // output colored command with prompt
-                if (cmdLower === 'run') {
-                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}`); // no newline for run
-                } else {
-                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for other commands
-                }
+                terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for all commands
             }
         }
 
@@ -850,7 +846,7 @@ OUTPUT greet("World")`
 
             case 'stop':
                 if (!isRunning) {
-                    consoleOutput.error('No running execution to stop');
+                    consoleOutput.errorln('No running execution to stop');
                     return;
                 }
                 
@@ -866,13 +862,13 @@ OUTPUT greet("World")`
                 const n = parseInt(rest[0], 10);
                 if (Number.isInteger(n) && n >= 0 && n <= 8) {
                     refreshTabSpaces(n);
-                    consoleOutput.println(`Tab size: ${n}`, 'stdout');
+                    consoleOutput.println(`Tab size: ${n}`);
                     if (n === 0) {
-                        consoleOutput.warning('Warning: using the "tab" command again will not reverse this change.');
-                        consoleOutput.warning('Press Cmd/Ctrl+Z to restore.');
+                        consoleOutput.warningln('Warning: using the "tab" command again will not reverse this change.' + '\r\n' +
+                        'Press Cmd/Ctrl+Z to restore.');
                     }
                 } else {
-                    consoleOutput.error('Usage: tab <0-8 spaces>');
+                    consoleOutput.errorln('Usage: tab <0-8 spaces>');
                 }
                 break;
             }
@@ -881,9 +877,9 @@ OUTPUT greet("World")`
                 const px = parseInt(rest[0], 10);
                 if (Number.isInteger(px) && px >= 6 && px <= 40) {
                     editor.setFontSize(px);
-                    consoleOutput.println(`Font size: ${px}px`, 'stdout');
+                    consoleOutput.println(`Font size: ${px}px`);
                 } else {
-                    consoleOutput.error('Usage: font <6-40px>');
+                    consoleOutput.errorln('Usage: font <6-40px>');
                 }
                 break;
             }
@@ -902,10 +898,10 @@ OUTPUT greet("World")`
                     
                     // if current theme is already light, keep it
                     if (lightThemes.includes(currentTheme)) {
-                        consoleOutput.println(`Mode: light`, 'stdout');
+                        consoleOutput.println(`Mode: light`);
                     } else {
                         editor.setTheme('ace/theme/github');
-                        consoleOutput.println('Mode: light', 'stdout');
+                        consoleOutput.println('Mode: light');
                     }
                 } else if (t === 'dark') {
                     document.documentElement.classList.remove('light');
@@ -914,14 +910,14 @@ OUTPUT greet("World")`
                     
                     // if current theme is already dark, keep it
                     if (darkThemes.includes(currentTheme)) {
-                        consoleOutput.println(`Mode: dark`, 'stdout');
+                        consoleOutput.println(`Mode: dark`);
                     } else {
                         editor.setTheme('ace/theme/monokai');
-                        consoleOutput.println('Mode: dark', 'stdout');
+                        consoleOutput.println('Mode: dark');
                     }
                 } else {
                     document.documentElement.classList.remove('mode-switching');
-                    return consoleOutput.error('Usage: mode <light|dark>');
+                    return consoleOutput.errorln('Usage: mode <light|dark>');
                 }
                 
                 // update terminal theme
@@ -936,10 +932,10 @@ OUTPUT greet("World")`
 
             case 'theme': {
                 const themeSelect = document.getElementById('editorThemeSelect');
-                if (!themeSelect) return consoleOutput.error('Theme dropdown not found');
+                if (!themeSelect) return consoleOutput.errorln('Theme dropdown not found');
                 
                 const t = rest.join(' ').toLowerCase().replace(/[_-]/g, ' ');
-                if (!t) return consoleOutput.error('Usage: theme <theme_name>');
+                if (!t) return consoleOutput.errorln('Usage: theme <theme_name>');
                 
                 // find theme in dropdown options
                 const options = Array.from(themeSelect.options);
@@ -954,23 +950,25 @@ OUTPUT greet("World")`
                 }
                 
                 if (!foundOption) {
-                    return consoleOutput.error(`Invalid theme: ${t}`);
+                    return consoleOutput.errorln(`Invalid theme: ${t}`);
                 }
                 
                 // set theme
                 themeSelect.value = foundOption.value;
                 editor.setTheme(foundOption.value);
-                consoleOutput.println(`Theme: ${foundOption.textContent}`, 'stdout');
+                consoleOutput.println(`Theme: ${foundOption.textContent}`);
                 break;
             }
 
             default:
-                consoleOutput.error(`Unknown command: ${cmd}`);
+                consoleOutput.errorln(`Unknown command: ${cmd}`);
         }
     }
 
     // init
-    updateButtonStates();
+    clearBtn.disabled = false;
+    copyBtn.disabled = false;
+    downloadBtn.disabled = false;
 
     // ------------------------ Splitter ------------------------
     (function initSplitter() {
@@ -1064,7 +1062,12 @@ OUTPUT greet("World")`
 
     // copy console output
     copyBtn.addEventListener('click', () => {
-        const output = terminal.getSelection() || terminal.buffer.active.getLine(terminal.buffer.active.cursorY).translateToString();
+        output = '';
+        for (let i = 0; i < terminal.buffer.active.length; i++) {
+            const line = terminal.buffer.active.getLine(i).translateToString();
+            output += line + '\n';
+        }
+        output = output.trim();
 
         navigator.clipboard.writeText(output).then(() => {
             // animate to copied state
@@ -1077,7 +1080,9 @@ OUTPUT greet("World")`
                 copyBtn.style.background = '';
                 copyBtn.style.color = '';
             }, 750);
-        })
+        }).catch(err => {
+            consoleOutput.errorln('Failed to copy to clipboard. ' + err);
+        });
     });
 
     // download console output
@@ -1086,11 +1091,6 @@ OUTPUT greet("World")`
         let output = '';
         for (let i = 0; i < terminal.buffer.active.length; i++) {
             output += terminal.buffer.active.getLine(i).translateToString() + '\n';
-        }
-        
-        if (!output.trim()) {
-            consoleOutput.error('No output to download');
-            return;
         }
 
         // Create filename with timestamp

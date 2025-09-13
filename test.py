@@ -1,0 +1,5 @@
+print("input x: ")
+x = input()
+print("input y: ")
+y = input()
+print("x + y = ", x + y)
