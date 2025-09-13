@@ -145,42 +145,42 @@ OUTPUT greet("World")`
             selection: '#00000030',
             black: '#000000',
             red: '#ff7b72',
-            green: '#00ff00',
-            yellow: '#ce8600',
+            green: '#22c55e', // --green-accent
+            yellow: '#ce8600', // --warning (light mode)
             blue: '#0000ff',
             magenta: '#ff00ff',
             cyan: '#00ffff',
             white: '#ffffff',
-            brightBlack: '#808080',
-            brightRed: '#ff8080',
-            brightGreen: '#80ff80',
-            brightYellow: '#ffff80',
-            brightBlue: '#8080ff',
-            brightMagenta: '#ff80ff',
-            brightCyan: '#80ffff',
+            brightBlack: '#8b949e', // --muted
+            brightRed: '#ff7b72',
+            brightGreen: '#22c55e', // --green-accent
+            brightYellow: '#ce8600', // --warning (light mode)
+            brightBlue: '#0000ff',
+            brightMagenta: '#ff00ff',
+            brightCyan: '#00ffff',
             brightWhite: '#ffffff'
         } : {
             // DARK MODE
-            background: '#000000',
-            foreground: '#ffffff',
-            cursor: '#ffffff',
-            selection: '#ffffff30',
+            background: '#0f1117', // --bg
+            foreground: '#e6edf3', // --text
+            cursor: '#e6edf3', // --text
+            selection: '#2b313b30', // --border with transparency
             black: '#000000',
-            red: '#d73a49',
-            green: '#00ff00',
-            yellow: '#ffd700',
+            red: '#ff7b72', // --red
+            green: '#22c55e', // --green-accent
+            yellow: '#ffd700', // --warning (dark mode)
             blue: '#0000ff',
             magenta: '#ff00ff',
             cyan: '#00ffff',
-            white: '#ffffff',
-            brightBlack: '#808080',
-            brightRed: '#ff8080',
-            brightGreen: '#80ff80',
-            brightYellow: '#ffff80',
-            brightBlue: '#8080ff',
-            brightMagenta: '#ff80ff',
-            brightCyan: '#80ffff',
-            brightWhite: '#ffffff'
+            white: '#e6edf3', // --text
+            brightBlack: '#8b949e', // --muted
+            brightRed: '#ff7b72', // --red
+            brightGreen: '#22c55e', // --green-accent
+            brightYellow: '#ffd700', // --warning (dark mode)
+            brightBlue: '#0000ff',
+            brightMagenta: '#ff00ff',
+            brightCyan: '#00ffff',
+            brightWhite: '#e6edf3' // --text
         };
         
         terminal.options.theme = terminalTheme;
@@ -439,13 +439,11 @@ OUTPUT greet("World")`
         // Set up animated dot ticker
         runningTimer = setTimeout(() => {
             if (isRunning && localRunId === runId) {
-                runningLine = consoleLine('', 'stdin');                  // create a line to update
-                runningLine.style.color = 'var(--green)'; 
-                currentRunningLine = runningLine;  // store globally
+                terminalWrite('Running', '32'); // green color
                 dotTimer = setInterval(() => {
                     dotPhase = (dotPhase + 1) % 4;                    // cycle
-                    runningLine.textContent = '.'.repeat(dotPhase);   // '', '.', '..', '...'
-                    if (dotPhase == 0) runningLine.textContent = '\u00A0'
+                    terminalWrite('\b'.repeat(7) + '.'.repeat(dotPhase));   // '', '.', '..', '...'
+                    if (dotPhase == 0) terminalWrite('\b'.repeat(7) + '\u00A0')
                 }, 300);
             }
         }, 40);
@@ -453,8 +451,8 @@ OUTPUT greet("World")`
         const clearRunningIndicators = () => {
             if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
             if (dotTimer)     { clearInterval(dotTimer);    dotTimer = null; }
-            if (runningLine)  { runningLine.style.removeProperty('color'); } // reset color
-            currentRunningLine = null;  // clear global reference
+            // Clear the running indicator from terminal
+            terminalWrite('\b'.repeat(7) + ' '.repeat(7) + '\b'.repeat(7));
         };
 
         // Capture indicators for force-terminate cleanup
@@ -503,14 +501,12 @@ OUTPUT greet("World")`
                 const s = String(e.data.output || '');
                 const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
                 __flushedPrefix += newPart;
-
+                if (newPart.length) hadFlushOutput = true;
                 newPart.split('\n').forEach(part => {
-                    hadFlushOutput = true; // we printed something this run
                     if (part === '') {
-                        consoleLine('', 'stdout');      // real blank line
+                        terminalWrite('\r\n');
                     } else {
-                        const lineEl = consoleLine('', 'stdout');
-                        lineEl.textContent = part;
+                        terminalWrite(part + '\r\n');
                     }
                 });
             } else if (type === 'warning') {
@@ -544,6 +540,9 @@ OUTPUT greet("World")`
         setRunButton(false);
         if (worker) { worker.terminate(); worker = null; }
         currentRunContainer = null;
+        // show next prompt now that all warnings/flushes are printed
+        deferPrompt = false;
+        writePrompt();
     }
 
     function stopCode() {
@@ -603,7 +602,7 @@ OUTPUT greet("World")`
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
         else {
-            consoleOutput.info('run');
+            terminalWrite('run', '32'); // green color
             runCode();
         }
     });    
@@ -628,13 +627,13 @@ OUTPUT greet("World")`
 
     let fitAddon = null;
     try {
-      const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
-      fitAddon = new FitCtor();
-      terminal.loadAddon(fitAddon);
-      // initial fit after the terminal attaches
-      setTimeout(() => fitAddon.fit(), 0);
+        const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
+        fitAddon = new FitCtor();
+        terminal.loadAddon(fitAddon);
+        // initial fit after the terminal attaches
+        setTimeout(() => fitAddon.fit(), 0);
     } catch (e) {
-      // Optional: console.warn('xterm-addon-fit not loaded; terminal won't auto-resize');
+        // Optional: console.warn('xterm-addon-fit not loaded; terminal won't auto-resize');
     }
 
     function fitTerm() { if (fitAddon) fitAddon.fit(); }
@@ -645,6 +644,7 @@ OUTPUT greet("World")`
     let historyIndex = -1;
     let awaitingProgramInput = false;
     let cursorPosition = 0; // Track cursor position within current command
+    let deferPrompt = false; // Defer prompt when run is active
 
     // Helper functions for cursor movement
     function moveCursorLeft() {
@@ -664,7 +664,7 @@ OUTPUT greet("World")`
     function updateCommandDisplay() {
         // Clear current line and rewrite command with prompt
         terminal.write('\r\x1b[K');
-        writePrompt();
+        writePrompt(); // Always use console command prompt
         terminal.write(currentCommand);
         // move cursor
         if (cursorPosition < currentCommand.length) {
@@ -717,7 +717,7 @@ OUTPUT greet("World")`
                 execCommand(currentCommand);
                 currentCommand = '';
                 cursorPosition = 0;
-                writePrompt(); // add prompt for next command
+                if (!deferPrompt) writePrompt(); // defer while a run is active
             } else if (data === '\u007f') { // backspace
                 if (cursorPosition > 0) {
                     currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
@@ -738,7 +738,7 @@ OUTPUT greet("World")`
                     currentCommand = commandHistory[historyIndex] || '';
                     cursorPosition = currentCommand.length; // Move cursor to end
                     terminal.write('\r\x1b[K');
-                    writePrompt();
+                    writePrompt(); // Always use console command prompt
                     terminal.write(currentCommand);
                 }
             } else if (data === '\u001b[B') { // down arrow
@@ -747,7 +747,7 @@ OUTPUT greet("World")`
                     currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
                     cursorPosition = currentCommand.length; // Move cursor to end
                     terminal.write('\r\x1b[K');
-                    writePrompt();
+                    writePrompt(); // Always use console command prompt
                     terminal.write(currentCommand);
                 }
             } else if (data === '\u001b[D') { // left arrow
@@ -794,7 +794,7 @@ OUTPUT greet("World")`
         println: (t) => terminalWrite(t + '\r\n'),
         info:    (t) => terminalWrite(t + '\r\n'),
         error:   (t) => terminalWrite(t + '\r\n', '31'), // red
-        warning: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // italics yellow
+        warning: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
         clear:   ()  => terminal.clear(),
     };
 
@@ -817,9 +817,13 @@ OUTPUT greet("World")`
         if (isValidCommand) {
             if (!(cmdLower === 'stop' && isRunning) && cmdLower !== 'clear') {
                 // delete the last line
-                terminalWrite(`\x1b[1A\x1b[2K`);
+                terminalWrite(`\x1b[1A\x1b[2K\x1b[90m% \x1b[0m`);
                 // output colored command with prompt
-                terminalWrite(`\x1b[90m% \x1b[0m\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`);
+                if (cmdLower === 'run') {
+                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}`); // no newline for run
+                } else {
+                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for other commands
+                }
             }
         }
 
@@ -830,18 +834,19 @@ OUTPUT greet("World")`
                     'stop                 Stop the running program\r\n' +
                     'clear                Clear console\r\n' +
                     'tab <n>              Set editor tab size (1-8 spaces)\r\n' +
-                    'font <px>            Set editor font size (6-50 px)\r\n' +
+                    'font <px>            Set editor font size (6-40 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
                     'theme <theme>        Change the editor color theme ("Monokai", "Github Dark", "Dracula", etc.)\r\n\r\n'
 
                 terminalWrite('\x1b[1mCommands:\x1b[0m\r\n');
                 terminalWrite(output);
-            break;
+                break;
             }
 
             case 'run':
+                deferPrompt = true; // defer prompt until run completes
                 runCode();
-            break;
+                break;
 
             case 'stop':
                 if (!isRunning) {
@@ -850,12 +855,12 @@ OUTPUT greet("World")`
                 }
                 
                 window.__ide_stop_flag = true;        
-                stopCode()
+                stopCode();
                 break;
 
             case 'clear':
                 consoleOutput.clear();
-            break;
+                break;
 
             case 'tab': {
                 const n = parseInt(rest[0], 10);
@@ -874,11 +879,11 @@ OUTPUT greet("World")`
 
             case 'font': {
                 const px = parseInt(rest[0], 10);
-                if (Number.isInteger(px) && px >= 6 && px <= 50) {
+                if (Number.isInteger(px) && px >= 6 && px <= 40) {
                     editor.setFontSize(px);
                     consoleOutput.println(`Font size: ${px}px`, 'stdout');
                 } else {
-                    consoleOutput.error('Usage: font <6-50px>');
+                    consoleOutput.error('Usage: font <6-40px>');
                 }
                 break;
             }

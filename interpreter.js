@@ -378,98 +378,98 @@ async function interpretPseudocode(code) {
         const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
     
         function isNumericExpr(text) {
-        const t = text.trim();
-        // Protected string/char literals must NOT be treated as numeric
-        if (/^\uE000\d+\uE001$/.test(t)) return false;
-        // Numeric literal
-        if (/^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(t)) return true;
-        // Anything starting with a quote would have been protected already
-        if (/^['"]/.test(t)) return false;
-        // Variables/func calls (unchecked here)
-        return true;
+            const t = text.trim();
+            // Protected string/char literals must NOT be treated as numeric
+            if (/^\uE000\d+\uE001$/.test(t)) return false;
+            // Numeric literal
+            if (/^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(t)) return true;
+            // Anything starting with a quote would have been protected already
+            if (/^['"]/.test(t)) return false;
+            // Variables/func calls (unchecked here)
+            return true;
         }
     
         function grabLeft(s, caretIdx) {
-        let i = caretIdx - 1;
-        while (i >= 0 && s[i] === ' ') i--;
-    
-        // protected literal to the left: … \uE000 ... \uE001 ^ …
-        if (s[i] === END) {
-            let j = i - 1;
-            while (j >= 0 && s[j] !== START) j--;
-            const start = Math.max(0, j);
-            return { start, text: s.slice(start, caretIdx).trim() };
-        }
-    
-        if (s[i] === ')') {
-            let depth = 1; i--;
-            while (i >= 0 && depth > 0) { if (s[i] === ')') depth++; else if (s[i] === '(') depth--; i--; }
+            let i = caretIdx - 1;
+            while (i >= 0 && s[i] === ' ') i--;
+        
+            // protected literal to the left: … \uE000 ... \uE001 ^ …
+            if (s[i] === END) {
+                let j = i - 1;
+                while (j >= 0 && s[j] !== START) j--;
+                const start = Math.max(0, j);
+                return { start, text: s.slice(start, caretIdx).trim() };
+            }
+        
+            if (s[i] === ')') {
+                let depth = 1; i--;
+                while (i >= 0 && depth > 0) { if (s[i] === ')') depth++; else if (s[i] === '(') depth--; i--; }
+                return { start: i + 1, text: s.slice(i + 1, caretIdx).trim() };
+            }
+            if (s[i] === ']') {
+                let depth = 1; i--;
+                while (i >= 0 && depth > 0) { if (s[i] === ']') depth++; else if (s[i] === '[') depth--; i--; }
+                return { start: i + 1, text: s.slice(i + 1, caretIdx).trim() };
+            }
+        
+            // identifier / number (scan token chars)
+            while (i >= 0 && isIdChar(s[i])) i--;
+            // include a unary sign if present
+            if (i >= 0 && (s[i] === '+' || s[i] === '-') && (i === 0 || /\s|\(|\[/.test(s[i-1]))) i--;
             return { start: i + 1, text: s.slice(i + 1, caretIdx).trim() };
-        }
-        if (s[i] === ']') {
-            let depth = 1; i--;
-            while (i >= 0 && depth > 0) { if (s[i] === ']') depth++; else if (s[i] === '[') depth--; i--; }
-            return { start: i + 1, text: s.slice(i + 1, caretIdx).trim() };
-        }
-    
-        // identifier / number (scan token chars)
-        while (i >= 0 && isIdChar(s[i])) i--;
-        // include a unary sign if present
-        if (i >= 0 && (s[i] === '+' || s[i] === '-') && (i === 0 || /\s|\(|\[/.test(s[i-1]))) i--;
-        return { start: i + 1, text: s.slice(i + 1, caretIdx).trim() };
         }
     
         function grabRight(s, caretIdx) {
-        let i = caretIdx + 1;
-        while (i < s.length && s[i] === ' ') i++;
-        const start = i;
-    
-        // protected literal to the right: … ^ \uE000 ... \uE001 …
-        if (s[i] === START) {
-            let j = i + 1;
-            while (j < s.length && s[j] !== END) j++;
-            j = Math.min(s.length, j + 1);
-            return { end: j, text: s.slice(start, j).trim() };
-        }
-    
-        if (s[i] === '(') {
-            let depth = 1; i++;
-            while (i < s.length && depth > 0) { if (s[i] === '(') depth++; else if (s[i] === ')') depth--; i++; }
+            let i = caretIdx + 1;
+            while (i < s.length && s[i] === ' ') i++;
+            const start = i;
+        
+            // protected literal to the right: … ^ \uE000 ... \uE001 …
+            if (s[i] === START) {
+                let j = i + 1;
+                while (j < s.length && s[j] !== END) j++;
+                j = Math.min(s.length, j + 1);
+                return { end: j, text: s.slice(start, j).trim() };
+            }
+        
+            if (s[i] === '(') {
+                let depth = 1; i++;
+                while (i < s.length && depth > 0) { if (s[i] === '(') depth++; else if (s[i] === ')') depth--; i++; }
+                return { end: i, text: s.slice(start, i).trim() };
+            }
+            if (s[i] === '[') {
+                let depth = 1; i++;
+                while (i < s.length && depth > 0) { if (s[i] === '[') depth++; else if (s[i] === ']') depth--; i++; }
+                return { end: i, text: s.slice(start, i).trim() };
+            }
+        
+            // include optional unary sign
+            if (s[i] === '+' || s[i] === '-') i++;
+            while (i < s.length && isIdChar(s[i])) i++;
+        
+            // allow a following () for function calls as a single token (e.g., f(x)^2)
+            if (i < s.length && s[i] === '(') {
+                let depth = 1; i++;
+                while (i < s.length && depth > 0) { if (s[i] === '(') depth++; else if (s[i] === ')') depth--; i++; }
+            }
             return { end: i, text: s.slice(start, i).trim() };
-        }
-        if (s[i] === '[') {
-            let depth = 1; i++;
-            while (i < s.length && depth > 0) { if (s[i] === '[') depth++; else if (s[i] === ']') depth--; i++; }
-            return { end: i, text: s.slice(start, i).trim() };
-        }
-    
-        // include optional unary sign
-        if (s[i] === '+' || s[i] === '-') i++;
-        while (i < s.length && isIdChar(s[i])) i++;
-    
-        // allow a following () for function calls as a single token (e.g., f(x)^2)
-        if (i < s.length && s[i] === '(') {
-            let depth = 1; i++;
-            while (i < s.length && depth > 0) { if (s[i] === '(') depth++; else if (s[i] === ')') depth--; i++; }
-        }
-        return { end: i, text: s.slice(start, i).trim() };
         }
     
         // Right-associative: scan right-to-left
         let s = expr;
         let idx = s.lastIndexOf('^');
         while (idx !== -1) {
-        const L = grabLeft(s, idx);
-        const R = grabRight(s, idx);
-    
-        if (!isNumericExpr(L.text) || !isNumericExpr(R.text)) {
-            throw new Error('Power operator ^ requires numeric operands');
-        }
-    
-        const before = s.slice(0, L.start);
-        const after  = s.slice(R.end);
-        s = `${before}Math.pow(${L.text}, ${R.text})${after}`;
-        idx = s.lastIndexOf('^');
+            const L = grabLeft(s, idx);
+            const R = grabRight(s, idx);
+        
+            if (!isNumericExpr(L.text) || !isNumericExpr(R.text)) {
+                throw new Error('Power operator ^ requires numeric operands');
+            }
+        
+            const before = s.slice(0, L.start);
+            const after  = s.slice(R.end);
+            s = `${before}Math.pow(${L.text}, ${R.text})${after}`;
+            idx = s.lastIndexOf('^');
         }
         return s;
     }  
@@ -1115,11 +1115,12 @@ async function interpretPseudocode(code) {
                 if (!allowReturn) {
                     throwErr('', 'RETURN used outside FUNCTION', currentLine);
                 }
-                const parts = splitArgs(m[1]);
+                const parts = splitArgs(m[1]);                         // support comma-separated parts
                 const vals  = await Promise.all(parts.map(p => evalExpr(p, scope)));
-                const ret = (vals.length === 1) ? vals[0] : vals.map(v => toString(v)).join("");
+                const ret   = (vals.length === 1) ? vals[0]           // single expr: return as-is
+                                                  : vals.map(v => toString(v)).join(""); // concat like OUTPUT
                 throw { __return: true, value: ret };
-            }
+            }              
 
             // simple statement table (DECLARE, CONSTANT, INPUT, OUTPUT, ASSIGNMENT)
             const SIMPLE = [
