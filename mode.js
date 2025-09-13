@@ -92,11 +92,7 @@ function(require, exports, module) {
         const trimmed = line.trim();
 
         // increase indent after opening keywords
-        const openers = [
-            /^IF\b/i,
-            /^THEN\b/i,
-            /^ELSE\b/i,
-            /^CASE\b/i,
+        const fullIndentOpeners = [
             /^OF\b/i,
             /^FOR\b.*\bTO\b/i,
             /^WHILE\b.*\bDO\b/i,
@@ -105,8 +101,22 @@ function(require, exports, module) {
             /^FUNCTION\b/i
         ];
 
-        if (openers.some(r => r.test(trimmed))) {
+        const halfIndentOpeners = [
+            /^IF\b/i,
+            /^CASE\b/i,
+            /^THEN\b/i,
+            /^ELSE\b/i
+        ];
+
+        if (fullIndentOpeners.some(r => r.test(trimmed))) {
+            console.log(tab);
             indent += tab;
+        } else if (halfIndentOpeners.some(r => r.test(trimmed))) {
+            let tablen = tab.length;
+            console.log(tablen);
+            console.log(tablen/2);
+            console.log(Math.floor(tablen / 2));
+            indent += ' '.repeat(Math.floor(tablen / 2)); // half the tab size
         }
 
         return indent;

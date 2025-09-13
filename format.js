@@ -403,12 +403,12 @@ function formatOnce(src) {
     const reFor       = /^\s*FOR\b/i;
     const reRepeat    = /^\s*REPEAT\s*$/i;
     const reCase      = /^\s*CASE\s+OF\b/i;
-    const reCaseOption = /^\s*\d+\s*:\s*/i; // matches CASE options like "1 : OUTPUT 1"
+    const reCaseOption = /^\s*\d+\s*:\s*/i;
 
     for (let i = 0; i < normalized.length; i++) {
         let codeProt = normalized[i].code;
         const comment = normalized[i].comment;
-        
+
         // close blocks before printing current line
         if (reEndIf.test(codeProt)) {
             indent = Math.max(0, indent - 1);
@@ -441,14 +441,13 @@ function formatOnce(src) {
              .replace(/\s*(?:←|<\s*-\s*)\s*/g, ' <- ')
              .replace(/ {2,}/g, ' ')
              .replace(/\b(NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (')
-             // keep unary minus tight after STEP and at expression starts/after delimiters
              .replace(/\bSTEP\s*-\s+(?=[0-9.])/gi, 'STEP -')
              .replace(/(^|\(|,|=|\bTO\b)\s*-\s+(?=[0-9.])/gi, (m, p1) => p1 + '-');
         restored = restore(p);
 
         let lineOut;
         if (reThen.test(codeProt) || reElse.test(codeProt) || reCaseOption.test(codeProt)) {
-            const halfUnit  = ' '.repeat(Math.floor(tabSize / 2));          // half the tab size
+            const halfUnit  = ' '.repeat(Math.floor(tabSize / 2)); // half the tab size
             lineOut = indentUnit.repeat(indent) + halfUnit + restored;
         } else {
             lineOut = indentUnit.repeat(indent) + restored;
