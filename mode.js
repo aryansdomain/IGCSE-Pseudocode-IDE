@@ -109,14 +109,9 @@ function(require, exports, module) {
         ];
 
         if (fullIndentOpeners.some(r => r.test(trimmed))) {
-            console.log(tab);
             indent += tab;
         } else if (halfIndentOpeners.some(r => r.test(trimmed))) {
-            let tablen = tab.length;
-            console.log(tablen);
-            console.log(tablen/2);
-            console.log(Math.floor(tablen / 2));
-            indent += ' '.repeat(Math.floor(tablen / 2)); // half the tab size
+            indent += tab.slice(0, Math.floor(tab.length / 2)); // half the tab size
         }
 
         return indent;
