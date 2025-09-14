@@ -1,32 +1,38 @@
 (function () {
-
-    // ------------------------ Initialization ------------------------
     const editor = ace.edit('code', {
         mode: 'ace/mode/lang',
-        theme: 'ace/theme/monokai', // default
+        theme: 'ace/theme/monokai',
         showPrintMargin: false,
-        fontSize: '14px',           // default
-        fontFamily: 'monospace',    // default
+        fontSize: '14px',
+        fontFamily: 'monospace',
     });
     window.editor = editor;
-
-    editor.setOptions({
-        useSoftTabs: true,
-        tabSize: 4,                 // default
-        enableBasicAutocompletion: true,
-        enableLiveAutocompletion: true,
-        enableSnippets: true,
-        highlightActiveLine: false,
-        fixedWidthGutter: true
-    });
-
-    // Use only our language completer (no word-based suggestions)
+    
+    const langTools = ace.require('ace/ext/language_tools');
+    
+    const completers = [];
     try {
         const LangModule = ace.require('ace/mode/lang');
         if (LangModule && LangModule.langCompleter) {
-            editor.completers = [LangModule.langCompleter];
+            completers.push(LangModule.langCompleter);
         }
     } catch {}
+    
+    editor.setOptions({
+        useSoftTabs: true,
+        tabSize: 4,
+        enableBasicAutocompletion: completers,
+        enableLiveAutocompletion:  completers,
+        enableSnippets: false,
+        highlightActiveLine: false,
+        fixedWidthGutter: true,
+    });
+    
+    langTools.setCompleters(completers);
+    editor.completers = completers.slice();
+    
+    // if mode changes, re-apply completers
+    editor.on('changeMode', () => {editor.completers = completers.slice();} );
 
     const Range = ace.require('ace/range').Range;
 
@@ -444,7 +450,7 @@ OUTPUT greet("World")`
                 indicatorShown = true;
                 dotTimer = setInterval(() => {
                     dotPhase = (dotPhase + 1) % 4;    // cycle
-                    terminalWrite('\x1b[2K\r' + '.'.repeat(dotPhase));   // '', '.', '..', '...'
+                    terminalWrite('\x1b[2K\r\x1b[32m' + '.'.repeat(dotPhase) + '\x1b[0m');   // '', '.', '..', '...'
                     if (dotPhase == 0) terminalWrite('\b'.repeat(7) + '\u00A0')
                 }, 300);
             }
@@ -728,13 +734,13 @@ OUTPUT greet("World")`
                     currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
                     cursorPosition--;
                     if (cursorPosition === currentCommand.length) {
-                        terminal.write('\b \b');
+                    terminal.write('\b \b');
                     } else {
                         // For middle deletion, move cursor back and delete character
                         terminal.write('\x1b[D');
                         terminal.write(currentCommand.slice(cursorPosition) + ' ');
                         terminal.write('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
-                    }
+                }
                 }
             } else if (data === '\u001b[A') { // up arrow
                 if (commandHistory.length > 0) {
@@ -820,9 +826,9 @@ OUTPUT greet("World")`
                 // output colored command with prompt
                 if (cmdLower === 'run') {
                     terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // no newline for run
-                } else {
+            } else {
                     terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for other commands
-                }
+            }
             }
         }
 

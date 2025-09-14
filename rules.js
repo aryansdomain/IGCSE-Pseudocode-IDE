@@ -12,7 +12,7 @@ function(require, exports, module) {
             'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
 
             // procedures and functions
-            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
+            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION', 'CALL',
 
             // input/output
             'INPUT','OUTPUT',
@@ -42,79 +42,69 @@ function(require, exports, module) {
         ].join('|')
     );
 
-    const LITERALS = (
-        [
-            'TRUE','FALSE'
-        ].join('|')
-    );
+    class LangHighlightRules extends TextHighlightRules {
+        constructor() {
+            super();
+            const keywordMapper = this.createKeywordMapper({
+                'keyword.control': KEYWORDS,
+                'storage.type': TYPES,
+                'support.function': BUILTINS,
+            }, 'identifier', true, '');
 
-    const LangHighlightRules = function() {
-        const keywordMapper = this.createKeywordMapper({
-            'keyword.control': KEYWORDS,
-            'storage.type': TYPES,
-            'support.function': BUILTINS,
-            'constant.language': LITERALS
-        }, 'identifier', true, '');
+            this.$rules = {
+                start: [
+                    // comments
+                    { token: 'comment.line.double-slash', regex: /\/\/.*$/ },
 
-        this.$rules = {
-            start: [
+                    // char (single quotes)
+                    { token: 'string.quoted.single', regex: /'(?:[^'\\]|\\.)'/ },
 
-                // comments
-                { token: 'comment.line.double-slash', regex: /\/\/.*$/ },
+                    // strings (double quotes)
+                    { token: 'string.quoted.double', regex: '"', next: 'string_dq' },
 
-                // char (single quotes)
-                { token: 'string.quoted.single', regex: /'(?:[^'\\]|\\.)'/ },
+                    // numbers: integer, real, or scientific notation
+                    { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ },
 
-                // strings (double quotes)
-                { token: 'string.quoted.double', regex: '"', next: 'string_dq' },
+                    // assignment with <-
+                    { token: 'keyword.operator', regex: /<-/ },
 
-                // numbers: integer, real, or scientific notation
-                { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ },
+                    // comparison
+                    { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },
 
-                // assignment with <-
-                { token: 'keyword.operator', regex: /<-/ },
+                    // arithmetic operators
+                    { token: 'keyword.operator', regex: /\+|\-|\*|\/|\^/ },
 
-                // comparison
-                { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },
+                    // logical operators
+                    { token: 'keyword.operator', regex: /\b(?:AND|OR|NOT)\b/i },
 
-                // arithmetic operators
-                { token: 'keyword.operator', regex: /\+|\-|\*|\/|\^/ },
+                    // function and procedure declarations
+                    { token: 'keyword.control', regex: "\\b(?:FUNCTION|PROCEDURE)\\b", caseInsensitive: true, next: "function_name" },
 
-                // logical operators
-                { token: 'keyword.operator', regex: /\b(?:AND|OR|NOT)\b/ },
+                    // identifiers and keywords
+                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9]*\b/ },
 
-                // CALL statements (must come before function declarations)
-                { token: 'keyword.control', regex: /\bCALL\b/ },
+                    // punctuation
+                    { token: 'punctuation.operator', regex: /[,:]/ },
+                    { token: 'paren.lparen', regex: /[\[(]/ },
+                    { token: 'paren.rparen', regex: /[\])]/ }
+                ],
 
-                // function and procedure declarations
-                { token: 'keyword.control', regex: /\b(?:FUNCTION|PROCEDURE)\b/, next: 'function_name' },
+                // double quotes
+                string_dq: [
+                    { token: 'string.quoted.double', regex: '"', next: 'start' },
+                    { defaultToken: 'string.quoted.double' }
+                ],
 
-                // identifiers and keywords
-                { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9]*\b/ },
+                // function/procedure name state
+                function_name: [
+                    { token: 'entity.name.function', regex: /\b[A-Za-z][A-Za-z0-9]*\b/, next: 'start' },
+                    { defaultToken: 'entity.name.function' }
+                ]
 
-                // punctuation
-                { token: 'punctuation.operator', regex: /[,:]/ },
-                { token: 'paren.lparen', regex: /[\[(]/ },
-                { token: 'paren.rparen', regex: /[\])]/ }
-            ],
+            };
 
-            // double quotes
-            string_dq: [
-                { token: 'string.quoted.double', regex: '"', next: 'start' },
-                { defaultToken: 'string.quoted.double' }
-            ],
-
-            // function/procedure name state
-            function_name: [
-                { token: 'entity.name.function', regex: /\b[A-Za-z][A-Za-z0-9]*\b/, next: 'start' },
-                { defaultToken: 'entity.name.function' }
-            ]
-
-        };
-
-        this.normalizeRules();
-    };
-
-    oop.inherits(LangHighlightRules, TextHighlightRules);
+            this.normalizeRules();
+        }
+    }
     exports.LangHighlightRules = LangHighlightRules;
 });

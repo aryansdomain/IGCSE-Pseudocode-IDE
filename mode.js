@@ -12,64 +12,152 @@ function(require, exports, module) {
         }
     }
 
-    // Custom autocomplete completer that only suggests keywords and built-ins
+    // Custom autocomplete completer that suggests keywords, built-ins, and variables
     const langCompleter = {
         getCompletions: function(editor, session, pos, prefix, callback) {
-            // Only suggest keywords and built-in functions, not literal values
-            const completions = [
+            // extract variable names
+            const code = editor.getValue();
+            const varNames  = new Set();
+            const procNames = new Set();
+            const funcNames = new Set();
+            const constNames = new Set();
+
+            // Find DECLARE statements and extract variable names
+            const declareMatches = code.match(/DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)/gi);
+            if (declareMatches) {
+                declareMatches.forEach(match => {
+                    const variables = match.replace(/DECLARE\s+/i, '').split(',').map(v => v.trim());
+                    variables.forEach(v => {
+                        if (v.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                            varNames.add(v);
+                        }
+                    });
+                });
+            }
+            
+            // Find CONSTANT statements and extract constant names
+            const constantMatches = code.match(/CONSTANT\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            if (constantMatches) {
+                constantMatches.forEach(match => {
+                    const constant = match.replace(/CONSTANT\s+/i, '').trim();
+                    if (constant.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                        constNames.add(constant);
+                    }
+                });
+            }
+            
+            // Find PROCEDURE and FUNCTION names
+            const procMatches = code.match(/PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            if (procMatches) {
+                procMatches.forEach(match => {
+                    const procName = match.replace(/PROCEDURE\s+/i, '').trim();
+                    if (procName.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                        procNames.add(procName);
+                    }
+                });
+            }
+            
+            const funcMatches = code.match(/FUNCTION\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            if (funcMatches) {
+                funcMatches.forEach(match => {
+                    const funcName = match.replace(/FUNCTION\s+/i, '').trim();
+                    if (funcName.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                        funcNames.add(funcName);
+                    }
+                });
+            }
+
+            // Convert variable names to completions
+            const varCompletions = Array.from(varNames).map(name => ({
+                name: name,
+                value: name,
+                score: 700,
+                meta: 'variable'
+            }));
+
+            // Convert constant names to completions
+            const constCompletions = Array.from(constNames).map(name => ({
+                name: name,
+                value: name,
+                score: 700,
+                meta: 'constant'
+            }));
+
+            const funcCompletions = Array.from(funcNames).map(name => ({
+                name: name,
+                value: name,
+                score: 700,
+                meta: 'function'
+            }));
+
+            const procCompletions = Array.from(procNames).map(name => ({
+                name: name,
+                value: name,
+                score: 700,
+                meta: 'procedure'
+            }));
+            
+            const keywordCompletions = [
                 // Keywords
-                { name: 'IF',         value: 'IF',         score: 1000, meta: 'keyword' },
-                { name: 'THEN',       value: 'THEN',       score: 1000, meta: 'keyword' },
-                { name: 'ELSE',       value: 'ELSE',       score: 1000, meta: 'keyword' },
-                { name: 'ENDIF',      value: 'ENDIF',      score: 1000, meta: 'keyword' },
-                { name: 'CASE',       value: 'CASE',       score: 1000, meta: 'keyword' },
-                { name: 'OF',         value: 'OF',         score: 1000, meta: 'keyword' },
-                { name: 'OTHERWISE',  value: 'OTHERWISE', score: 1000, meta: 'keyword' },
-                { name: 'ENDCASE',    value: 'ENDCASE',   score: 1000, meta: 'keyword' },
-                { name: 'FOR',        value: 'FOR',        score: 1000, meta: 'keyword' },
-                { name: 'TO',         value: 'TO',         score: 1000, meta: 'keyword' },
-                { name: 'STEP',       value: 'STEP',      score: 1000, meta: 'keyword' },
-                { name: 'NEXT',       value: 'NEXT',      score: 1000, meta: 'keyword' },
-                { name: 'WHILE',      value: 'WHILE',     score: 1000, meta: 'keyword' },
-                { name: 'DO',         value: 'DO',        score: 1000, meta: 'keyword' },
-                { name: 'ENDWHILE',   value: 'ENDWHILE', score: 1000, meta: 'keyword' },
-                { name: 'REPEAT',     value: 'REPEAT',   score: 1000, meta: 'keyword' },
-                { name: 'UNTIL',      value: 'UNTIL',     score: 1000, meta: 'keyword' },
-                { name: 'PROCEDURE',  value: 'PROCEDURE', score: 1000, meta: 'keyword' },
-                { name: 'FUNCTION',   value: 'FUNCTION', score: 1000, meta: 'keyword' },
-                { name: 'RETURNS',    value: 'RETURNS',  score: 1000, meta: 'keyword' },
-                { name: 'RETURN',     value: 'RETURN',   score: 1000, meta: 'keyword' },
-                { name: 'CALL',       value: 'CALL',      score: 1000, meta: 'keyword' },
+                { name: 'IF',           value: 'IF',           score: 1000, meta: 'keyword' },
+                { name: 'THEN',         value: 'THEN',         score: 1000, meta: 'keyword' },
+                { name: 'ELSE',         value: 'ELSE',         score: 1000, meta: 'keyword' },
+                { name: 'ENDIF',        value: 'ENDIF',        score: 1000, meta: 'keyword' },
+                { name: 'CASE',         value: 'CASE',         score: 1000, meta: 'keyword' },
+                { name: 'OF',           value: 'OF',           score: 1000, meta: 'keyword' },
+                { name: 'OTHERWISE',    value: 'OTHERWISE',    score: 1000, meta: 'keyword' },
+                { name: 'ENDCASE',      value: 'ENDCASE',      score: 1000, meta: 'keyword' },
+                { name: 'FOR',          value: 'FOR',          score: 1000, meta: 'keyword' },
+                { name: 'TO',           value: 'TO',           score: 1000, meta: 'keyword' },
+                { name: 'STEP',         value: 'STEP',         score: 1000, meta: 'keyword' },
+                { name: 'NEXT',         value: 'NEXT',         score: 1000, meta: 'keyword' },
+                { name: 'WHILE',        value: 'WHILE',        score: 1000, meta: 'keyword' },
+                { name: 'DO',           value: 'DO',           score: 1000, meta: 'keyword' },
+                { name: 'ENDWHILE',     value: 'ENDWHILE',     score: 1000, meta: 'keyword' },
+                { name: 'REPEAT',       value: 'REPEAT',       score: 1000, meta: 'keyword' },
+                { name: 'UNTIL',        value: 'UNTIL',        score: 1000, meta: 'keyword' },
+                { name: 'PROCEDURE',    value: 'PROCEDURE',    score: 1000, meta: 'keyword' },
+                { name: 'FUNCTION',     value: 'FUNCTION',     score: 1000, meta: 'keyword' },
+                { name: 'RETURNS',      value: 'RETURNS',      score: 1000, meta: 'keyword' },
+                { name: 'RETURN',       value: 'RETURN',       score: 1000, meta: 'keyword' },
+                { name: 'CALL',         value: 'CALL',         score: 1000, meta: 'keyword' },
                 { name: 'ENDPROCEDURE', value: 'ENDPROCEDURE', score: 1000, meta: 'keyword' },
                 { name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword' },
-                { name: 'INPUT',      value: 'INPUT',     score: 1000, meta: 'keyword' },
-                { name: 'OUTPUT',     value: 'OUTPUT',    score: 1000, meta: 'keyword' },
-                { name: 'DECLARE',    value: 'DECLARE',   score: 1000, meta: 'keyword' },
-                { name: 'CONSTANT',   value: 'CONSTANT', score: 1000, meta: 'keyword' },
-                { name: 'TRUE',       value: 'TRUE',      score: 1000, meta: 'keyword' },
-                { name: 'FALSE',      value: 'FALSE',     score: 1000, meta: 'keyword' },
-                { name: 'AND',        value: 'AND',        score: 1000, meta: 'keyword' },
-                { name: 'OR',         value: 'OR',        score: 1000, meta: 'keyword' },
-                { name: 'NOT',        value: 'NOT',        score: 1000, meta: 'keyword' },
+                { name: 'INPUT',        value: 'INPUT',        score: 1000, meta: 'keyword' },
+                { name: 'OUTPUT',       value: 'OUTPUT',       score: 1000, meta: 'keyword' },
+                { name: 'DECLARE',      value: 'DECLARE',      score: 1000, meta: 'keyword' },
+                { name: 'CONSTANT',     value: 'CONSTANT',     score: 1000, meta: 'keyword' },
+                { name: 'TRUE',         value: 'TRUE',         score: 1000, meta: 'keyword' },
+                { name: 'FALSE',        value: 'FALSE',        score: 1000, meta: 'keyword' },
+                { name: 'AND',          value: 'AND',          score: 1000, meta: 'keyword' },
+                { name: 'OR',           value: 'OR',           score: 1000, meta: 'keyword' },
+                { name: 'NOT',          value: 'NOT',          score: 1000, meta: 'keyword' },
                 
-                // Types
-                { name: 'INTEGER',    value: 'INTEGER',    score: 900,  meta: 'type' },
-                { name: 'REAL',       value: 'REAL',       score: 900,  meta: 'type' },
-                { name: 'BOOLEAN',    value: 'BOOLEAN',    score: 900,  meta: 'type' },
-                { name: 'CHAR',       value: 'CHAR',       score: 900,  meta: 'type' },
-                { name: 'STRING',     value: 'STRING',     score: 900,  meta: 'type' },
-                { name: 'ARRAY',      value: 'ARRAY',      score: 900,  meta: 'type' },
+                // types
+                { name: 'INTEGER',      value: 'INTEGER',      score: 900,  meta: 'type' },
+                { name: 'REAL',         value: 'REAL',         score: 900,  meta: 'type' },
+                { name: 'BOOLEAN',      value: 'BOOLEAN',      score: 900,  meta: 'type' },
+                { name: 'CHAR',         value: 'CHAR',         score: 900,  meta: 'type' },
+                { name: 'STRING',       value: 'STRING',       score: 900,  meta: 'type' },
+                { name: 'ARRAY',        value: 'ARRAY',        score: 900,  meta: 'type' },
                 
-                // Built-in functions
-                { name: 'ROUND',      value: 'ROUND',      score: 800,  meta: 'function' },
-                { name: 'RANDOM',     value: 'RANDOM',     score: 800,  meta: 'function' },
-                { name: 'LENGTH',     value: 'LENGTH',     score: 800,  meta: 'function' },
-                { name: 'LCASE',      value: 'LCASE',      score: 800,  meta: 'function' },
-                { name: 'UCASE',      value: 'UCASE',      score: 800,  meta: 'function' },
-                { name: 'SUBSTRING',  value: 'SUBSTRING',  score: 800,  meta: 'function' },
-                { name: 'DIV',        value: 'DIV',        score: 800,  meta: 'function' },
-                { name: 'MOD',        value: 'MOD',        score: 800,  meta: 'function' }
+                // built-in functions
+                { name: 'ROUND',        value: 'ROUND',        score: 800,  meta: 'builtin' },
+                { name: 'RANDOM',       value: 'RANDOM',       score: 800,  meta: 'builtin' },
+                { name: 'LENGTH',       value: 'LENGTH',       score: 800,  meta: 'builtin' },
+                { name: 'LCASE',        value: 'LCASE',        score: 800,  meta: 'builtin' },
+                { name: 'UCASE',        value: 'UCASE',        score: 800,  meta: 'builtin' },
+                { name: 'SUBSTRING',    value: 'SUBSTRING',    score: 800,  meta: 'builtin' },
+                { name: 'DIV',          value: 'DIV',          score: 800,  meta: 'builtin' },
+                { name: 'MOD',          value: 'MOD',          score: 800,  meta: 'builtin' }
             ];
+            
+            // combine completions
+            const completions = [...keywordCompletions,
+                                    ...varCompletions,
+                                    ...constCompletions,
+                                    ...funcCompletions,
+                                    ...procCompletions];
             
             // Filter completions based on prefix
             const filtered = completions.filter(completion => 
@@ -143,4 +231,5 @@ function(require, exports, module) {
     };
 
     exports.Mode = Mode;
+    exports.langCompleter = langCompleter;
 });
