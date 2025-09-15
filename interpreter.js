@@ -2,8 +2,8 @@ async function interpretPseudocode(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
     const OUTPUT_BUFFER = [];
-    const WARNING_BUFFER = [];
     let CAPITALIZATION_WARNINGS = [];
+    const warnedKeywords = new Set();
     let __capSummaryEmitted = false;
     const CAPITALIZATION_SEEN = new Set();
     const constants = Object.create(null);
@@ -11,6 +11,7 @@ async function interpretPseudocode(code) {
 
     // Clear warning tracking for this run
     CAPITALIZATION_WARNINGS = [];
+    warnedKeywords.clear();
     CAPITALIZATION_SEEN.clear();
     __capSummaryEmitted = false;  // NEW
 
@@ -674,6 +675,27 @@ async function interpretPseudocode(code) {
         s = replaceBinaryWordOperator(s, 'DIV', '__DIV');
         s = replaceBinaryWordOperator(s, 'MOD', '__MOD');
 
+        // replace vars that conflict with keywords
+        const jsKeywords = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
+        const pscKeywords = ['procedure', 'function', 'returns', 'endprocedure', 'endfunction', 'declare', 'constant', 'array', 'of', 'input', 'output', 'call', 'if', 'then', 'else', 'endif', 'case', 'endcase', 'for', 'to', 'step', 'next', 'while', 'do', 'endwhile', 'repeat', 'until', 'return', 'true', 'false', 'div', 'mod', 'and', 'or', 'not', 'integer', 'real', 'boolean', 'char', 'string'];
+        
+        s = s.replace(
+            /\b([A-Za-z][A-Za-z0-9]*)\b/g,
+            (match, name) => {
+                if (jsKeywords.includes(name.toLowerCase())) {
+                    return `__SCOPE["${name}"]`;
+                }
+                if (pscKeywords.includes(name.toLowerCase())) {
+                    if (!warnedKeywords.has(name.toLowerCase())) {
+                        emitWarning(`Warning: Variable "${name}" is the same as a keyword, please change the variable name`);
+                        warnedKeywords.add(name.toLowerCase());
+                    }
+                    return `__SCOPE["${name}"]`;
+                }
+                return match;
+            }
+        );
+
         // unprotect literals
         s = s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
 
@@ -950,8 +972,7 @@ async function interpretPseudocode(code) {
 
             // IF ... THEN ... (single-line form)
             if ((m = s.match(/^IF\s+(.+)\s+THEN\s+(.+)$/i))) {
-
-                consoleOutput.warning('Put THEN on a separate line.');
+                
                 const cond = m[1];
                 const thenStmt = m[2];
                 

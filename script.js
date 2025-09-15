@@ -7,7 +7,7 @@
         fontFamily: 'monospace',
     });
     window.editor = editor;
-    
+
     const langTools = ace.require('ace/ext/language_tools');
     
     const completers = [];
@@ -48,6 +48,17 @@ OUTPUT greet("World")`
         , -1); // -1 keeps cursor at start of editor
 
     editor.focus();
+
+    const consoleOutput = {
+        print:   (t, color = null) => terminalWrite(t,          color),
+        println: (t, color = null) => terminalWrite(t + '\r\n', color),
+        error:   (t) => terminalWrite(t,          '31'), // red
+        errorln: (t) => terminalWrite(t + '\r\n', '31'), // red
+        warning:   (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
+        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
+        clear:   () => terminal.clear(),
+        clearline: () => terminalWrite('\x1b[2K\r')
+    };
 
     // ------------------------ Line/Column Info ------------------------
     const cursorInfo = document.getElementById('line-col-info');
@@ -141,7 +152,7 @@ OUTPUT greet("World")`
         'ace/theme/tomorrow_night_eighties', 'ace/theme/twilight', 'ace/theme/vibrant_ink'
     ];
 
-    function updateTerminalTheme() {
+    function updateTerminalMode() {
         const isLight = document.documentElement.classList.contains('light');
         const terminalTheme = isLight ? {
             // LIGHT MODE
@@ -221,8 +232,8 @@ OUTPUT greet("World")`
             }
         }
         
-        // update terminal theme
-        updateTerminalTheme();
+        // update terminal mode
+        updateTerminalMode();
         
         // re-enable transitions
         setTimeout(() => {
@@ -386,9 +397,11 @@ OUTPUT greet("World")`
         const cssClass = editorthemeObj.cssClass || `ace-${(editor.getTheme() || '').split('/').pop()}`;
       
         const host = document.createElement('div');
+        const gutter = document.createElement('div');
+
         host.className = `ace_editor ${cssClass}`;
         host.style.cssText = 'position:absolute;left:-99999px;top:-99999px;visibility:hidden;';
-        const gutter = document.createElement('div');
+
         gutter.className = 'ace_gutter';
         host.appendChild(gutter);
         document.body.appendChild(host);
@@ -417,12 +430,14 @@ OUTPUT greet("World")`
     const runBtn = document.querySelector('.btn.run');
 
     let worker = null;
+    let outputStorage = [];
+    let hadFlushOutput = false;
+    let __flushedPrefix = '';
+
     let runId = 0;           // incremental id to disambiguate overlapping timers
     let isRunning = false;
     let flipTimer = null;    // delayed flip timer
-    let currentLocalRunId = 0;
     let clearIndicators = null;
-    let currentRunningLine = null;  // track the most recent running line
 
     function setRunButton(running) {
         if (running) {
@@ -438,8 +453,7 @@ OUTPUT greet("World")`
 
     function attachWorkerHandlers(localRunId) {
         let indicatorShown = false;
-
-        let runningLine = null;
+        let warningStorage = [];
         let runningTimer = null;
         let dotTimer = null;
         let dotPhase = 0;
@@ -448,20 +462,37 @@ OUTPUT greet("World")`
         runningTimer = setTimeout(() => {
             if (isRunning && localRunId === runId && !hadFlushOutput) {
                 indicatorShown = true;
+
+                // output pending warnings
+                warningStorage.forEach(msg => {
+                    consoleOutput.warningln(msg);
+                });
+                warningStorage = [];
+
+                consoleOutput.println('');
+
                 dotTimer = setInterval(() => {
-                    dotPhase = (dotPhase + 1) % 4;    // cycle
-                    terminalWrite('\x1b[2K\r\x1b[32m' + '.'.repeat(dotPhase) + '\x1b[0m');   // '', '.', '..', '...'
-                    if (dotPhase == 0) terminalWrite('\b'.repeat(7) + '\u00A0')
+                    dotPhase = (dotPhase + 1) % 4; // cycle
+                    consoleOutput.clearline()
+                    consoleOutput.print('\x1b[32m' + '.'.repeat(dotPhase))
+                    consoleOutput.print('\x1b[0m'); // reset color
                 }, 300);
             }
-        }, 40);
+        }, 75);
 
         const clearRunningIndicators = () => {
-            if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
-            if (dotTimer)     { clearInterval(dotTimer);    dotTimer = null; }
-            // Clear the running indicator ONLY if it was shown
+            if (runningTimer) { 
+                clearTimeout(runningTimer);
+                runningTimer = null;
+            }
+            if (dotTimer) {
+                clearInterval(dotTimer); 
+                dotTimer = null;
+            }
+
+            // clear dots
             if (indicatorShown) {
-                terminalWrite('\x1b[2K\r');
+                consoleOutput.clearline();
                 indicatorShown = false;
             }
         };
@@ -474,37 +505,34 @@ OUTPUT greet("World")`
             const { type } = e.data || {};
 
             if (type === 'done') {
-                const full = String(e.data.output || '');
-                const out  = (full.startsWith(__flushedPrefix) ? full.slice(__flushedPrefix.length) : full).trim();
-                
                 clearRunningIndicators();
-
-                if (out) {
-                    consoleOutput.println(out);
-                } else {
-                    // If we already flushed any output earlier, don't print "(no output)"
-                    if (!hadFlushOutput) {
-                        consoleOutput.println('(no output)');
+                
+                try {
+                    // output the output storage
+                    if (outputStorage.length > 0) {
+                        const combinedOutput = outputStorage.join('');
+                        const parts = combinedOutput.split('\n');
+                        parts.slice(1).forEach((line) => {
+                            consoleOutput.println(line);
+                        });
+                        outputStorage = [];
                     }
+
+                } finally {
+                    finishRun(localRunId);
+
+                    // reset per-run flags
+                    indicatorShown = false;
+                    outputStorage = [];
+                    warningStorage = [];
                 }
-
-                finishRun(localRunId);
-
-            } else if (type === 'error') {
-                const msg = String(e.data.error || 'Unknown error');
-                
-                clearRunningIndicators();
-                consoleOutput.errorln(msg); // red
-                
-                finishRun(localRunId);
-
             } else if (type === 'stopped') {
                 clearRunningIndicators();
                 consoleOutput.errorln('Execution stopped'); // red
                 
                 finishRun(localRunId);
             } else if (type === 'input_request') {
-                // Clear "running..." dots and switch to program input mode
+                // clear dots
                 clearRunningIndicators();
                 awaitingProgramInput = true;
 
@@ -514,33 +542,31 @@ OUTPUT greet("World")`
                 __flushedPrefix += newPart;
                 if (newPart.length) hadFlushOutput = true;
 
-                newPart.split('\n').forEach(part => {
-                    if (part === '') {
-                        consoleOutput.println('');
-                    } else {
-                        consoleOutput.println(part);
-                    }
-                });
+                outputStorage.push(newPart);
+
             } else if (type === 'warning') {
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
-                consoleOutput.warningln(msg);
+
+                warningStorage.push(msg);
+
+            } else if (type === 'error') {
+                const msg = String(e.data.error || 'Unknown error');
+                
+                // stop code immediately when error is encountered
+                clearRunningIndicators();
+                consoleOutput.errorln(msg);
+                
+                finishRun(localRunId);
             }
         };
 
         worker.onerror = (e) => {
-            const errorMsg = `Worker error: ${e.message || e.filename || 'unknown'}`;
             
-            // Store reference to running line before clearing indicators
-            const runningLineToReplace = currentRunningLine;
             clearRunningIndicators();
 
-            if (runningLineToReplace) {
-                runningLineToReplace.textContent = errorMsg;
-                runningLineToReplace.className = 'line stderr';
-            } else {
-                consoleOutput.errorln(errorMsg);
-            }
+            consoleOutput.clearline();
+            consoleOutput.errorln(`Worker error: ${e.message || e.filename || 'unknown'}`);
             finishRun(localRunId);
         };
     }
@@ -552,38 +578,37 @@ OUTPUT greet("World")`
         setRunButton(false);
         if (worker) { worker.terminate(); worker = null; }
         currentRunContainer = null;
-        // show next prompt now that all warnings/flushes are printed
+
+        // show next prompt
         deferPrompt = false;
         consoleOutput.println('');
         writePrompt();
     }
 
     function stopCode() {
-        // tell the worker to stop; force-terminate after a short grace period
+
         try { worker && worker.postMessage({ type: 'stop' }); } catch {}
+      
         setTimeout(() => {
-            if (worker) {
+            if (!worker) return; // already stopped cleanly
+        
                 try { worker.terminate(); } catch {}
                 worker = null;
-            }
-            // Store reference to running line before clearing indicators
-            const runningLineToReplace = currentRunningLine;
-            if (typeof clearIndicators === 'function') {
-                clearIndicators(); // stop the green dots
-            }
-            // Replace the most recent running line with "Execution stopped"
-            if (runningLineToReplace) {
-                runningLineToReplace.textContent = 'Execution stopped';
-                runningLineToReplace.className = 'line stderr';
-            }
-            // Don't call finishRun() here - let the worker 'stopped' message handle it
-        }, 300);
+        
+            // stop the green dot ticker and clear that line
+            if (typeof clearIndicators === 'function') clearIndicators();
+        
+            // show the message and finish the run
+            consoleOutput.errorln('Execution stopped');
+            finishRun(currentLocalRunId);
+        }, 600);
     }
     
     function runCode() {
         if (isRunning) return; // repeated "run" inputs
         
-        __flushedPrefix = '';        // <-- add this
+        __flushedPrefix = '';
+        outputStorage = [];
         lastStdoutEl = null;
         inputPromptBase = '';
         hadFlushOutput = false;
@@ -591,36 +616,33 @@ OUTPUT greet("World")`
         const localRunId = ++runId;
         isRunning = true;
 
-        // keep the button green briefly; flip to red only if still running
+        // flip to red only if still running
         if (flipTimer) clearTimeout(flipTimer);
         flipTimer = setTimeout(() => {
             if (isRunning && localRunId === runId) setRunButton(true);
         }, 30);
 
-        // No input queue needed - input will be handled interactively
-
-        // create a container for this run's output so we can reorder it later
+        // container for output
         currentRunContainer = document.createElement('div');
         currentRunContainer.className = 'run-chunk';
 
-        // start worker
+        // start worker, send job
         worker = new Worker('runner.js');
         attachWorkerHandlers(localRunId);
 
-        // send job
         worker.postMessage({ type: 'run', code });
     }
 
-    // Run/Stop button behavior
+    // run/stop button
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
         else {
-            consoleOutput.print('run', '32'); // green color 
+            consoleOutput.println('run', '32'); // green color 
             runCode();
         }
     });    
 
-    // ------------------------ Console --------------------------------
+    // ------------------------ Console/Terminal --------------------------------
     const clearBtn = document.querySelector('.btn.clear');
     const copyBtn = document.querySelector('.btn.copy');
     const downloadBtn = document.querySelector('.btn.download');
@@ -635,7 +657,7 @@ OUTPUT greet("World")`
     
     terminal.open(document.getElementById('terminal'));
     
-    updateTerminalTheme();
+    updateTerminalMode();
     writePrompt();
 
     let fitAddon = null;
@@ -643,10 +665,11 @@ OUTPUT greet("World")`
       const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
       fitAddon = new FitCtor();
       terminal.loadAddon(fitAddon);
+
       // initial fit after the terminal attaches
       setTimeout(() => fitAddon.fit(), 0);
     } catch (e) {
-      consoleOutput.errorln('Error: Terminal will not auto-resize. Please reload or report this error.');
+        consoleOutput.errorln('Error: Terminal is not auto-resizing. Please reload or report this error.');
     }
 
     function fitTerm() { if (fitAddon) fitAddon.fit(); }
@@ -659,29 +682,18 @@ OUTPUT greet("World")`
     let cursorPosition = 0; // Track cursor position within current command
     let deferPrompt = false; // Defer prompt when run is active
 
-    // Helper functions for cursor movement
+    // cursor movement
     function moveCursorLeft() {
         if (cursorPosition > 0) {
             cursorPosition--;
-            terminal.write('\x1b[D'); // Move cursor left
+            consoleOutput.print('\x1b[D'); // Move cursor left
         }
     }
 
     function moveCursorRight() {
         if (cursorPosition < currentCommand.length) {
             cursorPosition++;
-            terminal.write('\x1b[C'); // Move cursor right
-        }
-    }
-
-    function updateCommandDisplay() {
-        // Clear current line and rewrite command with prompt
-        terminal.write('\r\x1b[K');
-        writePrompt(); // Always use console command prompt
-        terminal.write(currentCommand);
-        // move cursor
-        if (cursorPosition < currentCommand.length) {
-            terminal.write('\x1b[' + (currentCommand.length - cursorPosition) + 'D');
+            consoleOutput.print('\x1b[C'); // Move cursor right
         }
     }
 
@@ -690,7 +702,6 @@ OUTPUT greet("World")`
         if (awaitingProgramInput) {
             // Handle program input
             if (data === '\r') { // enter
-                consoleOutput.println('');
                 worker.postMessage({ type: 'input_response', value: currentCommand });
                 currentCommand = '';
                 cursorPosition = 0;
@@ -701,65 +712,70 @@ OUTPUT greet("World")`
                     cursorPosition--;
                     // Always use efficient backspace for end-of-line deletion
                     if (cursorPosition === currentCommand.length) {
-                    terminal.write('\b \b');
+                        consoleOutput.print('\b \b');
                     } else {
                         // For middle deletion, move cursor back and delete character
-                        terminal.write('\b');
-                        terminal.write(currentCommand.slice(cursorPosition) + ' ');
-                        terminal.write('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
+                        consoleOutput.print('\b');
+                        consoleOutput.print(currentCommand.slice(cursorPosition) + ' ');
+                        consoleOutput.print('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
                     }
                 }
 
-            } else if (data === '\u001b[D') { // left arrow
-                moveCursorLeft();
-            } else if (data === '\u001b[C') { // right arrow
-                moveCursorRight();
+            }
+            else if (data === '\u001b[D') moveCursorLeft();
+            else if (data === '\u001b[C') moveCursorRight();
                 
-            } else if (data.length === 1 && data >= ' ') { // printable characters
-                // Append at end (simple, reliable in program-input mode)
+            else if (data.length === 1 && data >= ' ') { // printable characters
                 currentCommand += data;
                 cursorPosition = currentCommand.length;
-                consoleOutput.println(data);
+                consoleOutput.print(data);
             }
         } else {
 
             if (data === '\r') { // enter
                 consoleOutput.println('');
+
                 execCommand(currentCommand);
                 currentCommand = '';
                 cursorPosition = 0;
                 if (!deferPrompt) writePrompt(); // defer while a run is active
+
             } else if (data === '\u007f') { // backspace
+
                 if (cursorPosition > 0) {
                     currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
                     cursorPosition--;
                     if (cursorPosition === currentCommand.length) {
-                    terminal.write('\b \b');
+                        consoleOutput.print('\b \b');
                     } else {
-                        // For middle deletion, move cursor back and delete character
-                        terminal.write('\x1b[D');
-                        terminal.write(currentCommand.slice(cursorPosition) + ' ');
-                        terminal.write('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
-                }
+                        // middle deletion
+                        consoleOutput.print('\x1b[D');
+                        consoleOutput.print(currentCommand.slice(cursorPosition) + ' ');
+                        consoleOutput.print('\x1b[' + (currentCommand.length - cursorPosition + 1) + 'D');
+                    }
                 }
             } else if (data === '\u001b[A') { // up arrow
+
                 if (commandHistory.length > 0) {
                     historyIndex = Math.max(0, historyIndex - 1);
                     currentCommand = commandHistory[historyIndex] || '';
                     cursorPosition = currentCommand.length;
-                    terminal.write('\r\x1b[K');
+                    consoleOutput.clearline();
                     writePrompt();
-                    terminal.write(currentCommand);
+                    consoleOutput.print(currentCommand);
                 }
+
             } else if (data === '\u001b[B') { // down arrow
+
                 if (commandHistory.length > 0) {
                     historyIndex = Math.min(commandHistory.length, historyIndex + 1);
                     currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
                     cursorPosition = currentCommand.length;
-                    terminal.write('\r\x1b[K');
+                    consoleOutput.clearline();
                     writePrompt();
-                    terminal.write(currentCommand);
+                    consoleOutput.print(currentCommand);
                 }
+                
             } else if (data === '\u001b[D') moveCursorLeft();
               else if (data === '\u001b[C') moveCursorRight();
               else if (data.length === 1 && data >= ' ') { // printable characters
@@ -771,14 +787,19 @@ OUTPUT greet("World")`
                     consoleOutput.print(data);
                 } else {
                     // insert in middle
-                    terminal.write('\x1b[s'); // save cursor position
-                    terminal.write(currentCommand.slice(cursorPosition - 1));
-                    terminal.write('\x1b[u'); // restore cursor position
-                    terminal.write('\x1b[C'); // move cursor right by 1
+                    consoleOutput.print('\x1b[s'); // save cursor position
+                    consoleOutput.print(currentCommand.slice(cursorPosition - 1));
+                    consoleOutput.print('\x1b[u'); // restore cursor position
+                    consoleOutput.print('\x1b[C'); // move cursor right by 1
                 }
             }
         }
     });
+
+    // terminal output
+    function writePrompt() {
+        terminalWrite('% ', '90'); // muted gray color
+    }
 
     function terminalWrite(text, color = null) {
         if (color) {
@@ -787,21 +808,6 @@ OUTPUT greet("World")`
             terminal.write(text);
         }
     }
-
-    function writePrompt() {
-        terminalWrite('% ', '90'); // Muted gray color for prompt
-    }
-
-    // Terminal output functions
-    const consoleOutput = {
-        print:   (t, color = null) => terminalWrite(t,          color),
-        println: (t, color = null) => terminalWrite(t + '\r\n', color),
-        error:   (t) => terminalWrite(t,          '31'), // red
-        errorln: (t) => terminalWrite(t + '\r\n', '31'), // red
-        warning:   (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
-        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
-        clear:   ()  => terminal.clear(),
-    };
 
     // console commands
     function execCommand(raw) {
@@ -822,13 +828,12 @@ OUTPUT greet("World")`
         if (isValidCommand) {
             if (!(cmdLower === 'stop' && isRunning) && cmdLower !== 'clear') {
                 // delete the last line
-                terminalWrite(`\x1b[1A\x1b[2K\x1b[90m% \x1b[0m`);
+                consoleOutput.print(`\x1b[1A`)
+                consoleOutput.clearline();
+                consoleOutput.print(`\x1b[90m% \x1b[0m`);
+
                 // output colored command with prompt
-                if (cmdLower === 'run') {
-                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // no newline for run
-            } else {
-                    terminalWrite(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}\r\n`); // newline for other commands
-            }
+                consoleOutput.println(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}`); 
             }
         }
 
@@ -843,8 +848,8 @@ OUTPUT greet("World")`
                     'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
                     'theme <theme>        Change the editor color theme. For a full list of themes, open Settings.\r\n\r\n'
 
-                terminalWrite('\x1b[1mCommands:\x1b[0m\r\n');
-                terminalWrite(output);
+                consoleOutput.println('\x1b[1mCommands:\x1b[0m');
+                consoleOutput.println(output);
             break;
 
             case 'run':
@@ -888,7 +893,7 @@ OUTPUT greet("World")`
                     consoleOutput.println(`Font size: ${px}px`);
                 } else {
                     consoleOutput.errorln('Usage: font <6-40px>');
-                }j
+                }
                 break;
             }
 
@@ -905,31 +910,29 @@ OUTPUT greet("World")`
                     sunIcon.hidden = true;
                     
                     // if current theme is already light, keep it
-                    if (lightThemes.includes(currentTheme)) {
-                        consoleOutput.println(`Mode: light`);
-                    } else {
+                    if (!lightThemes.includes(currentTheme)) {
                         editor.setTheme('ace/theme/github');
-                        consoleOutput.println('Mode: light');
                     }
+                    consoleOutput.println('Mode: light');
+
                 } else if (t === 'dark') {
                     document.documentElement.classList.remove('light');
                     moonIcon.hidden = true;
                     sunIcon.hidden = false;
                     
                     // if current theme is already dark, keep it
-                    if (darkThemes.includes(currentTheme)) {
-                        consoleOutput.println(`Mode: dark`);
-                    } else {
+                    if (!darkThemes.includes(currentTheme)) {
                         editor.setTheme('ace/theme/monokai');
-                        consoleOutput.println('Mode: dark');
                     }
+                    consoleOutput.println('Mode: dark');
+
                 } else {
                     document.documentElement.classList.remove('mode-switching');
                     return consoleOutput.errorln('Usage: mode <light|dark>');
                 }
                 
-                // update terminal theme
-                updateTerminalTheme();
+                // update terminal mode
+                updateTerminalMode();
                 
                 // enable transitions
                 setTimeout(() => {

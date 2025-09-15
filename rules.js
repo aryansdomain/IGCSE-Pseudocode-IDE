@@ -12,7 +12,7 @@ function(require, exports, module) {
             'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
 
             // procedures and functions
-            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION', 'CALL',
+            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
 
             // input/output
             'INPUT','OUTPUT',
@@ -62,10 +62,10 @@ function(require, exports, module) {
                     // strings (double quotes)
                     { token: 'string.quoted.double', regex: '"', next: 'string_dq' },
 
-                    // numbers: integer, real, or scientific notation
+                    // integer, real, or scientific notation
                     { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ },
 
-                    // assignment with <-
+                    // assignment
                     { token: 'keyword.operator', regex: /<-/ },
 
                     // comparison
