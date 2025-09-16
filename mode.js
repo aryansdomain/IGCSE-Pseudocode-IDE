@@ -12,7 +12,7 @@ function(require, exports, module) {
         }
     }
 
-    // Custom autocomplete completer that suggests keywords, built-ins, and variables
+    // extract all names from the code
     const langCompleter = {
         getCompletions: function(editor, session, pos, prefix, callback) {
             // extract variable names
@@ -22,7 +22,7 @@ function(require, exports, module) {
             const funcNames = new Set();
             const constNames = new Set();
 
-            // Find DECLARE statements and extract variable names
+            // extract varable names from DECLARE statements
             const declareMatches = code.match(/DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)/gi);
             if (declareMatches) {
                 declareMatches.forEach(match => {
@@ -35,7 +35,7 @@ function(require, exports, module) {
                 });
             }
             
-            // Find CONSTANT statements and extract constant names
+            // extract constant names from CONSTANT statements
             const constantMatches = code.match(/CONSTANT\s+([A-Za-z][A-Za-z0-9]*)/gi);
             if (constantMatches) {
                 constantMatches.forEach(match => {
@@ -46,7 +46,7 @@ function(require, exports, module) {
                 });
             }
             
-            // Find PROCEDURE and FUNCTION names
+            // extract procedure names from PROCEDURE statements
             const procMatches = code.match(/PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)/gi);
             if (procMatches) {
                 procMatches.forEach(match => {
@@ -57,6 +57,7 @@ function(require, exports, module) {
                 });
             }
             
+            // extract function names from FUNCTION statements
             const funcMatches = code.match(/FUNCTION\s+([A-Za-z][A-Za-z0-9]*)/gi);
             if (funcMatches) {
                 funcMatches.forEach(match => {
@@ -67,29 +68,25 @@ function(require, exports, module) {
                 });
             }
 
-            // Convert variable names to completions
+            // convert names to completions
             const varCompletions = Array.from(varNames).map(name => ({
                 name: name,
                 value: name,
                 score: 700,
                 meta: 'variable'
             }));
-
-            // Convert constant names to completions
             const constCompletions = Array.from(constNames).map(name => ({
                 name: name,
                 value: name,
                 score: 700,
                 meta: 'constant'
             }));
-
             const funcCompletions = Array.from(funcNames).map(name => ({
                 name: name,
                 value: name,
                 score: 700,
                 meta: 'function'
             }));
-
             const procCompletions = Array.from(procNames).map(name => ({
                 name: name,
                 value: name,
@@ -98,7 +95,7 @@ function(require, exports, module) {
             }));
             
             const keywordCompletions = [
-                // Keywords
+                // keywords
                 { name: 'IF',           value: 'IF',           score: 1000, meta: 'keyword' },
                 { name: 'THEN',         value: 'THEN',         score: 1000, meta: 'keyword' },
                 { name: 'ELSE',         value: 'ELSE',         score: 1000, meta: 'keyword' },
@@ -154,12 +151,12 @@ function(require, exports, module) {
             
             // combine completions
             const completions = [...keywordCompletions,
-                                    ...varCompletions,
-                                    ...constCompletions,
-                                    ...funcCompletions,
-                                    ...procCompletions];
+                                 ...varCompletions,
+                                 ...constCompletions,
+                                 ...funcCompletions,
+                                 ...procCompletions];
             
-            // Filter completions based on prefix
+            // filter completions based on prefix
             const filtered = completions.filter(completion => 
                 completion.name.toLowerCase().startsWith(prefix.toLowerCase())
             );
@@ -168,7 +165,7 @@ function(require, exports, module) {
         }
     };
 
-    // Register the completer
+    // register the completer
     ace.require('ace/ext/language_tools').addCompleter(langCompleter);
 
     // comments
@@ -189,6 +186,7 @@ function(require, exports, module) {
             /^FUNCTION\b/i
         ];
 
+        // after these, half the tab size
         const halfIndentOpeners = [
             /^IF\b/i,
             /^CASE\b/i,
@@ -211,7 +209,6 @@ function(require, exports, module) {
         const closing = /^(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i;
         return closing.test(input.trim());
     };
-
     Mode.prototype.autoOutdent = function(state, doc, row) {
         const line = doc.getLine(row);
         const match = line.match(/^(\s*)(ENDIF|ENDCASE|NEXT|ENDWHILE|UNTIL|ENDPROCEDURE|ENDFUNCTION)\b/i);

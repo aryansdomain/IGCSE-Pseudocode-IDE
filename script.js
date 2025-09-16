@@ -1,12 +1,31 @@
-(function () {
+(async function () {
+    // Import font controls module
+    const { initFontControls } = await import('./src/editor/font.js');
+
     const editor = ace.edit('code', {
         mode: 'ace/mode/lang',
         theme: 'ace/theme/monokai',
         showPrintMargin: false,
-        fontSize: '14px',
-        fontFamily: 'monospace',
     });
     window.editor = editor;
+
+    // Initialize font controls
+    const fontCtl = initFontControls({
+        editor,
+        sizeInput: document.getElementById('fontSizeSlider'),
+        familySelect: document.getElementById('fontFamilySelect'),
+        incBtn: document.querySelector('[data-font="inc"]'),
+        decBtn: document.querySelector('[data-font="dec"]'),
+        min: 8,
+        max: 48,
+        step: 1,
+        defaultSize: 14
+    });
+
+    // Expose font controls to REPL
+    if (typeof editorApis !== 'undefined') {
+        editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
+    }
 
     const langTools = ace.require('ace/ext/language_tools');
     
@@ -324,50 +343,6 @@ OUTPUT greet("World")`
 
     tabSpacesSlider.addEventListener('input',  e => refreshTabSpaces(e.target.value));
     tabSpacesSlider.addEventListener('change', e => refreshTabSpaces(e.target.value));
-
-    // ------------------------ Font ------------------------
-    const fontSizeSlider = document.getElementById('fontSizeSlider');
-    const fontSizeValue = document.getElementById('fontSizeValue');
-
-    // make ticks clickable (only those with numbers)
-    const fontSizeTicks = document.querySelectorAll('#fontSizeSlider + .slider-ticks .tick');
-    fontSizeTicks.forEach((tick) => {
-        // only make clickable if tick has content (is a number)
-        if (tick.textContent.trim()) {
-            tick.addEventListener('click', () => {
-                const value = parseInt(tick.textContent); // evens from 10-24
-                fontSizeSlider.value = value;
-                updateFontSize(value);
-            });
-        }
-    });
-
-    // update font size
-    function refreshFontSize(value) {
-        editor.setFontSize(parseInt(value));
-        fontSizeValue.textContent = value;
-    }
-
-    fontSizeSlider.addEventListener('input', (e) => {
-        refreshFontSize(e.target.value);
-    });
-
-    // typeface
-    const fontFamilySelect = document.getElementById('fontFamilySelect');
-
-    // update font family
-    function updateFontFamily(fontFamily) {
-        editor.setOption('fontFamily', fontFamily);
-        // Also set CSS directly as backup
-        const editorElement = document.getElementById('code');
-        if (editorElement) {
-            editorElement.style.fontFamily = fontFamily;
-        }
-    }
-
-    fontFamilySelect.addEventListener('change', (e) => {
-        updateFontFamily(e.target.value);
-    });
 
     // editor theme
     editorThemeSelect.addEventListener('change', (e) => {
@@ -947,8 +922,12 @@ OUTPUT greet("World")`
             case 'font': {
                 const px = parseInt(rest[0], 10);
                 if (Number.isInteger(px) && px >= 6 && px <= 40) {
-                    editor.setFontSize(px);
-                    consoleOutput.println(`Font size: ${px}px`);
+                    if (typeof fontCtl !== 'undefined') {
+                        fontCtl.setFontSize(px);
+                        consoleOutput.println(`Font size: ${px}px`);
+                    } else {
+                        consoleOutput.errorln('Font controls not initialized');
+                    }
                 } else {
                     consoleOutput.errorln('Usage: font <6-40px>');
                 }
@@ -1050,9 +1029,7 @@ OUTPUT greet("World")`
 
         const SPLITTER_H = 8;
         const MIN_EDITOR_H  = 0;
-        const MIN_CONSOLE_H = 200;
-
-        // If you already have applySplit(), keep it; otherwise use this one:
+        const MIN_CONSOLE_H = 200
         function applySplit(editorH) {
             const totalH   = workspace.clientHeight;
             const maxEdH   = totalH - SPLITTER_H - MIN_CONSOLE_H;
