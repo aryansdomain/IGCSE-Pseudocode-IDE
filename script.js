@@ -52,10 +52,13 @@ OUTPUT greet("World")`
     const consoleOutput = {
         print:   (t, color = null) => terminalWrite(t,          color),
         println: (t, color = null) => terminalWrite(t + '\r\n', color),
+        lnprint: (t, color = null) => terminalWrite('\r\n' + t, color),
         error:   (t) => terminalWrite(t,          '31'), // red
-        errorln: (t) => terminalWrite(t + '\r\n', '31'), // red
+        errorln: (t) => terminalWrite(t + '\r\n', '31'), // newline after
+        lnerror: (t) => terminalWrite('\r\n' + t, '31'), // newline before
         warning:   (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
-        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // italics and yellow
+        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
+        lnwarn: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
         clear:   () => terminal.clear(),
         clearline: () => terminalWrite('\x1b[2K\r')
     };
@@ -119,11 +122,9 @@ OUTPUT greet("World")`
     downloadEditorBtn.addEventListener('click', async () => {
         const code = editor.getValue();
         
-        if (!code.trim()) {
-            return; // Don't download empty files
-        }
+        if (!code.trim()) return; // empty files
 
-        // Create filename with timestamp
+        // create filename
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
         const filename = `code_${timestamp}.txt`;
         
@@ -135,14 +136,13 @@ OUTPUT greet("World")`
     const moonIcon = modeToggleBtn.querySelector('.moon-icon');
     const sunIcon = modeToggleBtn.querySelector('.sun-icon');
 
-    // Define light and dark themes
+    // light and dark themes
     const lightThemes = [
         'ace/theme/chrome', 'ace/theme/clouds', 'ace/theme/dawn', 'ace/theme/dreamweaver',
         'ace/theme/eclipse', 'ace/theme/github', 'ace/theme/gruvbox_light_hard', 'ace/theme/iplastic',
         'ace/theme/katzenmilch', 'ace/theme/kuroir', 'ace/theme/solarized_light', 'ace/theme/sqlserver',
         'ace/theme/textmate', 'ace/theme/tomorrow', 'ace/theme/xcode'
     ];
-    
     const darkThemes = [
         'ace/theme/ambiance', 'ace/theme/chaos', 'ace/theme/clouds_midnight', 'ace/theme/cobalt',
         'ace/theme/dracula', 'ace/theme/gruvbox', 'ace/theme/gruvbox_dark_hard', 'ace/theme/idle_fingers',
@@ -454,6 +454,7 @@ OUTPUT greet("World")`
     function attachWorkerHandlers(localRunId) {
         let indicatorShown = false;
         let warningStorage = [];
+        console.log(`DEBUG: Initialized warning buffer for run ${localRunId}`);
         let runningTimer = null;
         let dotTimer = null;
         let dotPhase = 0;
@@ -464,12 +465,12 @@ OUTPUT greet("World")`
                 indicatorShown = true;
 
                 // output pending warnings
+                console.log(`DEBUG: Outputting ${warningStorage.length} warnings before dots`);
                 warningStorage.forEach(msg => {
+                    console.log(`DEBUG: Outputting warning: "${msg}"`);
                     consoleOutput.warningln(msg);
                 });
                 warningStorage = [];
-
-                consoleOutput.println('');
 
                 dotTimer = setInterval(() => {
                     dotPhase = (dotPhase + 1) % 4; // cycle
@@ -505,35 +506,74 @@ OUTPUT greet("World")`
             const { type } = e.data || {};
 
             if (type === 'done') {
+
+                const hadInd = indicatorShown;
                 clearRunningIndicators();
                 
                 try {
+
+                    if (!hadInd && warningStorage.length) {
+                        console.log(`DEBUG: Outputting ${warningStorage.length} warnings in completion handler`);
+                        warningStorage.forEach(msg => {
+                            console.log(`DEBUG: Outputting warning in completion: "${msg}"`);
+                            consoleOutput.warningln(msg);
+                        });
+                        warningStorage = [];
+                    }
+
+                    // output warnings immediately before program output
+                    if (warningStorage.length > 0) {
+                        console.log(`DEBUG: Outputting ${warningStorage.length} warnings before program output`);
+                        warningStorage.forEach(msg => {
+                            console.log(`DEBUG: Outputting warning before output: "${msg}"`);
+                            consoleOutput.warningln(msg);
+                        });
+                        warningStorage = [];
+                    }
+
                     // output the output storage
                     if (outputStorage.length > 0) {
                         const combinedOutput = outputStorage.join('');
                         const parts = combinedOutput.split('\n');
-                        parts.slice(1).forEach((line) => {
-                            consoleOutput.println(line);
-                        });
+                        parts.slice(1).forEach(line => consoleOutput.lnprint(line));
                         outputStorage = [];
                     }
 
                 } finally {
                     finishRun(localRunId);
 
-                    // reset per-run flags
+                    // reset flags
                     indicatorShown = false;
                     outputStorage = [];
                     warningStorage = [];
                 }
             } else if (type === 'stopped') {
                 clearRunningIndicators();
-                consoleOutput.errorln('Execution stopped'); // red
+                consoleOutput.lnerror('Execution stopped');
                 
                 finishRun(localRunId);
             } else if (type === 'input_request') {
-                // clear dots
                 clearRunningIndicators();
+                
+                // output warnings before showing output for input
+                if (warningStorage.length > 0) {
+                    console.log(`DEBUG: Outputting ${warningStorage.length} warnings before input request output`);
+                    warningStorage.forEach(msg => {
+                        console.log(`DEBUG: Outputting warning before input: "${msg}"`);
+                        consoleOutput.warningln(msg);
+                    });
+                    warningStorage = [];
+                }
+                
+                // show output before asking for input
+                if (outputStorage.length > 0) {
+                    const combinedOutput = outputStorage.join('');
+                    const parts = combinedOutput.split('\n');
+
+                    parts.slice(1).forEach(line => consoleOutput.lnprint(line));
+                    outputStorage = [];
+                }
+
                 awaitingProgramInput = true;
 
             } else if (type === 'flush') {
@@ -548,6 +588,8 @@ OUTPUT greet("World")`
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
 
+                console.log(`DEBUG: Adding warning to buffer: "${msg}"`);
+                console.log(`DEBUG: Warning buffer now has ${warningStorage.length + 1} items`);
                 warningStorage.push(msg);
 
             } else if (type === 'error') {
@@ -555,7 +597,7 @@ OUTPUT greet("World")`
                 
                 // stop code immediately when error is encountered
                 clearRunningIndicators();
-                consoleOutput.errorln(msg);
+                consoleOutput.lnerror(msg);
                 
                 finishRun(localRunId);
             }
@@ -566,7 +608,7 @@ OUTPUT greet("World")`
             clearRunningIndicators();
 
             consoleOutput.clearline();
-            consoleOutput.errorln(`Worker error: ${e.message || e.filename || 'unknown'}`);
+            consoleOutput.lnerror(`Worker error: ${e.message || e.filename || 'unknown'}`);
             finishRun(localRunId);
         };
     }
@@ -581,6 +623,8 @@ OUTPUT greet("World")`
 
         // show next prompt
         deferPrompt = false;
+        //consoleOutput.lnprint('run finish');
+        consoleOutput.lnprint('');
         consoleOutput.println('');
         writePrompt();
     }
@@ -590,22 +634,22 @@ OUTPUT greet("World")`
         try { worker && worker.postMessage({ type: 'stop' }); } catch {}
       
         setTimeout(() => {
-            if (!worker) return; // already stopped cleanly
+            if (!worker) return; // already stopped
         
-                try { worker.terminate(); } catch {}
-                worker = null;
+            try { worker.terminate(); } catch {}
+            worker = null;
         
-            // stop the green dot ticker and clear that line
+            // clear spinner
             if (typeof clearIndicators === 'function') clearIndicators();
         
             // show the message and finish the run
-            consoleOutput.errorln('Execution stopped');
+            consoleOutput.lnerror('Execution stopped');
             finishRun(currentLocalRunId);
         }, 600);
     }
     
     function runCode() {
-        if (isRunning) return; // repeated "run" inputs
+        if (isRunning) return; // repeatedrun commands
         
         __flushedPrefix = '';
         outputStorage = [];
@@ -616,7 +660,7 @@ OUTPUT greet("World")`
         const localRunId = ++runId;
         isRunning = true;
 
-        // flip to red only if still running
+        // flip button to red only if still running
         if (flipTimer) clearTimeout(flipTimer);
         flipTimer = setTimeout(() => {
             if (isRunning && localRunId === runId) setRunButton(true);
@@ -636,10 +680,7 @@ OUTPUT greet("World")`
     // run/stop button
     runBtn.addEventListener('click', () => {
         if (runBtn.classList.contains('stop')) stopCode();
-        else {
-            consoleOutput.println('run', '32'); // green color 
-            runCode();
-        }
+        else execCommand('run');
     });    
 
     // ------------------------ Console/Terminal --------------------------------
@@ -669,7 +710,7 @@ OUTPUT greet("World")`
       // initial fit after the terminal attaches
       setTimeout(() => fitAddon.fit(), 0);
     } catch (e) {
-        consoleOutput.errorln('Error: Terminal is not auto-resizing. Please reload or report this error.');
+        consoleOutput.lnerror('Error: Terminal is not auto-resizing. Please reload the page or report this error.');
     }
 
     function fitTerm() { if (fitAddon) fitAddon.fit(); }
@@ -733,6 +774,7 @@ OUTPUT greet("World")`
         } else {
 
             if (data === '\r') { // enter
+                //consoleOutput.println('enter key pressed');
                 consoleOutput.println('');
 
                 execCommand(currentCommand);
@@ -755,25 +797,40 @@ OUTPUT greet("World")`
                     }
                 }
             } else if (data === '\u001b[A') { // up arrow
-
                 if (commandHistory.length > 0) {
-                    historyIndex = Math.max(0, historyIndex - 1);
+                    if (historyIndex === -1) {
+                        historyIndex = commandHistory.length - 1;
+                    } else {
+                        historyIndex = Math.max(0, historyIndex - 1);
+                    }
+
                     currentCommand = commandHistory[historyIndex] || '';
-                    cursorPosition = currentCommand.length;
-                    consoleOutput.clearline();
+
+                    consoleOutput.print('\x1b[?25l'); // hide cursor
+                    consoleOutput.print('\r\x1b[2K');
                     writePrompt();
                     consoleOutput.print(currentCommand);
+                    consoleOutput.print('\x1b[?25h'); // show cursor
+
+                    cursorPosition = currentCommand.length;
                 }
 
             } else if (data === '\u001b[B') { // down arrow
-
                 if (commandHistory.length > 0) {
-                    historyIndex = Math.min(commandHistory.length, historyIndex + 1);
-                    currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
-                    cursorPosition = currentCommand.length;
-                    consoleOutput.clearline();
-                    writePrompt();
+                    if (historyIndex === -1) {
+                        currentCommand = '';
+                    } else {
+                        historyIndex = Math.min(commandHistory.length, historyIndex + 1);
+                        currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
+                    }
+
+                    consoleOutput.print('\x1b[?25l'); // hide cursor
+                    consoleOutput.print('\r\x1b[2K');
+                    writePrompt();                        
                     consoleOutput.print(currentCommand);
+                    consoleOutput.print('\x1b[?25h'); // show cursor
+
+                    cursorPosition = currentCommand.length;
                 }
                 
             } else if (data === '\u001b[D') moveCursorLeft();
@@ -853,13 +910,13 @@ OUTPUT greet("World")`
             break;
 
             case 'run':
-                deferPrompt = true; // defer prompt until run completes
+                deferPrompt = true; // dont output prompt until run completes
                 runCode();
             break;
 
             case 'stop':
                 if (!isRunning) {
-                    consoleOutput.errorln('No running execution to stop');
+                    consoleOutput.lnerror('No running execution to stop');
                     return;
                 }
                 
@@ -877,8 +934,9 @@ OUTPUT greet("World")`
                     refreshTabSpaces(n);
                     consoleOutput.println(`Tab size: ${n}`);
                     if (n === 0) {
-                        consoleOutput.warningln('Warning: using the "tab" command again will not reverse this change.' + '\r\n' +
-                        'Press Cmd/Ctrl+Z to restore.');
+                        consoleOutput.warningln(
+                            'Warning: using the "tab" command again will not reverse this change.\r\n' +
+                            'Press Cmd/Ctrl+Z to restore.');
                     }
                 } else {
                     consoleOutput.errorln('Usage: tab <0-8 spaces>');
@@ -943,7 +1001,7 @@ OUTPUT greet("World")`
 
             case 'theme': {
                 const themeSelect = document.getElementById('editorThemeSelect');
-                if (!themeSelect) return consoleOutput.errorln('Theme dropdown not found');
+                if (!themeSelect) return consoleOutput.lnerror('Theme dropdown not found');
                 
                 const t = rest.join(' ').toLowerCase().replace(/[_-]/g, ' ');
                 if (!t) return consoleOutput.errorln('Usage: theme <theme_name>');

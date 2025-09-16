@@ -1,22 +1,20 @@
-async function interpretPseudocode(code) {
+async function interpret(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
     const OUTPUT_BUFFER = [];
-    let CAPITALIZATION_WARNINGS = [];
     const warnedKeywords = new Set();
     let __capSummaryEmitted = false;
     const CAPITALIZATION_SEEN = new Set();
     const constants = Object.create(null);
     const globals   = Object.create(null);
 
-    // Clear warning tracking for this run
-    CAPITALIZATION_WARNINGS = [];
+    // clear tracking
     warnedKeywords.clear();
     CAPITALIZATION_SEEN.clear();
-    __capSummaryEmitted = false;  // NEW
+    __capSummaryEmitted = false;
 
-    // Error throwing helper
-    function throwErr(name, message, line) {
+    // output error
+    function throwErr(message, name, line) {
         const e = new Error(name + message);
         e.line = line;
         throw e;
@@ -28,6 +26,7 @@ async function interpretPseudocode(code) {
         }
     }
 
+    // remove all comments
     function stripStringsAndComments(src) {
         let out = '';
         let inStr = false, quote = '';
@@ -54,6 +53,7 @@ async function interpretPseudocode(code) {
         return out;
     }
 
+    // check if keywords are capitalized
     function checkCapitalization(text, lineNumber) {
         const scan = stripStringsAndComments(text);  // <-- add this line
         // Full keyword set (selection, iteration, decls, I/O, logical, types, builtins)
@@ -135,9 +135,19 @@ async function interpretPseudocode(code) {
 
     function assignChecked(lv, scope, rhsExpr, value, isInput) {
         const destType = getDestTypeForLValue(lv, scope);
-                        if (!destType) {
-                    throwErr('', 'Undeclared variable ' + lv.name, __LINE_NUMBER);
-                }
+        if (!destType) {
+            throwErr('Undeclared variable ', lv.name, __LINE_NUMBER);
+        }
+
+        // accept numeric strings like "0", "3.5", "-2e3"
+        if (isInput && typeof value === 'string') {
+            const t = destType.toUpperCase();
+                if (t === 'INTEGER' || t === 'REAL') {
+                    const n = Number(value.trim());
+                if (!Number.isNaN(n) && Number.isFinite(n)) value = n;
+            }
+        }
+
         checkAssignCompatible(destType, rhsExpr, value, isInput);
         lv.set(value);
     }
@@ -149,12 +159,12 @@ async function interpretPseudocode(code) {
         }
         if (typeof value === 'boolean') return 'BOOLEAN';
         if (typeof value === 'string') {
-            // Check if it's a single-quoted literal (CHAR) vs double-quoted (STRING)
+            // CHAR vs STRING
             if (rhsExpr && typeof rhsExpr === 'string') {
                 if (isSingleQuoted(rhsExpr)) return 'CHAR';
                 if (isDoubleQuoted(rhsExpr)) return 'STRING';
             }
-            // Fallback: single character = CHAR, multiple = STRING
+            // fallback - one letter: char
             if (value.length === 1) return 'CHAR';
             return 'STRING';
         }
@@ -197,9 +207,6 @@ async function interpretPseudocode(code) {
     }
 
     // conversion between types
-    function realToString(n) {
-        return Number.isInteger(n) ? n.toFixed(1) : String(n);
-    }
     function toString(v) {
         if (v === true) return "TRUE";
         if (v === false) return "FALSE";
@@ -237,13 +244,23 @@ async function interpretPseudocode(code) {
 
     // parse input value
     function parseInput(raw) {
-        const trimmed = raw.trim();
-        const num = Number(trimmed);
-        
-        if (!isNaN(num) && isFinite(num)) return num;
-        if (trimmed.toUpperCase() === 'TRUE') return true;
-        if (trimmed.toUpperCase() === 'FALSE') return false;
-        return raw;
+        // remove ANSI escapes and stray CRs, then trim
+        const cleaned = String(raw)
+        .replace(/\x1B\[[0-9;]*[A-Za-z]/g, '')  // ANSI SGR etc.
+        .replace(/\r/g, '')
+        .trim();
+
+        // numeric? -> number
+        if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(cleaned)) {
+            return Number(cleaned);
+        }
+        // booleans
+        const up = cleaned.toUpperCase();
+        if (up === 'TRUE')  return true;
+        if (up === 'FALSE') return false;
+
+        // otherwise keep as string (for CHAR / STRING)
+        return cleaned;
     }
 
     function defaultForType(type) {
@@ -385,7 +402,7 @@ async function interpretPseudocode(code) {
         return true;
     }
 
-    // ------------------------ Handle ^ replacement ------------------------
+    // handle ^ replacement
     function replacePowerOperators(expr) {
         const START = '\uE000';   // protected literal start
         const END   = '\uE001';   // protected literal end
@@ -549,7 +566,7 @@ async function interpretPseudocode(code) {
         return s;
     }
     
-    // Validate arithmetic operators have numeric operands
+    // check that arithmetic operators have numeric operands
     function validateArithmeticOperators(expr) {
         // Check for +, -, *, /, ^ operators
         const operators = ['+', '-', '*', '/', '^'];
@@ -559,6 +576,10 @@ async function interpretPseudocode(code) {
             while ((match = regex.exec(expr)) !== null) {
                 const left = match[1].trim();
                 const right = match[2].trim();
+
+                if (op === '/' && right == 0) {
+                    throwErr('', `Error: Division by 0.`, __LINE_NUMBER);
+                }
                 
                 // Skip if it's already a function call or complex expression
                 if (left.includes('(') || right.includes('(') || left.includes('[') || right.includes('[')) {
@@ -572,7 +593,7 @@ async function interpretPseudocode(code) {
         }
     }
 
-    // Helper function to replace commas with + only outside parentheses
+    // replace commas with + (string concatenation)
     function replaceCommas(s) {
         let result = '';
         let depth = 0;
@@ -925,6 +946,7 @@ async function interpretPseudocode(code) {
 
     const mainLines = extractDefs(lines);
 
+    // executes a block of code
     async function runBlock(blockLines, scope, startLineNumber = 1, allowReturn = false) {
         let m;
         for (let i = 0; i < blockLines.length; i++) {

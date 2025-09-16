@@ -1,7 +1,6 @@
-// do multiple formatting passes over the code
-function formatPseudocode(src) {
+function format(src) {
     let prev = String(src);
-    for (let i = 0; i < 10; i++) { // limit to avoid infinite loops
+    for (let i = 0; i < 10; i++) { // repeat formatting 10 times
         const next = formatOnce(prev);
         if (next === prev) return next;
         prev = next;
@@ -387,23 +386,25 @@ function formatOnce(src) {
     let indent = 0;
     const out = [];
 
-    const reThen      = /^\s*THEN\s*$/i;
-    const reElse      = /^\s*ELSE\s*$/i;
-    const reEndIf     = /^\s*ENDIF\s*$/i;
-    const reEndWhile  = /^\s*ENDWHILE\s*$/i;
-    const reEndProc   = /^\s*ENDPROCEDURE\s*$/i;
-    const reEndFunc   = /^\s*ENDFUNCTION\s*$/i;
-    const reEndCase   = /^\s*ENDCASE\s*$/i;
-    const reUntil     = /^\s*UNTIL\b/i;
-    const reNext      = /^\s*NEXT(\b|$)/i;
+    const reThen       = /^\s*THEN\s*$/i;
+    const reElse       = /^\s*ELSE\s*$/i;
+    const reEndIf      = /^\s*ENDIF\s*$/i;
+    const reEndWhile   = /^\s*ENDWHILE\s*$/i;
+    const reEndProc    = /^\s*ENDPROCEDURE\s*$/i;
+    const reEndFunc    = /^\s*ENDFUNCTION\s*$/i;
+    const reEndCase    = /^\s*ENDCASE\s*$/i;
+    const reUntil      = /^\s*UNTIL\b/i;
+    const reNext       = /^\s*NEXT(\b|$)/i;
 
-    const reProc      = /^\s*PROCEDURE\b/i;
-    const reFunc      = /^\s*FUNCTION\b/i;
-    const reWhileDo   = /^\s*WHILE\b.*\bDO\s*$/i;
-    const reFor       = /^\s*FOR\b/i;
-    const reRepeat    = /^\s*REPEAT\s*$/i;
-    const reCase      = /^\s*CASE\s+OF\b/i;
-    const reCaseOption = /^\s*\d+\s*:\s*/i;
+    const reProc       = /^\s*PROCEDURE\b/i;
+    const reFunc       = /^\s*FUNCTION\b/i;
+    const reWhileDo    = /^\s*WHILE\b.*\bDO\s*$/i;
+    const reFor        = /^\s*FOR\b/i;
+    const reRepeat     = /^\s*REPEAT\s*$/i;
+    const reCase       = /^\s*CASE\s+OF\b/i;
+    const reCaseOption =
+        /^\s*(?:[A-Za-z][A-Za-z0-9_]*|[+-]?(?:\d+(?:\.\d*)?|\.\d+)|\uE000\d+\uE001|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[^A-Za-z0-9\s:])\s*:\s*/i;
+    const reOtherwise  = /^\s*OTHERWISE\b/i;
 
     for (let i = 0; i < normalized.length; i++) {
         let codeProt = normalized[i].code;
@@ -424,7 +425,7 @@ function formatOnce(src) {
             indent = Math.max(0, indent - 1);
         }
 
-        // restore literals and final small polish
+        // restore literals
         let restored = restore(codeProt);
         let p = protect(restored);
         p = p.replace(/<\s*=/g, '<=')
@@ -446,9 +447,12 @@ function formatOnce(src) {
         restored = restore(p);
 
         let lineOut;
-        if (reThen.test(codeProt) || reElse.test(codeProt) || reCaseOption.test(codeProt)) {
-            const halfUnit  = ' '.repeat(Math.floor(tabSize / 2)); // half the tab size
+        const halfUnit = ' '.repeat(Math.floor(tabSize / 2)); // half the tab size
+        if (reThen.test(codeProt) || reElse.test(codeProt)) {                    // THEN/ELSE
             lineOut = indentUnit.repeat(indent) + halfUnit + restored;
+        } else if (reCaseOption.test(restored) || reOtherwise.test(restored)) {  // CASE
+            const base = Math.max(0, indent - 1);
+            lineOut = indentUnit.repeat(base) + halfUnit + restored;
         } else {
             lineOut = indentUnit.repeat(indent) + restored;
         }
@@ -509,7 +513,7 @@ function wireFormatterButton() {
     btn.addEventListener('click', () => {
         try {
             const before = getEditorCode();
-            const after = formatPseudocode(before);
+            const after = format(before);
             setEditorCode(after);
         } catch (e) {
             console.error('Format error:', e);
@@ -519,7 +523,7 @@ function wireFormatterButton() {
 }
 
 // Expose (optional, for debugging)
-window.pseudoFormatter = { formatPseudocode, wireFormatterButton, getEditorCode, setEditorCode };
+window.pseudoFormatter = { format, wireFormatterButton, getEditorCode, setEditorCode };
 
 // Auto-wire on load
 if (document.readyState === 'loading') {

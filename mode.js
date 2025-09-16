@@ -193,7 +193,7 @@ function(require, exports, module) {
             /^IF\b/i,
             /^CASE\b/i,
             /^THEN\b/i,
-            /^ELSE\b/i
+            /^ELSE\b/i,
         ];
 
         if (fullIndentOpeners.some(r => r.test(trimmed))) {

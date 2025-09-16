@@ -1,7 +1,7 @@
 self.window = self;
 self.__ide_stop_flag = false;
 
-// Ask main thread for a line of input
+// get input from main thread
 self.readInput = function () {
     self.postMessage({ type: 'input_request' });
     return new Promise((resolve) => {
@@ -21,7 +21,7 @@ self.onmessage = async (e) => {
     if (e.data?.type === 'run') {
         try {
             if (!imported) { importScripts('interpreter.js'); imported = true; }
-            const output = await self.interpretPseudocode(e.data.code); // <-- await
+            const output = await self.interpret(e.data.code);
             self.postMessage({ type: 'done', output: String(output ?? '') });
         } catch (err) {
             self.postMessage({ type: 'error', error: err?.message || String(err) });
