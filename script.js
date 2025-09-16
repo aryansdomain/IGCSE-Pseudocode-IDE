@@ -1,11 +1,25 @@
 (async function () {
-    // Import font controls module
+    // import modules
+    const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
 
-    const editor = ace.edit('code', {
-        mode: 'ace/mode/lang',
-        theme: 'ace/theme/monokai',
-        showPrintMargin: false,
+    // init editor
+    const { editor, getCode, setCode, editorApis } = initEditor({
+        container: document.getElementById('code'),
+        defaultCode: 
+        
+`// Type your code here!
+
+FUNCTION greet(name : STRING) RETURNS STRING
+    RETURN "Hello, ", name, "!"
+ENDFUNCTION
+
+OUTPUT greet("World")`,
+
+        tabSize: 4,
+        theme: 'monokai',
+        softWrap: false,
+        readOnly: false,
     });
     window.editor = editor;
 
@@ -22,11 +36,10 @@
         defaultSize: 14
     });
 
-    // Expose font controls to REPL
-    if (typeof editorApis !== 'undefined') {
-        editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
-    }
+    // set font size
+    editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
 
+    // Configure language tools and autocompletion
     const langTools = ace.require('ace/ext/language_tools');
     
     const completers = [];
@@ -38,8 +51,6 @@
     } catch {}
     
     editor.setOptions({
-        useSoftTabs: true,
-        tabSize: 4,
         enableBasicAutocompletion: completers,
         enableLiveAutocompletion:  completers,
         enableSnippets: false,
@@ -54,17 +65,6 @@
     editor.on('changeMode', () => {editor.completers = completers.slice();} );
 
     const Range = ace.require('ace/range').Range;
-
-    // initial code
-    editor.setValue(
-`// Type your code here!
-
-FUNCTION greet(name : STRING) RETURNS STRING
-    RETURN "Hello, ", name, "!"
-ENDFUNCTION
-
-OUTPUT greet("World")`
-        , -1); // -1 keeps cursor at start of editor
 
     editor.focus();
 
@@ -139,7 +139,7 @@ OUTPUT greet("World")`
 
     // ------------------------ Download Editor Code ------------------------
     downloadEditorBtn.addEventListener('click', async () => {
-        const code = editor.getValue();
+        const code = getCode();
         
         if (!code.trim()) return; // empty files
 
@@ -237,7 +237,7 @@ OUTPUT greet("World")`
             
             // if current theme is light
             if (lightThemes.includes(currentTheme)) {
-                editor.setTheme('ace/theme/monokai'); // switch to default dark theme
+                editorApis.setTheme('monokai'); // switch to default dark theme
             }
         // switch from dark to light mode
         } else {
@@ -247,7 +247,7 @@ OUTPUT greet("World")`
             
             // if current theme is dark
             if (darkThemes.includes(currentTheme)) {
-                editor.setTheme('ace/theme/github'); // switch to default light theme
+                editorApis.setTheme('github'); // switch to default light theme
             }
         }
         
@@ -330,10 +330,7 @@ OUTPUT greet("World")`
         const oldSize = getCurrentTabSize(session);
         if (!Number.isFinite(newSize) || newSize === oldSize) return;
 
-        session.setUseSoftTabs(true);
-        session.setTabSize(newSize);
-        editor.setOption('tabSize', newSize);
-
+        editorApis.setTab(newSize);
         retabDocumentByUnits(session, oldSize, newSize);
 
         tabSpacesValue.textContent = newSize;
@@ -346,7 +343,8 @@ OUTPUT greet("World")`
 
     // editor theme
     editorThemeSelect.addEventListener('change', (e) => {
-        editor.setTheme(e.target.value);
+        const themeName = e.target.value.replace('ace/theme/', '');
+        editorApis.setTheme(themeName);
     });
 
     // set initial theme in dropdown
@@ -631,7 +629,7 @@ OUTPUT greet("World")`
         lastStdoutEl = null;
         inputPromptBase = '';
         hadFlushOutput = false;
-        const code = editor.getValue();
+        const code = getCode();
         const localRunId = ++runId;
         isRunning = true;
 
@@ -948,7 +946,7 @@ OUTPUT greet("World")`
                     
                     // if current theme is already light, keep it
                     if (!lightThemes.includes(currentTheme)) {
-                        editor.setTheme('ace/theme/github');
+                        editorApis.setTheme('github');
                     }
                     consoleOutput.println('Mode: light');
 
@@ -959,7 +957,7 @@ OUTPUT greet("World")`
                     
                     // if current theme is already dark, keep it
                     if (!darkThemes.includes(currentTheme)) {
-                        editor.setTheme('ace/theme/monokai');
+                        editorApis.setTheme('monokai');
                     }
                     consoleOutput.println('Mode: dark');
 
@@ -1003,7 +1001,8 @@ OUTPUT greet("World")`
                 
                 // set theme
                 themeSelect.value = foundOption.value;
-                editor.setTheme(foundOption.value);
+                const themeName = foundOption.value.replace('ace/theme/', '');
+                editorApis.setTheme(themeName);
                 consoleOutput.println(`Theme: ${foundOption.textContent}`);
                 break;
             }
