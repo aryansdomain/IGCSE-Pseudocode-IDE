@@ -16,8 +16,8 @@
         familySelect: document.getElementById('fontFamilySelect'),
         incBtn: document.querySelector('[data-font="inc"]'),
         decBtn: document.querySelector('[data-font="dec"]'),
-        min: 8,
-        max: 48,
+        min: 6,
+        max: 38,
         step: 1,
         defaultSize: 14
     });
@@ -268,7 +268,7 @@ OUTPUT greet("World")`
     const tabSpacesInfo   = document.querySelector('.tab-spaces-info');
 
     // make ticks clickable
-    const tabSpacesTicks = document.querySelectorAll('#tabSpacesSlider + .slider-ticks .tick');
+    const tabSpacesTicks = document.querySelectorAll('#tabSpacesSlider + .slider-ticks.tab-ticks .tick');
     tabSpacesTicks.forEach((tick, index) => {
         tick.addEventListener('click', () => {
             const value = index + 1; // 1, 2, 3, 4, 5
@@ -876,7 +876,7 @@ OUTPUT greet("World")`
                     'stop                 Stop the running program\r\n' +
                     'clear                Clear console\r\n' +
                     'tab <n>              Set editor tab size (1-8 spaces)\r\n' +
-                    'font <px>            Set editor font size (6-40 px)\r\n' +
+                    'font <px>            Set editor font size (6-38 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
                     'theme <theme>        Change the editor color theme. For a full list of themes, open Settings.\r\n\r\n'
 
@@ -921,7 +921,7 @@ OUTPUT greet("World")`
 
             case 'font': {
                 const px = parseInt(rest[0], 10);
-                if (Number.isInteger(px) && px >= 6 && px <= 40) {
+                if (Number.isInteger(px) && px >= 6 && px <= 38) {
                     if (typeof fontCtl !== 'undefined') {
                         fontCtl.setFontSize(px);
                         consoleOutput.println(`Font size: ${px}px`);
@@ -929,7 +929,7 @@ OUTPUT greet("World")`
                         consoleOutput.errorln('Font controls not initialized');
                     }
                 } else {
-                    consoleOutput.errorln('Usage: font <6-40px>');
+                    consoleOutput.errorln('Usage: font <6-38px>');
                 }
                 break;
             }

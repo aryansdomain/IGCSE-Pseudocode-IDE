@@ -2,10 +2,10 @@ const KEY = 'editor.font';
 
 export function initFontControls({
     editor,
-    sizeInput,           // <input type="number" or range>
-    familySelect,        // <select>
-    incBtn = null,       // optional: button to increase size
-    decBtn = null,       // optional: button to decrease size
+    sizeInput,
+    familySelect,
+    incBtn = null,
+    decBtn = null,
     min = 8,
     max = 48,
     step = 1,
@@ -40,6 +40,10 @@ export function initFontControls({
         if (sizeInput.step !== undefined) sizeInput.step = String(step);
         sizeInput.value = String(size);
     }
+
+    // update html display
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    if (fontSizeValue) fontSizeValue.textContent = String(size);
     if (familySelect) {
         // If options are empty, populate a sensible macOS-first list once.
         if (!familySelect.options.length) {
@@ -74,12 +78,33 @@ export function initFontControls({
     decBtn?.addEventListener('click', onDec);
     familySelect?.addEventListener('change', onFamilyChange);
 
+    // slider ticks clickable
+    const fontSizeTicks = document.querySelectorAll('#fontSizeSlider + .slider-ticks.font-ticks .tick');
+    const tickClickHandlers = [];
+    fontSizeTicks.forEach((tick) => {
+
+        if (tick.textContent.trim()) {
+            const handler = () => {
+                const value = parseInt(tick.textContent);
+                if (sizeInput) sizeInput.value = value;
+                setFontSize(value);
+            };
+            tick.addEventListener('click', handler);
+            tickClickHandlers.push({ tick, handler });
+        }
+        
+    });
+
     // --- API ---
     function setFontSize(n) {
         size = clamp(Number(n) || defaultSize, min, max);
         applySize(size);
         persist();
         if (sizeInput) sizeInput.value = String(size);
+
+        // update html display
+        const fontSizeValue = document.getElementById('fontSizeValue');
+        if (fontSizeValue) fontSizeValue.textContent = String(size);
         return size;
     }
     function setFontFamily(f) {
@@ -98,6 +123,10 @@ export function initFontControls({
         incBtn?.removeEventListener('click', onInc);
         decBtn?.removeEventListener('click', onDec);
         familySelect?.removeEventListener('change', onFamilyChange);
+        // Clean up tick event listeners
+        tickClickHandlers.forEach(({ tick, handler }) => {
+            tick.removeEventListener('click', handler);
+        });
     }
 
     // HELPERS
