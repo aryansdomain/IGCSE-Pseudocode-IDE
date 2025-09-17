@@ -4,6 +4,7 @@
     const { initFontControls } = await import('./src/editor/font.js');
     const { initSpacingControls } = await import('./src/editor/tab.js');
     const { initThemeControls } = await import('./src/editor/theme.js');
+    const { initFormatter } = await import('./src/format/format.js');
 
     // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
@@ -40,6 +41,15 @@ OUTPUT greet("World")`,
 
     // set font size
     editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
+
+    // formatter
+    const formatBtn = document.getElementById('btn-format');
+    const fmt = initFormatter({
+        editor,
+        getCode,
+        setCode,
+        formatBtn
+    });
 
     // spacing controls
     const tabSpacesSlider = document.getElementById('tabSpacesSlider');
@@ -631,7 +641,7 @@ OUTPUT greet("World")`,
         const cmdLower = (cmd || '').toLowerCase();
 
         // check if command is valid
-        const validCommands = ['help', 'run', 'clear', 'tab', 'font', 'mode', 'theme', 'stop'];
+        const validCommands = ['help', 'run', 'clear', 'tab', 'font', 'mode', 'theme', 'stop', 'format'];
         const isValidCommand = validCommands.includes(cmdLower);
 
         // command is green, arguments are white
@@ -653,6 +663,7 @@ OUTPUT greet("World")`,
                     'run                  Execute the code currently in the editor. If the program needs input, type and press Enter.\r\n' +
                     'stop                 Stop the running program\r\n' +
                     'clear                Clear console\r\n' +
+                    'format               Format the code in the editor\r\n' +
                     'tab <n>              Set editor tab size (1-8 spaces)\r\n' +
                     'font <px>            Set editor font size (6-38 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
@@ -753,6 +764,11 @@ OUTPUT greet("World")`,
                 consoleOutput.println(`Theme: ${foundOption.textContent}`);
                 break;
             }
+
+            case 'format':
+                fmt.formatNow();
+                consoleOutput.println('Formatted.');
+                break;
 
             default:
                 consoleOutput.errln(`Unknown command: ${cmd}`);
@@ -890,12 +906,5 @@ OUTPUT greet("World")`,
         const filename = `console_output_${timestamp}.txt`;
         
         await saveTextAsFile(filename, output);
-    });
-
-    // load formatter and setup resize
-    document.addEventListener('DOMContentLoaded', () => {
-        if (window.pseudoFormatter) {
-            window.pseudoFormatter.wireFormatterButton();
-        }
     });
 })();
