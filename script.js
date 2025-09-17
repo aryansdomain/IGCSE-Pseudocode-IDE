@@ -2,12 +2,13 @@
     // import modules
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
+    const { initSpacingControls } = await import('./src/editor/tab.js');
 
-    // init editor
+    // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
         container: document.getElementById('code'),
         defaultCode: 
-        
+
 `// Type your code here!
 
 FUNCTION greet(name : STRING) RETURNS STRING
@@ -23,7 +24,7 @@ OUTPUT greet("World")`,
     });
     window.editor = editor;
 
-    // Initialize font controls
+    // font controls
     const fontCtl = initFontControls({
         editor,
         sizeInput: document.getElementById('fontSizeSlider'),
@@ -38,6 +39,29 @@ OUTPUT greet("World")`,
 
     // set font size
     editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
+
+    // spacing controls
+    const tabSpacesSlider = document.getElementById('tabSpacesSlider');
+    const tabSpacesValue = document.getElementById('tabSpacesValue');
+    const tabSpacesInfo = document.querySelector('.tab-spaces-info');
+    
+    let spacingCtl;
+    if (tabSpacesSlider && tabSpacesValue && tabSpacesInfo) {
+        // store original setTab before overriding
+        const originalSetTab = editorApis.setTab;
+        
+        spacingCtl = initSpacingControls({
+            editor,
+            editorApis: { ...editorApis, setTab: originalSetTab },
+            slider: tabSpacesSlider,
+            valueEl: tabSpacesValue,
+            infoEl: tabSpacesInfo,
+            tickSelector: '#tabSpacesSlider + .slider-ticks.tab-ticks .tick',
+        });
+
+        // override editorApis.setTab to use spacing controls
+        editorApis.setTab = (n) => spacingCtl.setTabSpaces(n);
+    }
 
     // Configure language tools and autocompletion
     const langTools = ace.require('ace/ext/language_tools');
@@ -72,13 +96,16 @@ OUTPUT greet("World")`,
         print:   (t, color = null) => terminalWrite(t,          color),
         println: (t, color = null) => terminalWrite(t + '\r\n', color),
         lnprint: (t, color = null) => terminalWrite('\r\n' + t, color),
-        error:   (t) => terminalWrite(t,          '31'), // red
-        errorln: (t) => terminalWrite(t + '\r\n', '31'), // newline after
-        lnerror: (t) => terminalWrite('\r\n' + t, '31'), // newline before
-        warning:   (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
-        warningln: (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
-        lnwarn: (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
-        clear:   () => terminal.clear(),
+        
+        err:     (t) => terminalWrite(t,          '31'), // red
+        errln:   (t) => terminalWrite(t + '\r\n', '31'), // newline after
+        lnerr:   (t) => terminalWrite('\r\n' + t, '31'), // newline before
+
+        warn:    (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
+        warnln:  (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
+        lnwarn:  (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
+
+        clear:     () => terminal.clear(),
         clearline: () => terminalWrite('\x1b[2K\r')
     };
 
@@ -262,84 +289,6 @@ OUTPUT greet("World")`,
 
     modeToggleBtn.addEventListener('click', toggleMode);
 
-    // ------------------------ Tab Spacing ------------------------
-    const tabSpacesSlider = document.getElementById('tabSpacesSlider');
-    const tabSpacesValue  = document.getElementById('tabSpacesValue');
-    const tabSpacesInfo   = document.querySelector('.tab-spaces-info');
-
-    // make ticks clickable
-    const tabSpacesTicks = document.querySelectorAll('#tabSpacesSlider + .slider-ticks.tab-ticks .tick');
-    tabSpacesTicks.forEach((tick, index) => {
-        tick.addEventListener('click', () => {
-            const value = index + 1; // 1, 2, 3, 4, 5
-            tabSpacesSlider.value = value;
-            refreshTabSpaces(value);
-        });
-    });
-
-    function getCurrentTabSize(session) {
-        return typeof session.getTabSize === 'function'
-            ? session.getTabSize()
-            : (session.$tabSize || 4);
-    }
-
-    // change tab spacing
-    function retabDocumentByUnits(session, oldSize, newSize) {
-
-        const doc = session.getDocument();
-        const lineCount = session.getLength();
-
-        const changeSpacing = () => {
-            for (let row = 0; row < lineCount; row++) {
-                const line = session.getLine(row);
-                const m = line.match(/^[\t ]+/);
-                if (!m) continue;
-
-                const oldIndent = m[0];
-
-                // measure current column spacing
-                let cols = 0;
-                for (const ch of oldIndent) {
-                    if (ch === '\t') cols += oldSize - (cols % oldSize);
-                    else cols += 1; // space
-                }
-
-                // convert columns to indent units, still old size
-                const units = Math.floor(cols / oldSize);
-                const remainder = cols % oldSize; // keep alignment
-
-                // make new indent with new size
-                let newIndent;
-                newIndent = ' '.repeat(units * newSize + remainder);
-
-                if (newIndent !== oldIndent) {
-                    doc.replace(new Range(row, 0, row, oldIndent.length), newIndent);
-                }
-            }
-        };
-
-        const um = session.getUndoManager();
-        if (um && typeof um.transact === 'function') um.transact(changeSpacing);
-        else changeSpacing();
-    }
-
-    // update tab spacing
-    function refreshTabSpaces(value) {
-        const session = editor.session;
-        const newSize = parseInt(value, 10);
-        const oldSize = getCurrentTabSize(session);
-        if (!Number.isFinite(newSize) || newSize === oldSize) return;
-
-        editorApis.setTab(newSize);
-        retabDocumentByUnits(session, oldSize, newSize);
-
-        tabSpacesValue.textContent = newSize;
-        tabSpacesInfo.textContent = `Tab Spaces: ${newSize}`;
-        editor.renderer.updateFull();
-    }
-
-    tabSpacesSlider.addEventListener('input',  e => refreshTabSpaces(e.target.value));
-    tabSpacesSlider.addEventListener('change', e => refreshTabSpaces(e.target.value));
 
     // editor theme
     editorThemeSelect.addEventListener('change', (e) => {
@@ -351,11 +300,6 @@ OUTPUT greet("World")`,
     editorThemeSelect.value = editor.getTheme();
 
     // init ui
-    const initialTab = getCurrentTabSize(editor.session);
-    tabSpacesSlider.value = initialTab;
-    tabSpacesValue.textContent = initialTab;
-    tabSpacesInfo.textContent = `Tab Spaces: ${initialTab}`;
-
     if (editor.renderer.$theme) refreshEditortheme();
     editor.renderer.on('themeLoaded', refreshEditortheme);
 
@@ -427,7 +371,6 @@ OUTPUT greet("World")`,
     function attachWorkerHandlers(localRunId) {
         let indicatorShown = false;
         let warningStorage = [];
-        console.log(`DEBUG: Initialized warning buffer for run ${localRunId}`);
         let runningTimer = null;
         let dotTimer = null;
         let dotPhase = 0;
@@ -438,10 +381,8 @@ OUTPUT greet("World")`,
                 indicatorShown = true;
 
                 // output pending warnings
-                console.log(`DEBUG: Outputting ${warningStorage.length} warnings before dots`);
                 warningStorage.forEach(msg => {
-                    console.log(`DEBUG: Outputting warning: "${msg}"`);
-                    consoleOutput.warningln(msg);
+                    consoleOutput.warnln(msg);
                 });
                 warningStorage = [];
 
@@ -486,20 +427,16 @@ OUTPUT greet("World")`,
                 try {
 
                     if (!hadInd && warningStorage.length) {
-                        console.log(`DEBUG: Outputting ${warningStorage.length} warnings in completion handler`);
                         warningStorage.forEach(msg => {
-                            console.log(`DEBUG: Outputting warning in completion: "${msg}"`);
-                            consoleOutput.warningln(msg);
+                            consoleOutput.warnln(msg);
                         });
                         warningStorage = [];
                     }
 
                     // output warnings immediately before program output
                     if (warningStorage.length > 0) {
-                        console.log(`DEBUG: Outputting ${warningStorage.length} warnings before program output`);
                         warningStorage.forEach(msg => {
-                            console.log(`DEBUG: Outputting warning before output: "${msg}"`);
-                            consoleOutput.warningln(msg);
+                            consoleOutput.warnln(msg);
                         });
                         warningStorage = [];
                     }
@@ -522,7 +459,7 @@ OUTPUT greet("World")`,
                 }
             } else if (type === 'stopped') {
                 clearRunningIndicators();
-                consoleOutput.lnerror('Execution stopped');
+                consoleOutput.lnerr('Execution stopped');
                 
                 finishRun(localRunId);
             } else if (type === 'input_request') {
@@ -530,10 +467,8 @@ OUTPUT greet("World")`,
                 
                 // output warnings before showing output for input
                 if (warningStorage.length > 0) {
-                    console.log(`DEBUG: Outputting ${warningStorage.length} warnings before input request output`);
                     warningStorage.forEach(msg => {
-                        console.log(`DEBUG: Outputting warning before input: "${msg}"`);
-                        consoleOutput.warningln(msg);
+                        consoleOutput.warnln(msg);
                     });
                     warningStorage = [];
                 }
@@ -561,8 +496,6 @@ OUTPUT greet("World")`,
                 const msg = (e.data && (e.data.message ?? e.data.text)) || '';
                 if (!msg) return;
 
-                console.log(`DEBUG: Adding warning to buffer: "${msg}"`);
-                console.log(`DEBUG: Warning buffer now has ${warningStorage.length + 1} items`);
                 warningStorage.push(msg);
 
             } else if (type === 'error') {
@@ -570,7 +503,7 @@ OUTPUT greet("World")`,
                 
                 // stop code immediately when error is encountered
                 clearRunningIndicators();
-                consoleOutput.lnerror(msg);
+                consoleOutput.lnerr(msg);
                 
                 finishRun(localRunId);
             }
@@ -581,7 +514,7 @@ OUTPUT greet("World")`,
             clearRunningIndicators();
 
             consoleOutput.clearline();
-            consoleOutput.lnerror(`Worker error: ${e.message || e.filename || 'unknown'}`);
+            consoleOutput.lnerr(`Worker error: ${e.message || e.filename || 'unknown'}`);
             finishRun(localRunId);
         };
     }
@@ -616,7 +549,7 @@ OUTPUT greet("World")`,
             if (typeof clearIndicators === 'function') clearIndicators();
         
             // show the message and finish the run
-            consoleOutput.lnerror('Execution stopped');
+            consoleOutput.lnerr('Execution stopped');
             finishRun(currentLocalRunId);
         }, 600);
     }
@@ -676,15 +609,13 @@ OUTPUT greet("World")`,
 
     let fitAddon = null;
     try {
-      const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
-      fitAddon = new FitCtor();
-      terminal.loadAddon(fitAddon);
+        const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
+        fitAddon = new FitCtor();
+        terminal.loadAddon(fitAddon);
 
-      // initial fit after the terminal attaches
-      setTimeout(() => fitAddon.fit(), 0);
-    } catch (e) {
-        consoleOutput.lnerror('Error: Terminal is not auto-resizing. Please reload the page or report this error.');
-    }
+        // initial fit after the terminal attaches
+        setTimeout(() => fitAddon.fit(), 0);
+    } catch {}
 
     function fitTerm() { if (fitAddon) fitAddon.fit(); }
 
@@ -889,7 +820,7 @@ OUTPUT greet("World")`,
 
             case 'stop':
                 if (!isRunning) {
-                    consoleOutput.lnerror('No running execution to stop');
+                    consoleOutput.lnerr('No running execution to stop');
                     return;
                 }
                 
@@ -904,15 +835,15 @@ OUTPUT greet("World")`,
             case 'tab': {
                 const n = parseInt(rest[0], 10);
                 if (Number.isInteger(n) && n >= 0 && n <= 8) {
-                    refreshTabSpaces(n);
+                    spacingCtl.setTabSpaces(n);
                     consoleOutput.println(`Tab size: ${n}`);
                     if (n === 0) {
-                        consoleOutput.warningln(
+                        consoleOutput.warnln(
                             'Warning: using the "tab" command again will not reverse this change.\r\n' +
-                            'Press Cmd/Ctrl+Z to restore.');
+                            'Press Cmd/Ctrl+Z on the editor to restore.');
                     }
                 } else {
-                    consoleOutput.errorln('Usage: tab <0-8 spaces>');
+                    consoleOutput.errln('Usage: tab <0-8 spaces>');
                 }
                 break;
             }
@@ -924,10 +855,10 @@ OUTPUT greet("World")`,
                         fontCtl.setFontSize(px);
                         consoleOutput.println(`Font size: ${px}px`);
                     } else {
-                        consoleOutput.errorln('Font controls not initialized');
+                        consoleOutput.errln('Font controls not initialized');
                     }
                 } else {
-                    consoleOutput.errorln('Usage: font <6-38px>');
+                    consoleOutput.errln('Usage: font <6-38px>');
                 }
                 break;
             }
@@ -963,7 +894,7 @@ OUTPUT greet("World")`,
 
                 } else {
                     document.documentElement.classList.remove('mode-switching');
-                    return consoleOutput.errorln('Usage: mode <light|dark>');
+                    return consoleOutput.errln('Usage: mode <light|dark>');
                 }
                 
                 // update terminal mode
@@ -978,10 +909,10 @@ OUTPUT greet("World")`,
 
             case 'theme': {
                 const themeSelect = document.getElementById('editorThemeSelect');
-                if (!themeSelect) return consoleOutput.lnerror('Theme dropdown not found');
+                if (!themeSelect) return consoleOutput.lnerr('Theme dropdown not found');
                 
                 const t = rest.join(' ').toLowerCase().replace(/[_-]/g, ' ');
-                if (!t) return consoleOutput.errorln('Usage: theme <theme_name>');
+                if (!t) return consoleOutput.errln('Usage: theme <theme_name>');
                 
                 // find theme in dropdown options
                 const options = Array.from(themeSelect.options);
@@ -996,7 +927,7 @@ OUTPUT greet("World")`,
                 }
                 
                 if (!foundOption) {
-                    return consoleOutput.errorln(`Invalid theme: ${t}`);
+                    return consoleOutput.errln(`Invalid theme: ${t}`);
                 }
                 
                 // set theme
@@ -1008,7 +939,7 @@ OUTPUT greet("World")`,
             }
 
             default:
-                consoleOutput.errorln(`Unknown command: ${cmd}`);
+                consoleOutput.errln(`Unknown command: ${cmd}`);
         }
     }
 
@@ -1126,7 +1057,7 @@ OUTPUT greet("World")`,
                 copyBtn.style.color = '';
             }, 750);
         }).catch(err => {
-            consoleOutput.errorln('Failed to copy to clipboard. ' + err);
+            consoleOutput.errln('Failed to copy to clipboard. ' + err);
         });
     });
 
