@@ -3,6 +3,7 @@
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
     const { initSpacingControls } = await import('./src/editor/tab.js');
+    const { initThemeControls } = await import('./src/editor/theme.js');
 
     // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
@@ -177,171 +178,9 @@ OUTPUT greet("World")`,
         await saveTextAsFile(filename, code);
     });
 
-    // ------------------------ Light/Dark Mode Toggle ------------------------
-    const modeToggleBtn = document.getElementById('modeToggleBtn');
-    const moonIcon = modeToggleBtn.querySelector('.moon-icon');
-    const sunIcon = modeToggleBtn.querySelector('.sun-icon');
-
-    // light and dark themes
-    const lightThemes = [
-        'ace/theme/chrome', 'ace/theme/clouds', 'ace/theme/dawn', 'ace/theme/dreamweaver',
-        'ace/theme/eclipse', 'ace/theme/github', 'ace/theme/gruvbox_light_hard', 'ace/theme/iplastic',
-        'ace/theme/katzenmilch', 'ace/theme/kuroir', 'ace/theme/solarized_light', 'ace/theme/sqlserver',
-        'ace/theme/textmate', 'ace/theme/tomorrow', 'ace/theme/xcode'
-    ];
-    const darkThemes = [
-        'ace/theme/ambiance', 'ace/theme/chaos', 'ace/theme/clouds_midnight', 'ace/theme/cobalt',
-        'ace/theme/dracula', 'ace/theme/gruvbox', 'ace/theme/gruvbox_dark_hard', 'ace/theme/idle_fingers',
-        'ace/theme/kr_theme', 'ace/theme/merbivore', 'ace/theme/monokai', 'ace/theme/nord_dark',
-        'ace/theme/one_dark', 'ace/theme/pastel_on_dark', 'ace/theme/solarized_dark', 'ace/theme/terminal',
-        'ace/theme/tomorrow_night', 'ace/theme/tomorrow_night_blue', 'ace/theme/tomorrow_night_bright',
-        'ace/theme/tomorrow_night_eighties', 'ace/theme/twilight', 'ace/theme/vibrant_ink'
-    ];
-
-    function updateTerminalMode() {
-        const isLight = document.documentElement.classList.contains('light');
-        const terminalTheme = isLight ? {
-            // LIGHT MODE
-            background: '#ffffff',
-            foreground: '#000000',
-            cursor: '#000000',
-            selection: '#00000030',
-            black: '#000000',
-            red: '#d73a49',
-            green: '#179645', // --green-accent
-            yellow: '#ce8600', // --warning (light mode)
-            blue: '#0000ff',
-            magenta: '#ff00ff',
-            cyan: '#00ffff',
-            white: '#ffffff',
-            brightBlack: '#8b949e', // --muted
-            brightRed: '#ff7b72',
-            brightGreen: '#179645', // --green-accent
-            brightYellow: '#ce8600', // --warning (light mode)
-            brightBlue: '#0000ff',
-            brightMagenta: '#ff00ff',
-            brightCyan: '#00ffff',
-            brightWhite: '#ffffff'
-        } : {
-            // DARK MODE
-            background: '#000000', // pitch black
-            foreground: '#e6edf3', // --text
-            cursor: '#e6edf3', // --text
-            selection: '#2b313b30', // --border with transparency
-            black: '#000000',
-            red: '#ff7b72', // --red
-            green: '#22c55e', // --green-accent
-            yellow: '#ffd700', // --warning (dark mode)
-            blue: '#0000ff',
-            magenta: '#ff00ff',
-            cyan: '#00ffff',
-            white: '#e6edf3', // --text
-            brightBlack: '#8b949e', // --muted
-            brightRed: '#ff7b72', // --red
-            brightGreen: '#22c55e', // --green-accent
-            brightYellow: '#ffd700', // --warning (dark mode)
-            brightBlue: '#0000ff',
-            brightMagenta: '#ff00ff',
-            brightCyan: '#00ffff',
-            brightWhite: '#e6edf3' // --text
-        };
-        
-        terminal.options.theme = terminalTheme;
-    }
-
-    function toggleMode() {
-        const isLight = document.documentElement.classList.contains('light');
-        const currentTheme = editor.getTheme();
-        
-        // add class to disable transitions during mode switch
-        document.documentElement.classList.add('mode-switching');
-        
-        // switch from light to dark mode
-        if (isLight) {
-            document.documentElement.classList.remove('light');
-            moonIcon.hidden = true; // show dark theme icon
-            sunIcon.hidden = false; // show light theme icon
-            
-            // if current theme is light
-            if (lightThemes.includes(currentTheme)) {
-                editorApis.setTheme('monokai'); // switch to default dark theme
-            }
-        // switch from dark to light mode
-        } else {
-            document.documentElement.classList.add('light');
-            moonIcon.hidden = false; // show light theme icon
-            sunIcon.hidden = true;   // show dark theme icon
-            
-            // if current theme is dark
-            if (darkThemes.includes(currentTheme)) {
-                editorApis.setTheme('github'); // switch to default light theme
-            }
-        }
-        
-        // update terminal mode
-        updateTerminalMode();
-        
-        // re-enable transitions
-        setTimeout(() => {
-            document.documentElement.classList.remove('mode-switching');
-        }, 50);
-    }
-
-    modeToggleBtn.addEventListener('click', toggleMode);
 
 
-    // editor theme
-    editorThemeSelect.addEventListener('change', (e) => {
-        const themeName = e.target.value.replace('ace/theme/', '');
-        editorApis.setTheme(themeName);
-    });
 
-    // set initial theme in dropdown
-    editorThemeSelect.value = editor.getTheme();
-
-    // init ui
-    if (editor.renderer.$theme) refreshEditortheme();
-    editor.renderer.on('themeLoaded', refreshEditortheme);
-
-    // ------------------------ Editor Theme ------------------------
-
-    // update bottom bar and topbar colors
-    function refreshEditortheme() {
-        const bottomBar = document.querySelector('.bottombar');
-        const topBar = document.querySelector('.topbar');
-      
-        const editorthemeObj = editor.renderer.$theme || {};
-        const cssClass = editorthemeObj.cssClass || `ace-${(editor.getTheme() || '').split('/').pop()}`;
-      
-        const host = document.createElement('div');
-        const gutter = document.createElement('div');
-
-        host.className = `ace_editor ${cssClass}`;
-        host.style.cssText = 'position:absolute;left:-99999px;top:-99999px;visibility:hidden;';
-
-        gutter.className = 'ace_gutter';
-        host.appendChild(gutter);
-        document.body.appendChild(host);
-      
-        const actualEditor = document.querySelector('#code');
-        const cs = el => window.getComputedStyle(el);
-        const editorBg = cs(actualEditor).backgroundColor;
-        const editorText = cs(actualEditor).color;
-      
-        // apply background/text to both bars
-        [bottomBar, topBar].filter(Boolean).forEach(bar => {
-            bar.style.backgroundColor = editorBg;
-            bar.style.color = editorText;
-        });
-      
-        // color icons/buttons in both bars
-        document.querySelectorAll('.topbar .btn').forEach(btn => {
-            btn.style.color = editorText;
-            btn.querySelectorAll('ion-icon').forEach(icon => (icon.style.color = editorText));
-        });
-      
-        document.body.removeChild(host);
-    }      
 
     // ------------------------ Run / Stop ------------------------
     const runBtn = document.querySelector('.btn.run');
@@ -604,7 +443,17 @@ OUTPUT greet("World")`,
     
     terminal.open(document.getElementById('terminal'));
     
-    updateTerminalMode();
+    // theme controls
+    const themeCtl = initThemeControls({
+        editor,
+        editorApis,
+        terminal,
+        modeToggleBtn: document.getElementById('modeToggleBtn'),
+        moonIcon: document.querySelector('#modeToggleBtn .moon-icon'),
+        sunIcon: document.querySelector('#modeToggleBtn .sun-icon'),
+        editorThemeSelect: document.getElementById('editorThemeSelect'),
+    });
+    
     writePrompt();
 
     let fitAddon = null;
@@ -865,45 +714,12 @@ OUTPUT greet("World")`,
 
             case 'mode': {
                 const t = (rest[0] || '').toLowerCase();
-                const currentTheme = editor.getTheme();
-                
-                // disable transitions
-                document.documentElement.classList.add('mode-switching');
-                
-                if (t === 'light') {
-                    document.documentElement.classList.add('light');
-                    moonIcon.hidden = false;
-                    sunIcon.hidden = true;
-                    
-                    // if current theme is already light, keep it
-                    if (!lightThemes.includes(currentTheme)) {
-                        editorApis.setTheme('github');
-                    }
-                    consoleOutput.println('Mode: light');
-
-                } else if (t === 'dark') {
-                    document.documentElement.classList.remove('light');
-                    moonIcon.hidden = true;
-                    sunIcon.hidden = false;
-                    
-                    // if current theme is already dark, keep it
-                    if (!darkThemes.includes(currentTheme)) {
-                        editorApis.setTheme('monokai');
-                    }
-                    consoleOutput.println('Mode: dark');
-
+                if (t === 'light' || t === 'dark') {
+                    themeCtl.setMode(t);
+                    consoleOutput.println(`Mode: ${t}`);
                 } else {
-                    document.documentElement.classList.remove('mode-switching');
-                    return consoleOutput.errln('Usage: mode <light|dark>');
+                    consoleOutput.errln('Usage: mode <light|dark>');
                 }
-                
-                // update terminal mode
-                updateTerminalMode();
-                
-                // enable transitions
-                setTimeout(() => {
-                    document.documentElement.classList.remove('mode-switching');
-                }, 50);
                 break;
             }
 
@@ -933,7 +749,7 @@ OUTPUT greet("World")`,
                 // set theme
                 themeSelect.value = foundOption.value;
                 const themeName = foundOption.value.replace('ace/theme/', '');
-                editorApis.setTheme(themeName);
+                themeCtl.setEditorTheme(themeName);
                 consoleOutput.println(`Theme: ${foundOption.textContent}`);
                 break;
             }
