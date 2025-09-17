@@ -129,10 +129,9 @@ function formatOnce(src) {
         if (!m) return [prot];
         const header = m[1];
         const tail   = m[2];
-        // Only split if tail begins with a statement keyword or an end token
-        if (startsWithKeyword(tail)) return [header, tail];
-        // else keep as-is
-        return [prot];
+        
+        // everything after DO goes on a new line
+        return [header, tail];
     }
 
     // split a one-line FOR header + body

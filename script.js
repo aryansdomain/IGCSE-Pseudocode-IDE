@@ -5,6 +5,7 @@
     const { initSpacingControls } = await import('./src/editor/tab.js');
     const { initThemeControls } = await import('./src/editor/theme.js');
     const { initFormatter } = await import('./src/format/format.js');
+    const { createRunController } = await import('./src/runtime/runController.js');
 
     // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
@@ -104,20 +105,28 @@ OUTPUT greet("World")`,
     editor.focus();
 
     const consoleOutput = {
-        print:   (t, color = null) => terminalWrite(t,          color),
-        println: (t, color = null) => terminalWrite(t + '\r\n', color),
-        lnprint: (t, color = null) => terminalWrite('\r\n' + t, color),
+        print:      (t, color = null) => terminalWrite(t,          color),
+        println:    (t, color = null) => terminalWrite(t + '\r\n', color),
+        lnprint:    (t, color = null) => terminalWrite('\r\n' + t, color),
+        lnprintln:  (t, color = null) => terminalWrite('\r\n' + t + '\r\n', color), // newline before and after
         
-        err:     (t) => terminalWrite(t,          '31'), // red
-        errln:   (t) => terminalWrite(t + '\r\n', '31'), // newline after
-        lnerr:   (t) => terminalWrite('\r\n' + t, '31'), // newline before
+        err:        (t) => terminalWrite(t,          '31'), // red
+        errln:      (t) => terminalWrite(t + '\r\n', '31'), // newline after
+        lnerr:      (t) => terminalWrite('\r\n' + t, '31'), // newline before
+        lnerrln:    (t) => terminalWrite('\r\n' + t + '\r\n', '31'), // newline before and after
 
-        warn:    (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
-        warnln:  (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
-        lnwarn:  (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
+        warn:       (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
+        warnln:     (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
+        lnwarn:     (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
+        lnwarnln:   (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline before and after
 
-        clear:     () => terminal.clear(),
-        clearline: () => terminalWrite('\x1b[2K\r')
+        clear:      () => terminal.clear(),
+        clearline:  () => terminalWrite('\x1b[2K\r'),
+
+        newline:    () => terminalWrite('\r\n'),
+
+        hideCursor: () => terminalWrite('\x1b[?25l'),
+        showCursor: () => terminalWrite('\x1b[?25h')
     };
 
     // ------------------------ Line/Column Info ------------------------
@@ -188,256 +197,6 @@ OUTPUT greet("World")`,
         await saveTextAsFile(filename, code);
     });
 
-
-
-
-
-    // ------------------------ Run / Stop ------------------------
-    const runBtn = document.querySelector('.btn.run');
-
-    let worker = null;
-    let outputStorage = [];
-    let hadFlushOutput = false;
-    let __flushedPrefix = '';
-
-    let runId = 0;           // incremental id to disambiguate overlapping timers
-    let isRunning = false;
-    let flipTimer = null;    // delayed flip timer
-    let clearIndicators = null;
-
-    function setRunButton(running) {
-        if (running) {
-            runBtn.textContent = 'Stop';
-            runBtn.classList.remove('run');
-            runBtn.classList.add('stop');
-        } else {
-            runBtn.textContent = 'Run';
-            runBtn.classList.remove('stop');
-            runBtn.classList.add('run');
-        }
-    }
-
-    function attachWorkerHandlers(localRunId) {
-        let indicatorShown = false;
-        let warningStorage = [];
-        let runningTimer = null;
-        let dotTimer = null;
-        let dotPhase = 0;
-
-        // Set up animated dot ticker
-        runningTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId && !hadFlushOutput) {
-                indicatorShown = true;
-
-                // output pending warnings
-                warningStorage.forEach(msg => {
-                    consoleOutput.warnln(msg);
-                });
-                warningStorage = [];
-
-                dotTimer = setInterval(() => {
-                    dotPhase = (dotPhase + 1) % 4; // cycle
-                    consoleOutput.clearline()
-                    consoleOutput.print('\x1b[32m' + '.'.repeat(dotPhase))
-                    consoleOutput.print('\x1b[0m'); // reset color
-                }, 300);
-            }
-        }, 75);
-
-        const clearRunningIndicators = () => {
-            if (runningTimer) { 
-                clearTimeout(runningTimer);
-                runningTimer = null;
-            }
-            if (dotTimer) {
-                clearInterval(dotTimer); 
-                dotTimer = null;
-            }
-
-            // clear dots
-            if (indicatorShown) {
-                consoleOutput.clearline();
-                indicatorShown = false;
-            }
-        };
-
-        // Capture indicators for force-terminate cleanup
-        clearIndicators = clearRunningIndicators;
-        currentLocalRunId = localRunId;
-
-        worker.onmessage = (e) => {
-            const { type } = e.data || {};
-
-            if (type === 'done') {
-
-                const hadInd = indicatorShown;
-                clearRunningIndicators();
-                
-                try {
-
-                    if (!hadInd && warningStorage.length) {
-                        warningStorage.forEach(msg => {
-                            consoleOutput.warnln(msg);
-                        });
-                        warningStorage = [];
-                    }
-
-                    // output warnings immediately before program output
-                    if (warningStorage.length > 0) {
-                        warningStorage.forEach(msg => {
-                            consoleOutput.warnln(msg);
-                        });
-                        warningStorage = [];
-                    }
-
-                    // output the output storage
-                    if (outputStorage.length > 0) {
-                        const combinedOutput = outputStorage.join('');
-                        const parts = combinedOutput.split('\n');
-                        parts.slice(1).forEach(line => consoleOutput.lnprint(line));
-                        outputStorage = [];
-                    }
-
-                } finally {
-                    finishRun(localRunId);
-
-                    // reset flags
-                    indicatorShown = false;
-                    outputStorage = [];
-                    warningStorage = [];
-                }
-            } else if (type === 'stopped') {
-                clearRunningIndicators();
-                consoleOutput.lnerr('Execution stopped');
-                
-                finishRun(localRunId);
-            } else if (type === 'input_request') {
-                clearRunningIndicators();
-                
-                // output warnings before showing output for input
-                if (warningStorage.length > 0) {
-                    warningStorage.forEach(msg => {
-                        consoleOutput.warnln(msg);
-                    });
-                    warningStorage = [];
-                }
-                
-                // show output before asking for input
-                if (outputStorage.length > 0) {
-                    const combinedOutput = outputStorage.join('');
-                    const parts = combinedOutput.split('\n');
-
-                    parts.slice(1).forEach(line => consoleOutput.lnprint(line));
-                    outputStorage = [];
-                }
-
-                awaitingProgramInput = true;
-
-            } else if (type === 'flush') {
-                const s = String(e.data.output || '');
-                const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
-                __flushedPrefix += newPart;
-                if (newPart.length) hadFlushOutput = true;
-
-                outputStorage.push(newPart);
-
-            } else if (type === 'warning') {
-                const msg = (e.data && (e.data.message ?? e.data.text)) || '';
-                if (!msg) return;
-
-                warningStorage.push(msg);
-
-            } else if (type === 'error') {
-                const msg = String(e.data.error || 'Unknown error');
-                
-                // stop code immediately when error is encountered
-                clearRunningIndicators();
-                consoleOutput.lnerr(msg);
-                
-                finishRun(localRunId);
-            }
-        };
-
-        worker.onerror = (e) => {
-            
-            clearRunningIndicators();
-
-            consoleOutput.clearline();
-            consoleOutput.lnerr(`Worker error: ${e.message || e.filename || 'unknown'}`);
-            finishRun(localRunId);
-        };
-    }
-
-    function finishRun(localRunId) {
-        if (localRunId !== runId) return; // stale completion
-        isRunning = false;
-        if (flipTimer) { clearTimeout(flipTimer); flipTimer = null; }
-        setRunButton(false);
-        if (worker) { worker.terminate(); worker = null; }
-        currentRunContainer = null;
-
-        // show next prompt
-        deferPrompt = false;
-        //consoleOutput.lnprint('run finish');
-        consoleOutput.lnprint('');
-        consoleOutput.println('');
-        writePrompt();
-    }
-
-    function stopCode() {
-
-        try { worker && worker.postMessage({ type: 'stop' }); } catch {}
-      
-        setTimeout(() => {
-            if (!worker) return; // already stopped
-        
-            try { worker.terminate(); } catch {}
-            worker = null;
-        
-            // clear spinner
-            if (typeof clearIndicators === 'function') clearIndicators();
-        
-            // show the message and finish the run
-            consoleOutput.lnerr('Execution stopped');
-            finishRun(currentLocalRunId);
-        }, 600);
-    }
-    
-    function runCode() {
-        if (isRunning) return; // repeatedrun commands
-        
-        __flushedPrefix = '';
-        outputStorage = [];
-        lastStdoutEl = null;
-        inputPromptBase = '';
-        hadFlushOutput = false;
-        const code = getCode();
-        const localRunId = ++runId;
-        isRunning = true;
-
-        // flip button to red only if still running
-        if (flipTimer) clearTimeout(flipTimer);
-        flipTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId) setRunButton(true);
-        }, 30);
-
-        // container for output
-        currentRunContainer = document.createElement('div');
-        currentRunContainer.className = 'run-chunk';
-
-        // start worker, send job
-        worker = new Worker('runner.js');
-        attachWorkerHandlers(localRunId);
-
-        worker.postMessage({ type: 'run', code });
-    }
-
-    // run/stop button
-    runBtn.addEventListener('click', () => {
-        if (runBtn.classList.contains('stop')) stopCode();
-        else execCommand('run');
-    });    
-
     // ------------------------ Console/Terminal --------------------------------
     const clearBtn = document.querySelector('.btn.clear');
     const copyBtn = document.querySelector('.btn.copy');
@@ -504,17 +263,21 @@ OUTPUT greet("World")`,
     // keys pressed in terminal
     terminal.onData(data => {
         if (awaitingProgramInput) {
-            // Handle program input
+
+            // handle program input
             if (data === '\r') { // enter
-                worker.postMessage({ type: 'input_response', value: currentCommand });
+
+                runCtl.sendUserInput(currentCommand);
                 currentCommand = '';
                 cursorPosition = 0;
                 awaitingProgramInput = false;
+                return;
+
             } else if (data === '\u007f') { // backspace
                 if (cursorPosition > 0) {
                     currentCommand = currentCommand.slice(0, cursorPosition - 1) + currentCommand.slice(cursorPosition);
                     cursorPosition--;
-                    // Always use efficient backspace for end-of-line deletion
+
                     if (cursorPosition === currentCommand.length) {
                         consoleOutput.print('\b \b');
                     } else {
@@ -537,13 +300,11 @@ OUTPUT greet("World")`,
         } else {
 
             if (data === '\r') { // enter
-                //consoleOutput.println('enter key pressed');
-                consoleOutput.println('');
 
                 execCommand(currentCommand);
                 currentCommand = '';
                 cursorPosition = 0;
-                if (!deferPrompt) writePrompt(); // defer while a run is active
+                if (!deferPrompt) writePrompt();
 
             } else if (data === '\u007f') { // backspace
 
@@ -569,11 +330,11 @@ OUTPUT greet("World")`,
 
                     currentCommand = commandHistory[historyIndex] || '';
 
-                    consoleOutput.print('\x1b[?25l'); // hide cursor
-                    consoleOutput.print('\r\x1b[2K');
+                    consoleOutput.hideCursor();
+                    consoleOutput.clearline();
                     writePrompt();
                     consoleOutput.print(currentCommand);
-                    consoleOutput.print('\x1b[?25h'); // show cursor
+                    consoleOutput.showCursor();
 
                     cursorPosition = currentCommand.length;
                 }
@@ -587,11 +348,11 @@ OUTPUT greet("World")`,
                         currentCommand = historyIndex === commandHistory.length ? '' : commandHistory[historyIndex];
                     }
 
-                    consoleOutput.print('\x1b[?25l'); // hide cursor
-                    consoleOutput.print('\r\x1b[2K');
+                    consoleOutput.hideCursor();
+                    consoleOutput.clearline();
                     writePrompt();                        
                     consoleOutput.print(currentCommand);
-                    consoleOutput.print('\x1b[?25h'); // show cursor
+                    consoleOutput.showCursor();
 
                     cursorPosition = currentCommand.length;
                 }
@@ -629,10 +390,33 @@ OUTPUT greet("World")`,
         }
     }
 
+    // run controller
+    const runBtn = document.getElementById('runBtn');
+    const runCtl = createRunController({
+        consoleOutput,
+        writePrompt,
+        getCode,
+        workerPath: 'runner.js',
+        onInputRequested: () => { awaitingProgramInput = true; },
+        onStateChange: (running) => {
+            if (!runBtn) return;
+            runBtn.textContent = running ? 'Stop' : 'Run';
+            runBtn.classList.toggle('run', !running);
+            runBtn.classList.toggle('stop', running);
+        }
+    });
+
+    // run/stop button
+    document.querySelector('.btn.run')?.addEventListener('click', () => {
+        if (runCtl.isRunning()) runCtl.stop();
+        else execCommand('run');
+    });
+
     // console commands
     function execCommand(raw) {
         const line = String(raw || '').trim();
         if (!line) return;
+        
         commandHistory.push(line);
         historyIndex = commandHistory.length;
 
@@ -645,25 +429,25 @@ OUTPUT greet("World")`,
         const isValidCommand = validCommands.includes(cmdLower);
 
         // command is green, arguments are white
-        if (isValidCommand) {
-            if (!(cmdLower === 'stop' && isRunning) && cmdLower !== 'clear') {
-                // delete the last line
-                consoleOutput.print(`\x1b[1A`)
-                consoleOutput.clearline();
-                consoleOutput.print(`\x1b[90m% \x1b[0m`);
+        if (isValidCommand && cmdLower !== 'clear' && !runCtl.isRunning()) {
+            consoleOutput.hideCursor();
 
-                // output colored command with prompt
-                consoleOutput.println(`\x1b[32m${cmd}\x1b[0m${arg ? ` ${arg}` : ''}`); 
-            }
+            consoleOutput.clearline();
+            writePrompt();
+            consoleOutput.print(`\x1b[32m${cmd}`) // set color to green and print command
+            consoleOutput.print(`\x1b[0m${arg ? ` ${arg}` : ''}`); // reset color to white and print arguments
+            consoleOutput.showCursor();
         }
 
+        consoleOutput.newline();
+
         switch (cmdLower) {
-            case 'help':
+            case 'help': {
                 const output =
                     'run                  Execute the code currently in the editor. If the program needs input, type and press Enter.\r\n' +
                     'stop                 Stop the running program\r\n' +
                     'clear                Clear console\r\n' +
-                    'format               Format the code in the editor\r\n' +
+                    'format               Format the editor code\r\n' +
                     'tab <n>              Set editor tab size (1-8 spaces)\r\n' +
                     'font <px>            Set editor font size (6-38 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes.\r\n' +
@@ -671,26 +455,30 @@ OUTPUT greet("World")`,
 
                 consoleOutput.println('\x1b[1mCommands:\x1b[0m');
                 consoleOutput.println(output);
-            break;
+                break;
+            }
 
-            case 'run':
+            case 'run': {
                 deferPrompt = true; // dont output prompt until run completes
-                runCode();
-            break;
+                runCtl.run();
+                break;
+            }
 
-            case 'stop':
-                if (!isRunning) {
-                    consoleOutput.lnerr('No running execution to stop');
+            case 'stop': {
+                if (!runCtl.isRunning()) {
+                    consoleOutput.errln('No running execution to stop');
                     return;
                 }
                 
                 window.__ide_stop_flag = true;        
-                stopCode();
+                runCtl.stop();
                 break;
+            }
 
-            case 'clear':
+            case 'clear': {
                 consoleOutput.clear();
-            break;
+                break;
+            }
 
             case 'tab': {
                 const n = parseInt(rest[0], 10);
@@ -726,20 +514,33 @@ OUTPUT greet("World")`,
             case 'mode': {
                 const t = (rest[0] || '').toLowerCase();
                 if (t === 'light' || t === 'dark') {
+
                     themeCtl.setMode(t);
                     consoleOutput.println(`Mode: ${t}`);
+
                 } else {
+
                     consoleOutput.errln('Usage: mode <light|dark>');
+                    console.log("command: ", cmdLower);
+                    console.log("isValidCommand: ", isValidCommand);
+                    if (isValidCommand) consoleOutput.errln(`Did you mean "theme ${t}"?`);
                 }
                 break;
             }
 
             case 'theme': {
                 const themeSelect = document.getElementById('editorThemeSelect');
-                if (!themeSelect) return consoleOutput.lnerr('Theme dropdown not found');
+                if (!themeSelect) {
+                    consoleOutput.errln('Theme dropdown not found');
+                    return;
+                }
                 
                 const t = rest.join(' ').toLowerCase().replace(/[_-]/g, ' ');
-                if (!t) return consoleOutput.errln('Usage: theme <theme_name>');
+
+                if (!t) {
+                    consoleOutput.errln('Usage: theme <theme_name>');
+                    return;
+                }
                 
                 // find theme in dropdown options
                 const options = Array.from(themeSelect.options);
@@ -754,7 +555,11 @@ OUTPUT greet("World")`,
                 }
                 
                 if (!foundOption) {
-                    return consoleOutput.errln(`Invalid theme: ${t}`);
+                    consoleOutput.errln(`Invalid theme: ${rest}.`);
+                    if (t === 'light' || t === 'dark') {
+                        consoleOutput.errln(`Did you mean "mode ${t}"?`);
+                    }
+                    return;
                 }
                 
                 // set theme
@@ -862,6 +667,8 @@ OUTPUT greet("World")`,
             applySplit(newEdH);
         });
     })();  
+
+    // ------------------------ Console Sidebar Buttons ------------------------
 
     // clear
     clearBtn.addEventListener('click', () => {

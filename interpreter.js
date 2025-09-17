@@ -55,16 +55,15 @@ async function interpret(code) {
 
     // check if keywords are capitalized
     function checkCapitalization(text, lineNumber) {
-        const scan = stripStringsAndComments(text);  // <-- add this line
-        // Full keyword set (selection, iteration, decls, I/O, logical, types, builtins)
+        const scan = stripStringsAndComments(text);
         const KEYWORDS = [
-          'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
-          'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
-          'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
-          'INPUT','OUTPUT','DECLARE','CONSTANT',
-          'TRUE','FALSE','AND','OR','NOT',
-          'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY',
-          'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
+            'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
+            'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
+            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
+            'INPUT','OUTPUT','DECLARE','CONSTANT',
+            'TRUE','FALSE','AND','OR','NOT',
+            'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY',
+            'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
         ]
       
         for (const kw of KEYWORDS) {
@@ -72,12 +71,10 @@ async function interpret(code) {
             const re = new RegExp(`\\b${kw}\\b`, 'gi');
             let m;
             while ((m = re.exec(scan)) !== null) {
-            // m[0] is whatever was in source; if it doesn't exactly equal the canonical uppercase, warn once
                 if (m[0] !== kw) {
                     const sig = `${kw}:${lineNumber}:${m.index}`;
                     if (!CAPITALIZATION_SEEN.has(sig)) {
                         CAPITALIZATION_SEEN.add(sig);
-                        // Emit the classic single summary the first time we notice any issue
                         if (!__capSummaryEmitted) {
                             emitWarning(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
                             __capSummaryEmitted = true;
@@ -1261,17 +1258,13 @@ async function interpret(code) {
                   
                 [ /^OUTPUT\s+(.+)$/i,
                     async (m, scope) => {
-                        const val = await evalExpr(m[1], scope);
-                        
-                        // print newline first then text
-                        OUTPUT_BUFFER.push('');
-                        OUTPUT_BUFFER.push(toString(val));
-
-                        // stream immediately
-                        if (OUTPUT_BUFFER.length) {
-                            self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join('\n') });
-                            OUTPUT_BUFFER.length = 0;
-                        }
+                        // Evaluate each OUTPUT argument independently, then concatenate as text.
+                        const parts = splitArgs(m[1]);
+                        const vals  = await Promise.all(parts.map(p => evalExpr(p, scope)));
+                        OUTPUT_BUFFER.push(''); // newline first
+                        OUTPUT_BUFFER.push(vals.map(v => toString(v)).join(''));
+                        self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join('\n') });
+                        OUTPUT_BUFFER.length = 0;
                     }
                 ],
 
