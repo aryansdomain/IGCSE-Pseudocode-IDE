@@ -1,6 +1,6 @@
-export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, editorApis, themeCtl }) {
-    if (!terminal || !consoleOutput || !writePrompt || !runCtl) {
-        throw new Error('createRepl: terminal, consoleOutput, writePrompt, runCtl required');
+export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, editorApis, themeCtrl }) {
+    if (!terminal || !consoleOutput || !writePrompt || !runCtrl) {
+        throw new Error('createRepl: terminal, consoleOutput, writePrompt, runCtrl required');
     }
   
     // ---- shell state ----
@@ -76,11 +76,11 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, edito
             }
     
             case 'run':
-                runCtl.run();
+                runCtrl.run();
                 return;
     
             case 'stop':
-                runCtl.stop();
+                runCtrl.stop();
                 break;
     
             case 'clear':
@@ -119,14 +119,14 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, edito
             case 'mode': {
                 const t = (arg || '').toLowerCase();
                 if (t === 'light' || t === 'dark') {
-                    if (themeCtl && typeof themeCtl.setMode === 'function') themeCtl.setMode(t);
+                    if (themeCtrl && typeof themeCtrl.setMode === 'function') themeCtrl.setMode(t);
                     else if (editorApis?.setMode) editorApis.setMode(t);
 
                     consoleOutput.println(`Mode: ${t}`);
                 } else {
                     
                     consoleOutput.errln('Usage: mode <light|dark>')
-                    if (themeCtl.hasTheme(t).ok) consoleOutput.errln(`Did you mean 'theme ${t}'?`);
+                    if (themeCtrl.hasTheme(t).ok) consoleOutput.errln(`Did you mean 'theme ${t}'?`);
 
                 }
                 break;
@@ -140,13 +140,13 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, edito
                 }
 
                 // invalid theme
-                if (!themeCtl.hasTheme(name).ok) {
+                if (!themeCtrl.hasTheme(name).ok) {
                     consoleOutput.errln('Error: Invalid theme');
                     if (name === 'light' || name === 'dark') consoleOutput.errln(`Did you mean 'mode ${name}'?`);
                     break;
                 }
 
-                themeCtl.setEditorTheme(name);
+                themeCtrl.setEditorTheme(name);
                 console.log('ace/theme/' + name)
                 consoleOutput.println(`Theme: ${name}`);
 
@@ -172,7 +172,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, edito
         // INPUT mode
         if (awaitingProgramInput) {
             if (data === '\r') {                 // submit input to program
-                runCtl.sendUserInput(buf);
+                runCtrl.sendUserInput(buf);
 
                 buf = '';
                 hIdx = -1;
@@ -180,7 +180,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtl, edito
                 
                 setAwaitingInput(false);
             } else if (data === '\u0003') {      // ctrl-c, abort program
-                runCtl.stop();
+                runCtrl.stop();
                 setAwaitingInput(false);
             } else if (data === '\u007F') {      // backspace
                 if (cursorPos > 0) {

@@ -28,7 +28,7 @@ OUTPUT greet("World")`,
     window.editor = editor;
 
     // font controls
-    const fontCtl = initFontControls({
+    const fontCtrl = initFontControls({
         editor,
         sizeInput: document.getElementById('fontSizeSlider'),
         familySelect: document.getElementById('fontFamilySelect'),
@@ -41,7 +41,7 @@ OUTPUT greet("World")`,
     });
 
     // set font size
-    editorApis.setFontSize = (n) => fontCtl.setFontSize(n);
+    editorApis.setFontSize = (n) => fontCtrl.setFontSize(n);
 
     // formatter
     const formatBtn = document.getElementById('btn-format');
@@ -57,12 +57,12 @@ OUTPUT greet("World")`,
     const tabSpacesValue = document.getElementById('tabSpacesValue');
     const tabSpacesInfo = document.querySelector('.tab-spaces-info');
     
-    let spacingCtl;
+    let spacingCtrl;
     if (tabSpacesSlider && tabSpacesValue && tabSpacesInfo) {
         // store original setTab before overriding
         const originalSetTab = editorApis.setTab;
         
-        spacingCtl = initSpacingControls({
+        spacingCtrl = initSpacingControls({
             editor,
             editorApis: { ...editorApis, setTab: originalSetTab },
             slider: tabSpacesSlider,
@@ -72,7 +72,7 @@ OUTPUT greet("World")`,
         });
 
         // override editorApis.setTab to use spacing controls
-        editorApis.setTab = (n) => spacingCtl.setTabSpaces(n);
+        editorApis.setTab = (n) => spacingCtrl.setTabSpaces(n);
     }
 
     // Configure language tools and autocompletion
@@ -198,7 +198,7 @@ OUTPUT greet("World")`,
     const { createRepl } = await import('./src/terminal/repl.js');
     
     // theme controls
-    const themeCtl = initThemeControls({
+    const themeCtrl = initThemeControls({
         editor,
         editorApis,
         terminal,
@@ -216,7 +216,7 @@ OUTPUT greet("World")`,
 
     // Create run controller first; pass a callback that flips REPL into input mode.
     const runBtn = document.getElementById('runBtn');
-    const runCtl = createRunController({
+    const runCtrl = createRunController({
         consoleOutput,
         writePrompt,
         getCode,
@@ -230,19 +230,19 @@ OUTPUT greet("World")`,
         }
     });
     
-    // Now create the REPL (it needs runCtl to dispatch commands)
+    // Now create the REPL (it needs runCtrl to dispatch commands)
     repl = createRepl({
         terminal,
         consoleOutput,
         writePrompt,
-        runCtl,
+        runCtrl,
         editorApis,
-        themeCtl
+        themeCtrl
     });
 
     // run/stop button
     document.querySelector('.btn.run')?.addEventListener('click', () => {
-        if (runCtl.isRunning()) repl.execCommand('stop');
+        if (runCtrl.isRunning()) repl.execCommand('stop');
         else repl.execCommand('run');
     });
 
