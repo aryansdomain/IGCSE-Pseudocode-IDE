@@ -121,25 +121,7 @@ OUTPUT greet("World")`,
     updateCursorPos();
 
     // ------------------------ Settings ------------------------
-    const settingsBtn = document.getElementById('settingsBtn');
-    const settingsOverlay = document.getElementById('settingsOverlay');
-    const closeSettings = document.getElementById('closeSettings');
-    const editorThemeSelect = document.getElementById('editorThemeSelect');
     const downloadEditorBtn = document.getElementById('downloadEditorBtn');
-
-    // show/close settings overlay
-    settingsBtn.addEventListener('click', () => {
-        settingsOverlay.style.display = 'flex';
-    });
-    closeSettings.addEventListener('click', () => {
-        settingsOverlay.style.display = 'none';
-    });
-    settingsOverlay.addEventListener('click', (e) => { // close when clicking outside
-        if (e.target === settingsOverlay) {
-            settingsOverlay.style.display = 'none';
-        }
-    });
-
 
     // ------------------------ Console/Terminal --------------------------------
     const clearBtn = document.querySelector('.btn.clear');
@@ -172,7 +154,10 @@ OUTPUT greet("World")`,
     // Mode toggle module import
     const { initMode } = await import('./src/ui/modeCtrl.js');
     
-        // theme controls
+    // Settings module import
+    const { initSettings } = await import('./src/ui/settings.js');
+    
+    // theme controls
     const themeCtrl = initThemeControls({
         editor,
         editorApis,
@@ -183,13 +168,34 @@ OUTPUT greet("World")`,
         editorThemeSelect: document.getElementById('editorThemeSelect'),
     });
     
-    // Mode toggle
+    // Mode controls
     const modeCtrl = initMode({
         themeCtrl: themeCtrl,
         button: document.getElementById('modeBtn'),
         moonIcon: document.querySelector('#modeBtn .moon-icon'),
         sunIcon: document.querySelector('#modeBtn .sun-icon'),
         defaultMode: 'dark'
+    });
+    
+    // Settings panel
+    const settings = initSettings({
+        panelEl: document.getElementById('settingsOverlay'),
+        openBtn: document.getElementById('settingsBtn'),
+        closeBtn: document.getElementById('closeSettings'),
+        overlayEl: document.getElementById('settingsOverlay'),
+        fontCtrl,
+        spacingCtrl,
+        themeCtrl,
+        editorApis,
+        selectors: {
+            fontSize: '#fontSizeSlider',
+            fontFamily: '#fontFamilySelect',
+            tabSpaces: '#tabSpacesSlider',
+            softWrap: '#softWrap',
+            readOnly: '#readOnly',
+            theme: '#editorThemeSelect',
+            mode: '#modeSelect'
+        }
     });
     
     // initial prompt
