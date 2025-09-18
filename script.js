@@ -1,5 +1,6 @@
 (async function () {
     // import modules
+    const { Terminal } = await import('xterm');
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
     const { initSpacingControls } = await import('./src/editor/tab.js');
@@ -104,31 +105,6 @@ OUTPUT greet("World")`,
 
     editor.focus();
 
-    const consoleOutput = {
-        print:      (t, color = null) => terminalWrite(t,          color),
-        println:    (t, color = null) => terminalWrite(t + '\r\n', color),
-        lnprint:    (t, color = null) => terminalWrite('\r\n' + t, color),
-        lnprintln:  (t, color = null) => terminalWrite('\r\n' + t + '\r\n', color), // newline before and after
-        
-        err:        (t) => terminalWrite(t,          '31'), // red
-        errln:      (t) => terminalWrite(t + '\r\n', '31'), // newline after
-        lnerr:      (t) => terminalWrite('\r\n' + t, '31'), // newline before
-        lnerrln:    (t) => terminalWrite('\r\n' + t + '\r\n', '31'), // newline before and after
-
-        warn:       (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m`), // italics and yellow
-        warnln:     (t) => terminalWrite(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline after
-        lnwarn:     (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`), // newline before
-        lnwarnln:   (t) => terminalWrite(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`), // newline before and after
-
-        clear:      () => terminal.clear(),
-        clearline:  () => terminalWrite('\x1b[2K\r'),
-
-        newline:    () => terminalWrite('\r\n'),
-
-        hideCursor: () => terminalWrite('\x1b[?25l'),
-        showCursor: () => terminalWrite('\x1b[?25h')
-    };
-
     // ------------------------ Line/Column Info ------------------------
     const cursorInfo = document.getElementById('line-col-info');
 
@@ -211,6 +187,10 @@ OUTPUT greet("World")`,
     });
     
     terminal.open(document.getElementById('terminal'));
+    
+    // console output
+    const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
+    const consoleOutput = createConsoleOutput(terminal);
     
     // theme controls
     const themeCtl = initThemeControls({
@@ -379,15 +359,7 @@ OUTPUT greet("World")`,
 
     // terminal output
     function writePrompt() {
-        terminalWrite('% ', '90'); // muted gray color
-    }
-
-    function terminalWrite(text, color = null) {
-        if (color) {
-            terminal.write(`\x1b[${color}m${text}\x1b[0m`);
-        } else {
-            terminal.write(text);
-        }
+        consoleOutput.print('% ', '90'); // muted gray color
     }
 
     // run controller
