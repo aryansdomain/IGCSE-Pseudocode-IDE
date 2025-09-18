@@ -178,14 +178,17 @@ OUTPUT greet("World")`,
     const downloadBtn = document.querySelector('.btn.download');
 
     // ---------- Terminal wiring ----------
-    const terminal = new Terminal({
+    // Terminal module import
+    const { initTerminal } = await import('./src/terminal/terminal.js');
+    
+    // Initialize terminal with module
+    const { terminal, writePrompt, refit } = initTerminal({
+        container: document.getElementById('terminal'),
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
-        cursorStyle: 'block'
+        cursorStyle: 'block',
     });
-    
-    terminal.open(document.getElementById('terminal'));
     
     // console output
     const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
@@ -205,27 +208,11 @@ OUTPUT greet("World")`,
         editorThemeSelect: document.getElementById('editorThemeSelect'),
     });
     
+    // initial prompt
     writePrompt();
 
-    let fitAddon = null;
-    try {
-        const FitCtor = (window.FitAddon && window.FitAddon.FitAddon) || FitAddon;
-        fitAddon = new FitCtor();
-        terminal.loadAddon(fitAddon);
-
-        // initial fit after the terminal attaches
-        setTimeout(() => fitAddon.fit(), 0);
-    } catch {}
-
-    function fitTerm() { if (fitAddon) fitAddon.fit(); }
-
-    // initialize the repl
+    // init repl
     let repl;
-
-    // terminal output
-    function writePrompt() {
-        consoleOutput.print('% ', '90'); // muted gray color
-    }
 
     // Create run controller first; pass a callback that flips REPL into input mode.
     const runBtn = document.getElementById('runBtn');
@@ -289,7 +276,7 @@ OUTPUT greet("World")`,
             if (window.editor && typeof window.editor.resize === 'function') {
                 window.editor.resize(true);
             }
-            if (typeof fitTerm === 'function') fitTerm();
+            if (typeof refit === 'function') refit();
         }
 
         // Initial layout (keep your existing logic if you have one)
