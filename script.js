@@ -140,37 +140,6 @@ OUTPUT greet("World")`,
         }
     });
 
-    // ------------------------ File Save Function ------------------------
-    async function saveTextAsFile(filename, text) {
-        try {
-            // Show Chrome's Save dialog
-            const handle = await window.showSaveFilePicker({
-                suggestedName: filename,
-                types: [{ description: "Text", accept: { "text/plain": [".txt"] } }]
-            });
-
-            const writable = await handle.createWritable();
-            await writable.write(new Blob([text], { type: "text/plain" }));
-            await writable.close();
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Error saving file:', error);
-            }
-        }
-    }
-
-    // ------------------------ Download Editor Code ------------------------
-    downloadEditorBtn.addEventListener('click', async () => {
-        const code = getCode();
-        
-        if (!code.trim()) return; // empty files
-
-        // create filename
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-        const filename = `code_${timestamp}.txt`;
-        
-        await saveTextAsFile(filename, code);
-    });
 
     // ------------------------ Console/Terminal --------------------------------
     const clearBtn = document.querySelector('.btn.clear');
@@ -196,6 +165,9 @@ OUTPUT greet("World")`,
     
     // REPL import
     const { createRepl } = await import('./src/terminal/repl.js');
+    
+    // Downloads module import
+    const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
     
     // theme controls
     const themeCtrl = initThemeControls({
@@ -246,10 +218,23 @@ OUTPUT greet("World")`,
         else repl.execCommand('run');
     });
 
+    // Editor download
+    const editorDownload = initEditorDownloads({
+        getCode,
+        button: document.getElementById('downloadEditorBtn'),
+        filenamePrefix: 'code'
+    });
+
+    // Console Copy/Download
+    const consoleDownloads = initConsoleDownloads({
+        terminal,
+        copyBtn: document.querySelector('.btn.copy'),
+        downloadBtn: document.querySelector('.btn.download'),
+        consoleOutput
+    });
+
     // init
     clearBtn.disabled = false;
-    copyBtn.disabled = false;
-    downloadBtn.disabled = false;
 
     // ------------------------ Splitter ------------------------
     (function initSplitter() {
@@ -341,43 +326,4 @@ OUTPUT greet("World")`,
         consoleOutput.clear();
     });
 
-    // copy console output
-    copyBtn.addEventListener('click', () => {
-        output = '';
-        for (let i = 0; i < terminal.buffer.active.length; i++) {
-            const line = terminal.buffer.active.getLine(i).translateToString();
-            output += line + '\n';
-        }
-        output = output.trim();
-
-        navigator.clipboard.writeText(output).then(() => {
-            // animate to copied state
-            copyBtn.style.transition = 'background 0.3s, color 0.3s';
-            copyBtn.style.background = 'var(--green-accent)';
-            copyBtn.style.color = 'white';
-
-            // animate back to original state
-            setTimeout(() => {
-                copyBtn.style.background = '';
-                copyBtn.style.color = '';
-            }, 750);
-        }).catch(err => {
-            consoleOutput.errln('Failed to copy to clipboard. ' + err);
-        });
-    });
-
-    // download console output
-    downloadBtn.addEventListener('click', async () => {
-        // Get all terminal content
-        let output = '';
-        for (let i = 0; i < terminal.buffer.active.length; i++) {
-            output += terminal.buffer.active.getLine(i).translateToString() + '\n';
-        }
-
-        // Create filename with timestamp
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-        const filename = `console_output_${timestamp}.txt`;
-        
-        await saveTextAsFile(filename, output);
-    });
 })();
