@@ -175,7 +175,10 @@ export function createRunController({
     }
 
     function stop() {
-        if (!isRunning || !worker) return;
+        if (!isRunning || !worker) {
+            consoleOutput.errln('No running execution to stop');
+            return;
+        }
         try { worker.postMessage({ type: 'stop' }); } catch {}
         // Force-stop fallback
         setTimeout(() => {
@@ -186,13 +189,11 @@ export function createRunController({
 
             consoleOutput.lnerrln('Execution stopped');
 
-
             finishRun(runId);
         }, 600);
     }
 
     function sendUserInput(text) {
-        if (!isRunning || !worker) return;
         worker.postMessage({ type: 'input_response', value: text });
 
         rearmDots();

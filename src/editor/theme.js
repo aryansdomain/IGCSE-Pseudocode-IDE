@@ -7,21 +7,27 @@ export function initThemeControls({
     sunIcon,
     editorThemeSelect,
     lightThemes = [
-        'ace/theme/chrome','ace/theme/clouds','ace/theme/dawn','ace/theme/dreamweaver',
-        'ace/theme/eclipse','ace/theme/github','ace/theme/gruvbox_light_hard','ace/theme/iplastic',
-        'ace/theme/katzenmilch','ace/theme/kuroir','ace/theme/solarized_light','ace/theme/sqlserver',
-        'ace/theme/textmate','ace/theme/tomorrow','ace/theme/xcode'
+        'chrome','clouds','dawn','dreamweaver', 'eclipse','github','gruvbox_light_hard','iplastic',
+        'katzenmilch','kuroir','solarized_light','sqlserver', 'textmate','tomorrow','xcode'
     ],
     darkThemes = [
-        'ace/theme/ambiance','ace/theme/chaos','ace/theme/clouds_midnight','ace/theme/cobalt',
-        'ace/theme/dracula','ace/theme/gruvbox','ace/theme/gruvbox_dark_hard','ace/theme/idle_fingers',
-        'ace/theme/kr_theme','ace/theme/merbivore','ace/theme/monokai','ace/theme/nord_dark',
-        'ace/theme/one_dark','ace/theme/pastel_on_dark','ace/theme/solarized_dark','ace/theme/terminal',
-        'ace/theme/tomorrow_night','ace/theme/tomorrow_night_blue','ace/theme/tomorrow_night_bright',
-        'ace/theme/tomorrow_night_eighties','ace/theme/twilight','ace/theme/vibrant_ink'
+        'ambiance','chaos','clouds_midnight','cobalt','dracula','gruvbox','gruvbox_dark_hard',
+        'idle_fingers','kr_theme','merbivore','monokai','nord_dark','one_dark','pastel_on_dark',
+        'solarized_dark','terminal','tomorrow_night','tomorrow_night_blue','tomorrow_night_bright',
+        'tomorrow_night_eighties','twilight','vibrant_ink'
     ],
 }) {
     if (!editor || !editorApis || !terminal) throw new Error('initThemeControls: editor, editorApis, terminal required');
+
+    const toBare = (id)   => String(id).replace(/^ace\/theme\//, '');
+    function hasTheme(name) {
+        if (lightThemes.includes(name)) return { ok: true, kind: 'light', name, bare: toBare(name) };
+        if ( darkThemes.includes(name)) return { ok: true, kind: 'dark',  name, bare: toBare(name) };
+                                        return { ok: false };
+    }
+    function listThemes() {
+        return [...lightThemes, ...darkThemes].map(toBare);
+    }
 
     function isLightMode() {
         return document.documentElement.classList.contains('light');
@@ -62,7 +68,7 @@ export function initThemeControls({
         });
     }
 
-    function setMode(mode /* 'light' | 'dark' */) {
+    function setMode(mode) {
 
         // disable transitions during switch
         document.documentElement.classList.add('mode-switching');
@@ -111,5 +117,6 @@ export function initThemeControls({
 
     updateTerminalTheme();
 
-    return { setMode, toggleMode, setEditorTheme, refreshEditorChrome, updateTerminalTheme };
+    return { setMode, toggleMode, setEditorTheme, refreshEditorChrome, updateTerminalTheme,
+             hasTheme, listThemes, lightThemes, darkThemes };
 }
