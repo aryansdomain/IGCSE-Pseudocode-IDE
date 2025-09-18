@@ -3,7 +3,7 @@
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
     const { initSpacingControls } = await import('./src/editor/tab.js');
-    const { initThemeControls } = await import('./src/editor/theme.js');
+    const { initThemeControls } = await import('./src/editor/themeCtrl.js');
     const { initFormatter } = await import('./src/format/format.js');
     const { createRunController } = await import('./src/runtime/runController.js');
 
@@ -169,15 +169,27 @@ OUTPUT greet("World")`,
     // Downloads module import
     const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
     
-    // theme controls
+    // Mode toggle module import
+    const { initMode } = await import('./src/ui/modeCtrl.js');
+    
+        // theme controls
     const themeCtrl = initThemeControls({
         editor,
         editorApis,
         terminal,
-        modeToggleBtn: document.getElementById('modeToggleBtn'),
-        moonIcon: document.querySelector('#modeToggleBtn .moon-icon'),
-        sunIcon: document.querySelector('#modeToggleBtn .sun-icon'),
+        modeBtn: null,
+        moonIcon: null,
+        sunIcon: null,
         editorThemeSelect: document.getElementById('editorThemeSelect'),
+    });
+    
+    // Mode toggle
+    const modeCtrl = initMode({
+        themeCtrl: themeCtrl,
+        button: document.getElementById('modeBtn'),
+        moonIcon: document.querySelector('#modeBtn .moon-icon'),
+        sunIcon: document.querySelector('#modeBtn .sun-icon'),
+        defaultMode: 'dark'
     });
     
     // initial prompt
@@ -209,7 +221,8 @@ OUTPUT greet("World")`,
         writePrompt,
         runCtrl,
         editorApis,
-        themeCtrl
+        themeCtrl,
+        modeCtrl
     });
 
     // run/stop button

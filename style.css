@@ -663,10 +663,10 @@ body.dragging {
   padding: 4px 12px;
 }
 
-/* Topbar buttons - settings, download, and mode toggle */
+/* Topbar buttons - settings, download, and mode */
 .btn.settings,
 .btn.download-editor,
-.btn.mode-toggle {
+.btn.mode {
   width: 40px;
   height: 40px;
   display: flex;
@@ -678,16 +678,16 @@ body.dragging {
 
 .btn.settings:hover,
 .btn.download-editor:hover,
-.btn.mode-toggle:hover {
+.btn.mode:hover {
   background-color: var(--panel);
 }
 
-/* Theme toggle button - icons in same position */
-.btn.mode-toggle {
+/* mode button */
+.btn.mode {
   position: relative;
 }
 
-.btn.mode-toggle ion-icon {
+.btn.mode ion-icon {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -696,7 +696,7 @@ body.dragging {
   font-size: 18px;
 }
 
-.btn.mode-toggle ion-icon[hidden] {
+.btn.mode ion-icon[hidden] {
   display: none;
 }
 
