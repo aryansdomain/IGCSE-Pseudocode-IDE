@@ -396,7 +396,7 @@ OUTPUT greet("World")`,
         consoleOutput,
         writePrompt,
         getCode,
-        workerPath: 'runner.js',
+        workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
         onInputRequested: () => { awaitingProgramInput = true; },
         onStateChange: (running) => {
             if (!runBtn) return;

@@ -1,4 +1,10 @@
-ace.define('ace/mode/lang', ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text', 'ace/mode/rules'],
+ace.define('ace/mode/lang', ['require',
+                             'exports',
+                             'module',
+                             'ace/lib/oop',
+                             'ace/mode/text',
+                             'ace/mode/rules',
+                             'ace/mode/behaviour'],
 function(require, exports, module) {
     const oop = require('ace/lib/oop');
     const TextMode = require('ace/mode/text').Mode;
