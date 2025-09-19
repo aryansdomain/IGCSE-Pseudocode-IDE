@@ -16,6 +16,30 @@
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
   --gap: 14px;
   --splitter-h: 8px;
+  --topbar-h: 45px;
+  --bottombar-h: 45px;
+  --bar-min: 22px;
+}
+
+/* Fix for splitter panes - allow them to shrink properly */
+#editor-pane, #console-pane { 
+  min-height: 0; 
+  min-width: 0; 
+  overflow: hidden; 
+}
+
+/* Ensure containers take full height */
+html, body { height: 100%; }
+.app, #workspace { height: 100%; }
+
+/* Lock down splitter handle size */
+#splitter { 
+  box-sizing: border-box; 
+  margin: 0; 
+}
+#splitter:active, #splitter:focus { 
+  outline: none; 
+  border-width: 0; 
 }
 
 .light {
@@ -59,7 +83,7 @@ html, body { height: 100%; }
 .app {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   padding: var(--gap);
 }
 
@@ -80,7 +104,8 @@ html, body { height: 100%; }
 
 /* topbar */
 .topbar {
-  height: 45px;
+  flex: 0 1 var(--topbar-h);
+  min-height: var(--bar-min);
   padding: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -88,6 +113,8 @@ html, body { height: 100%; }
   gap: 10px;
   padding-left: 14px;
   padding-right: 14px;
+  overflow: hidden;
+  container-type: size;
 }
 
 .brand {
@@ -101,6 +128,14 @@ html, body { height: 100%; }
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* Expand buttons styling (subtle) */
+#expandConsoleBtn, #expandEditorBtn {
+  padding: 6px 8px;
+}
+#expandConsoleBtn ion-icon, #expandEditorBtn ion-icon {
+  font-size: 18px;
 }
 
 /* Panes + splitter */
@@ -118,9 +153,20 @@ html, body { height: 100%; }
 #editor-pane {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* Ace should fill the pane */
+/* Editor shell fills remaining space between bars and can shrink to 0 */
+.editor-shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Ace should fill the shell */
 #code {
   position: absolute;
   inset: 0;
@@ -129,13 +175,16 @@ html, body { height: 100%; }
 
 /* bottom bar */
 .bottombar {
-  height: 60px;
+  flex: 0 1 var(--bottombar-h);
+  min-height: var(--bar-min);
   padding: 0 10px;
   font-size: 13px;
   margin: 0;
   width: 100%;
   display: flex;
   align-items: center;
+  overflow: hidden;
+  container-type: size;
 }
 
 .bottombar .info {
@@ -148,6 +197,7 @@ html, body { height: 100%; }
   display: flex;
   justify-content: flex-start;
   padding: 10px;
+  flex-shrink: 0;
 }
 
 #splitter {
@@ -169,10 +219,10 @@ html, body { height: 100%; }
 /* Let bars collapse cleanly while we animate heights */
 .topbar, .bottombar { overflow: hidden; }
 
-/* Console pane has explicit height, does NOT grow */
+/* Console pane can shrink fully; let JS control mins */
 #console-pane {
   padding-top: 0;
-  min-height: 120px;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -759,6 +809,7 @@ html.mode-switching *::after {
   background: var(--bg);
   font-size: 11px;
   color: var(--muted);
+  z-index: 0;
 }
 
 .footer ion-icon {

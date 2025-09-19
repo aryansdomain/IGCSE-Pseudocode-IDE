@@ -6,6 +6,12 @@
     const { initThemeControls } = await import('./src/editor/themeCtrl.js');
     const { initFormatter } = await import('./src/format/format.js');
     const { createRunController } = await import('./src/runtime/runController.js');
+    const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
+    const { createRepl } = await import('./src/terminal/repl.js');
+    const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
+    const { initMode } = await import('./src/ui/modeCtrl.js');
+    const { initSettings } = await import('./src/ui/settings.js');
+    const { initSplitter } = await import('./src/ui/splitter.js');
 
     // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
@@ -142,20 +148,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
     const consoleOutput = createConsoleOutput(terminal);
-    
-    // REPL import
-    const { createRepl } = await import('./src/terminal/repl.js');
-    
-    // Downloads module import
-    const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
-    
-    // Mode toggle module import
-    const { initMode } = await import('./src/ui/modeCtrl.js');
-    
-    // Settings module import
-    const { initSettings } = await import('./src/ui/settings.js');
     
     // theme controls
     const themeCtrl = initThemeControls({
@@ -196,6 +189,33 @@ OUTPUT greet("World")`,
             theme: '#editorThemeSelect',
             mode: '#modeSelect'
         }
+    });
+    
+    // splitter
+    const splitter = initSplitter({
+        container: document.getElementById('workspace'),
+        handle: document.getElementById('splitter'),
+        paneA: document.getElementById('editor-pane'),
+        paneB: document.getElementById('console-pane'),
+        axis: 'vertical',
+        minA: 0,
+        minB: 50,
+        normal_top: 45,
+        normal_bottom: 45,
+        initialRatio: 0.5,
+        storageKey: 'editor-console',
+        onResize: () => {
+            try { editor.resize(); } catch {}
+            try { refit(); } catch {}
+        }
+    });
+
+    // Expand buttons
+    document.getElementById('expandConsoleBtn')?.addEventListener('click', () => {
+        try { splitter.collapseB(); } catch {}
+    });
+    document.getElementById('expandEditorBtn')?.addEventListener('click', () => {
+        try { splitter.collapseA(); } catch {}
     });
     
     // initial prompt
@@ -255,90 +275,6 @@ OUTPUT greet("World")`,
     // init
     clearBtn.disabled = false;
 
-    // ------------------------ Splitter ------------------------
-    (function initSplitter() {
-        const workspace   = document.getElementById('workspace');
-        const editorPane  = document.getElementById('editor-pane');
-        const consolePane = document.getElementById('console-pane');
-        const splitter    = document.getElementById('splitter');
-    
-        if (!workspace || !editorPane || !consolePane || !splitter) return;
-
-        const SPLITTER_H = 8;
-        const MIN_EDITOR_H  = 0;
-        const MIN_CONSOLE_H = 200
-        function applySplit(editorH) {
-            const totalH   = workspace.clientHeight;
-            const maxEdH   = totalH - SPLITTER_H - MIN_CONSOLE_H;
-            const clamped  = Math.max(MIN_EDITOR_H, Math.min(editorH, maxEdH));
-            const consoleH = totalH - SPLITTER_H - clamped;
-
-            editorPane.style.height  = clamped  + 'px';
-            consolePane.style.height = consoleH + 'px';
-
-            // Resize editors/terminal if present
-            if (window.editor && typeof window.editor.resize === 'function') {
-                window.editor.resize(true);
-            }
-            if (typeof refit === 'function') refit();
-        }
-
-        // Initial layout (keep your existing logic if you have one)
-        applySplit(Math.round((workspace.clientHeight - SPLITTER_H) * 0.4));
-
-        let pointerId = null;
-        let startY = 0;
-        let startEditorH = 0;
-
-        function onPointerDown(e) {
-            // Only handle primary button
-            if (e.button !== undefined && e.button !== 0) return;
-
-            pointerId = e.pointerId ?? 1;
-            try { splitter.setPointerCapture(pointerId); } catch {}
-
-            e.preventDefault();
-            document.body.classList.add('dragging');
-
-            startY = e.clientY;
-            // Use rendered height as baseline
-            startEditorH = editorPane.getBoundingClientRect().height;
-        }
-    
-        function onPointerMove(e) {
-            if (pointerId == null) return;
-            // delta (positive when dragging down)
-            const dy = e.clientY - startY;
-
-            applySplit(startEditorH + dy);
-        }
-    
-        function endDrag() {
-            if (pointerId == null) return;
-            try { splitter.releasePointerCapture(pointerId); } catch {}
-            pointerId = null;
-            document.body.classList.remove('dragging');
-        }
-
-        splitter.addEventListener('pointerdown', onPointerDown);
-        splitter.addEventListener('pointermove', onPointerMove);
-        splitter.addEventListener('pointerup', endDrag);
-        splitter.addEventListener('pointercancel', endDrag);
-        splitter.addEventListener('lostpointercapture', endDrag);
-
-        // Keep proportions on window resize
-        window.addEventListener('resize', () => {
-            // Recompute based on current ratio
-            const edH = editorPane.getBoundingClientRect().height;
-            const coH = consolePane.getBoundingClientRect().height;
-            const total = edH + SPLITTER_H + coH || 1;
-            const ratio = edH / total;
-            const newEdH = Math.round((workspace.clientHeight - SPLITTER_H) * ratio);
-            applySplit(newEdH);
-        });
-    })();  
-
-    // ------------------------ Console Sidebar Buttons ------------------------
 
     // clear
     clearBtn.addEventListener('click', () => {

@@ -41,32 +41,36 @@
       </div>
     </div>
 
-    <!-- Top Bar -->
-    <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
-      <div class="controls">
-        <button class="btn format" type="button" title="Format code" id="btn-format">
-          <span>Format</span>
-        </button>
-        <button class="btn download-editor" type="button" title="Download code" id="downloadEditorBtn">
-          <ion-icon name="download-outline"></ion-icon>
-        </button>
-      </div>
-    </div>
-
     <!-- Workspace -->
     <div class="workspace" id="workspace">
       <div id="editor-pane">
-        <div id="code"></div>
-      </div>
+        <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
+          <div class="controls">
+            <button class="btn format" type="button" title="Format code" id="btn-format">
+              <span>Format</span>
+            </button>
+            <button class="btn download-editor" type="button" title="Download code" id="downloadEditorBtn">
+              <ion-icon name="download-outline"></ion-icon>
+            </button>
+            <button class="btn expand-console" type="button" title="Expand console (collapse editor)" id="expandConsoleBtn">
+              <ion-icon name="expand-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
 
-      <div id="console-pane">
-        <!-- Bottom Bar -->
+        <div class="editor-shell">
+          <div id="code"></div>
+        </div>
+
         <div class="bottombar" role="bottombar" aria-live="polite">
           <div class="info">
             <span id="line-col-info">Ln 1, Col 1</span>
             <span class="tab-spaces-info">Tab Spaces: 4</span>
           </div>
         </div>
+      </div>
+
+      <div id="console-pane">
 
         <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
 
@@ -79,6 +83,9 @@
         <section class="console" id="console">
           <div class="console-sidebar">
             <div class="console-controls">
+              <button class="btn expand-editor" title="Expand editor (collapse console)" id="expandEditorBtn">
+                <ion-icon name="expand-outline"></ion-icon>
+              </button>
               <button class="btn clear" title="Clear console">
                 <ion-icon name="trash"></ion-icon>
               </button>
