@@ -12,7 +12,7 @@
     const { initMode } = await import('./src/ui/modeCtrl.js');
     const { initSettings } = await import('./src/ui/settings.js');
     const { initSplitter } = await import('./src/ui/splitter.js');
-    const { initDom, on, setVars } = await import('./src/ui/dom.js');
+    const { initDom, on, setVars } = await import('./src/utils/dom.js');
 
     // collect UI refs
     const UI = initDom();
