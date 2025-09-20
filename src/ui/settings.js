@@ -6,6 +6,7 @@ export function initSettings({
     fontCtrl = null,
     spacingCtrl = null,
     themeCtrl = null,
+    modeCtrl = null,
     editorApis = null,
     selectors = {
         fontSize:   '#font-size',
@@ -105,8 +106,8 @@ export function initSettings({
     }
 
     // light/dark mode
-    if (md && themeCtrl?.setMode) {
-        md.addEventListener('change', () => themeCtrl.setMode(md.value)); // 'light' | 'dark'
+    if (md && modeCtrl?.setMode) {
+        md.addEventListener('change', () => modeCtrl.setMode(md.value));
     }
 
     // reflect current values (best-effort)

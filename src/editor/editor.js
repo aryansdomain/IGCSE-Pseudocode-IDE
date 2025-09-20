@@ -21,12 +21,6 @@ export function initEditor({
     editor.setReadOnly(!!readOnly);
     editor.setOption('wrap', softWrap ? 'free' : false);
 
-    // auto pairing configuration
-    editor.setOptions({
-        behaviorsEnabled: true,
-        wrapBehaviorsEnabled: true,
-    });
-
     // API
     function getCode() { return editor.getValue(); }
     function setCode(src, moveCursorToStart = false) {

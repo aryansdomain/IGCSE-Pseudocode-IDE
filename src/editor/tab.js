@@ -54,6 +54,7 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
         retabDocumentByUnits(session, oldSize, newSize);
 
         // refresh ui
+        slider && (slider.value = String(newSize));
         valueEl && (valueEl.textContent = newSize);
         infoEl  && (infoEl.textContent  = `Tab Spaces: ${newSize}`);
         editor.renderer.updateFull();

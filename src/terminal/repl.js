@@ -1,4 +1,4 @@
-export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, editorApis, themeCtrl }) {
+export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, editorApis, themeCtrl, modeCtrl }) {
     if (!terminal || !consoleOutput || !writePrompt || !runCtrl) {
         throw new Error('createRepl: terminal, consoleOutput, writePrompt, runCtrl required');
     }
@@ -119,7 +119,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             case 'mode': {
                 const t = (arg || '').toLowerCase();
                 if (t === 'light' || t === 'dark') {
-                    if (themeCtrl && typeof themeCtrl.setMode === 'function') themeCtrl.setMode(t);
+                    if (modeCtrl && typeof modeCtrl.setMode === 'function') modeCtrl.setMode(t);
                     else if (editorApis?.setMode) editorApis.setMode(t);
 
                     consoleOutput.println(`Mode: ${t}`);
@@ -139,16 +139,16 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
                     break;
                 }
 
-                // invalid theme
-                if (!themeCtrl.hasTheme(name).ok) {
+                // get name of theme
+                const themeResult = themeCtrl.hasTheme(name);
+                if (!themeResult.ok) {
                     consoleOutput.errln('Error: Invalid theme');
                     if (name === 'light' || name === 'dark') consoleOutput.errln(`Did you mean 'mode ${name}'?`);
                     break;
                 }
 
-                themeCtrl.setEditorTheme(name);
-                console.log('ace/theme/' + name)
-                consoleOutput.println(`Theme: ${name}`);
+                themeCtrl.setEditorTheme(themeResult.bare);
+                consoleOutput.println(`Theme: ${themeResult.name}`);
 
                 break;
             }

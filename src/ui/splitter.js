@@ -1,3 +1,5 @@
+// TODO: add button to change from editor top, terminal bottom, to terminal top, editor bottom or left/right
+
 const KEY_PREFIX = 'ui.splitter:';
 
 export function initSplitter({
