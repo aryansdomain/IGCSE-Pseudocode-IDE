@@ -3,7 +3,7 @@
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
     const { initSpacingControls } = await import('./src/editor/tab.js');
-    const { initThemeControls } = await import('./src/editor/themeCtrl.js');
+    const { initThemeControls } = await import('./src/ui/themeCtrl.js');
     const { initFormatter } = await import('./src/format/format.js');
     const { createRunController } = await import('./src/runtime/runController.js');
     const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
@@ -12,10 +12,14 @@
     const { initMode } = await import('./src/ui/modeCtrl.js');
     const { initSettings } = await import('./src/ui/settings.js');
     const { initSplitter } = await import('./src/ui/splitter.js');
+    const { initDom, on, setVars } = await import('./src/ui/dom.js');
+
+    // collect UI refs
+    const UI = initDom();
 
     // ace editor
     const { editor, getCode, setCode, editorApis } = initEditor({
-        container: document.getElementById('code'),
+        container: UI.codeEl,
         defaultCode: 
 
 `// Type your code here!
@@ -36,8 +40,8 @@ OUTPUT greet("World")`,
     // font controls
     const fontCtrl = initFontControls({
         editor,
-        sizeInput: document.getElementById('fontSizeSlider'),
-        familySelect: document.getElementById('fontFamilySelect'),
+        sizeInput: UI.fontSizeSlider,
+        familySelect: UI.fontFamilySelect,
         incBtn: document.querySelector('[data-font="inc"]'),
         decBtn: document.querySelector('[data-font="dec"]'),
         min: 6,
@@ -59,21 +63,17 @@ OUTPUT greet("World")`,
     });
 
     // spacing controls
-    const tabSpacesSlider = document.getElementById('tabSpacesSlider');
-    const tabSpacesValue = document.getElementById('tabSpacesValue');
-    const tabSpacesInfo = document.querySelector('.tab-spaces-info');
-    
     let spacingCtrl;
-    if (tabSpacesSlider && tabSpacesValue && tabSpacesInfo) {
+    if (UI.tabSpacesSlider && UI.tabSpacesValue && UI.tabSpacesInfo) {
         // store original setTab before overriding
         const originalSetTab = editorApis.setTab;
         
         spacingCtrl = initSpacingControls({
             editor,
             editorApis: { ...editorApis, setTab: originalSetTab },
-            slider: tabSpacesSlider,
-            valueEl: tabSpacesValue,
-            infoEl: tabSpacesInfo,
+            slider: UI.tabSpacesSlider,
+            valueEl: UI.tabSpacesValue,
+            infoEl: UI.tabSpacesInfo,
             tickSelector: '#tabSpacesSlider + .slider-ticks.tab-ticks .tick',
         });
 
@@ -111,12 +111,10 @@ OUTPUT greet("World")`,
     editor.focus();
 
     // ------------------------ Line/Column Info ------------------------
-    const cursorInfo = document.getElementById('line-col-info');
-
     function updateCursorPos() {
         const pos = editor.getCursorPosition();
         const selText = editor.getSelectedText() || '';
-        cursorInfo.textContent =
+        UI.lineColInfo.textContent =
         `Ln ${pos.row + 1}, Col ${pos.column + 1}` +
         (selText ? ` (${selText.length} selected)` : '');
     }
@@ -126,21 +124,12 @@ OUTPUT greet("World")`,
     editor.session.on('change', updateCursorPos);
     updateCursorPos();
 
-    // ------------------------ Settings ------------------------
-    const downloadEditorBtn = document.getElementById('downloadEditorBtn');
-
-    // ------------------------ Console/Terminal --------------------------------
-    const clearBtn = document.querySelector('.btn.clear');
-    const copyBtn = document.querySelector('.btn.copy');
-    const downloadBtn = document.querySelector('.btn.download');
-
     // ---------- Terminal wiring ----------
-    // Terminal module import
     const { initTerminal } = await import('./src/terminal/terminal.js');
     
     // Initialize terminal with module
     const { terminal, writePrompt, refit } = initTerminal({
-        container: document.getElementById('terminal'),
+        container: UI.terminalEl,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
@@ -150,35 +139,37 @@ OUTPUT greet("World")`,
     // console output
     const consoleOutput = createConsoleOutput(terminal);
     
+    const modeCtrl = initMode({
+        themeCtrl: null,
+        button: UI.modeBtn,
+        moonIcon: UI.moonIcon,
+        sunIcon: UI.sunIcon,
+        defaultMode: 'dark'
+    });
+    
     // theme controls
     const themeCtrl = initThemeControls({
         editor,
         editorApis,
         terminal,
-        modeBtn: null,
-        moonIcon: null,
-        sunIcon: null,
-        editorThemeSelect: document.getElementById('editorThemeSelect'),
+        modeCtrl: modeCtrl,
+        editorThemeSelect: UI.editorThemeSelect,
     });
     
-    // Mode controls
-    const modeCtrl = initMode({
-        themeCtrl: themeCtrl,
-        button: document.getElementById('modeBtn'),
-        moonIcon: document.querySelector('#modeBtn .moon-icon'),
-        sunIcon: document.querySelector('#modeBtn .sun-icon'),
-        defaultMode: 'dark'
-    });
+    // update modeCtrl
+    modeCtrl.setThemeCtrl(themeCtrl);
+    themeCtrl.updateTerminalTheme();
     
     // Settings panel
     const settings = initSettings({
-        panelEl: document.getElementById('settingsOverlay'),
-        openBtn: document.getElementById('settingsBtn'),
-        closeBtn: document.getElementById('closeSettings'),
-        overlayEl: document.getElementById('settingsOverlay'),
+        panelEl: UI.settingsOverlay,
+        openBtn: UI.settingsBtn,
+        closeBtn: UI.closeSettings,
+        overlayEl: UI.settingsOverlay,
         fontCtrl,
         spacingCtrl,
         themeCtrl,
+        modeCtrl,
         editorApis,
         selectors: {
             fontSize: '#fontSizeSlider',
@@ -193,10 +184,10 @@ OUTPUT greet("World")`,
     
     // splitter
     const splitter = initSplitter({
-        container: document.getElementById('workspace'),
-        handle: document.getElementById('splitter'),
-        paneA: document.getElementById('editor-pane'),
-        paneB: document.getElementById('console-pane'),
+        container: UI.workspace,
+        handle: UI.splitter,
+        paneA: UI.editorPane,
+        paneB: UI.consolePane,
         axis: 'vertical',
         minA: 0,
         minB: 50,
@@ -225,7 +216,7 @@ OUTPUT greet("World")`,
     let repl;
 
     // Create run controller first; pass a callback that flips REPL into input mode.
-    const runBtn = document.getElementById('runBtn');
+    const runBtn = UI.runBtn;
     const runCtrl = createRunController({
         consoleOutput,
         writePrompt,
@@ -252,7 +243,7 @@ OUTPUT greet("World")`,
     });
 
     // run/stop button
-    document.querySelector('.btn.run')?.addEventListener('click', () => {
+    on(UI.runBtn, 'click', () => {
         if (runCtrl.isRunning()) repl.execCommand('stop');
         else repl.execCommand('run');
     });
@@ -260,24 +251,23 @@ OUTPUT greet("World")`,
     // Editor download
     const editorDownload = initEditorDownloads({
         getCode,
-        button: document.getElementById('downloadEditorBtn'),
+        button: UI.editorDownloadBtn,
         filenamePrefix: 'code'
     });
 
     // Console Copy/Download
     const consoleDownloads = initConsoleDownloads({
         terminal,
-        copyBtn: document.querySelector('.btn.copy'),
-        downloadBtn: document.querySelector('.btn.download'),
+        copyBtn: UI.copyBtn,
+        downloadBtn: UI.downloadBtn,
         consoleOutput
     });
 
     // init
-    clearBtn.disabled = false;
-
+    UI.clearBtn.disabled = false;
 
     // clear
-    clearBtn.addEventListener('click', () => {
+    on(UI.clearBtn, 'click', () => {
         consoleOutput.clear();
     });
 
