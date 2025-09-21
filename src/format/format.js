@@ -1,30 +1,30 @@
 let __fmtEditor = null;
 
 export function initFormatter({ editor, getCode, setCode, formatBtn }) {
-  __fmtEditor = editor || __fmtEditor;
+    __fmtEditor = editor || __fmtEditor;
 
-  const btn =
-    formatBtn ||
-    document.getElementById('formatBtn') ||
-    document.getElementById('btn-format') ||
-    document.querySelector('[data-action="format"]');
+    const btn =
+        formatBtn ||
+        document.getElementById('formatBtn') ||
+        document.getElementById('btn-format') ||
+        document.querySelector('[data-action="format"]');
 
-  if (btn && !btn.__formatterBound) {
-    btn.__formatterBound = true;
-    btn.addEventListener('click', () => {
-      const before = getCode ? getCode() : getEditorCode();   // reuse your helpers if needed
-      const after  = format(before);                          // ← your existing formatter
-      if (setCode) setCode(after, true); else setEditorCode(after);
-    });
-  }
-
-  return {
-    formatNow: () => {
-      const before = getCode ? getCode() : getEditorCode();
-      const after  = format(before);
-      if (setCode) setCode(after, true); else setEditorCode(after);
+    if (btn && !btn.__formatterBound) {
+        btn.__formatterBound = true;
+        btn.addEventListener('click', () => {
+            const before = getCode ? getCode() : getEditorCode();   // reuse your helpers if needed
+            const after  = format(before);                          // ← your existing formatter
+            if (setCode) setCode(after, true); else setEditorCode(after);
+        });
     }
-  };
+
+    return {
+        formatNow: () => {
+            const before = getCode ? getCode() : getEditorCode();
+            const after  = format(before);
+            if (setCode) setCode(after, true); else setEditorCode(after);
+        }
+    };
 }
 
 function format(src) {

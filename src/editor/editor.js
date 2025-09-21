@@ -42,13 +42,13 @@ export function initEditor({
         editor.setReadOnly(!!v);
     }
 
-  const editorApis = {
-    setTab,
-    setTheme,
-    setSoftWrap,
-    setReadOnly: setReadOnlyFlag,
-    focus: () => editor.focus(),
-  };
+    const editorApis = {
+        setTab,
+        setTheme,
+        setSoftWrap,
+        setReadOnly: setReadOnlyFlag,
+        focus: () => editor.focus(),
+    };
 
     return { editor, getCode, setCode, editorApis };
 }
