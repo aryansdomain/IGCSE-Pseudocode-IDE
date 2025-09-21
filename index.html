@@ -1,236 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IGCSE Pseudocode IDE</title>
-  <link rel="stylesheet" href="style.css"/>
-  
-  <!-- xterm.js -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-  <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IGCSE Pseudocode IDE</title>
+    <link rel="stylesheet" href="style.css"/>
+    
+    <!-- xterm.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
 
-  <!-- ACE Editor -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ace.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-language_tools.min.js"></script>
-  <script src="rules.js"></script>
-  <script src="mode.js"></script>
+    <!-- ACE Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-language_tools.min.js"></script>
+    <script src="rules.js"></script>
+    <script src="mode.js"></script>
 
-  <!-- Interpreter -->
-  <script src="interpreter.js"></script>
-
+    <!-- Interpreter -->
+    <script src="interpreter.js"></script>
 </head>
 <body>
 
-  <!-- Editor Theme Button -->
-  <input id="editortheme" type="checkbox" hidden />
+    <!-- Editor Theme Button -->
+    <input id="editortheme" type="checkbox" hidden />
 
-  <div class="app">
+    <div class="app">
 
-    <!-- Utility Bar -->
-    <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
-      <div class="controls">
-        <button class="btn settings" type="button" title="Settings" id="settingsBtn">
-          <ion-icon name="settings-outline" class="settings-icon"></ion-icon>
-        </button>
-        <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
-          <ion-icon name="moon-outline" class="moon-icon" hidden></ion-icon>
-          <ion-icon name="sunny" class="sun-icon"></ion-icon>
-        </button>
-      </div>
-    </div>
-
-    <!-- Workspace -->
-    <div class="workspace" id="workspace">
-      <div id="editor-pane">
-        <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
-          <div class="controls">
-            <button class="btn format" type="button" title="Format code" id="btn-format">
-              <span>Format</span>
-            </button>
-            <button class="btn download-editor" type="button" title="Download code" id="downloadEditorBtn">
-              <ion-icon name="download-outline"></ion-icon>
-            </button>
-            <button class="btn expand-console" type="button" title="Expand console (collapse editor)" id="expandConsoleBtn">
-              <ion-icon name="expand-outline"></ion-icon>
-            </button>
-          </div>
-        </div>
-
-        <div class="editor-shell">
-          <div id="code"></div>
-        </div>
-
-        <div class="bottombar" role="bottombar" aria-live="polite">
-          <div class="info">
-            <span id="line-col-info">Ln 1, Col 1</span>
-            <span class="tab-spaces-info">Tab Spaces: 4</span>
-          </div>
-        </div>
-      </div>
-
-      <div id="console-pane">
-
-        <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
-
-        <!-- Run Button -->
-        <div class="run-container">
-          <button class="btn run" id="runBtn" type="button" title="Run code">Run</button>
-        </div>
-
-        <!-- Console -->
-        <section class="console" id="console">
-          <div class="console-sidebar">
-            <div class="console-controls">
-              <button class="btn expand-editor" title="Expand editor (collapse console)" id="expandEditorBtn">
-                <ion-icon name="expand-outline"></ion-icon>
-              </button>
-              <button class="btn clear" title="Clear console">
-                <ion-icon name="trash"></ion-icon>
-              </button>
-              <button class="btn copy" title="Copy console output">
-                <ion-icon name="copy"></ion-icon>
-              </button>
-              <button class="btn download" title="Download console output">
-                <ion-icon name="download-outline"></ion-icon>
-              </button>
+        <!-- Utility Bar -->
+        <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
+            <div class="controls">
+                <button class="btn settings" type="button" title="Settings" id="settingsBtn">
+                    <ion-icon name="settings-outline" class="settings-icon"></ion-icon>
+                </button>
+                <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
+                    <ion-icon name="moon-outline" class="moon-icon" hidden></ion-icon>
+                    <ion-icon name="sunny" class="sun-icon"></ion-icon>
+                </button>
             </div>
-          </div>
-          
-          <div class="console-main">
-            <div id="terminal"></div>
-          </div>
-        </section>
-      </div>
-    </div>
+        </div>
 
-  <!-- Settings Overlay -->
-  <div id="settingsOverlay" class="settings-overlay" style="display: none;">
-    <div class="settings-panel">
-      <div class="settings-header">
-        <h3>Settings</h3>
-        <button class="btn close" type="button" id="closeSettings">✕</button>
-      </div>
-      <div class="settings-content">
-        <div class="setting-group">
-          <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
-          <div class="slider-container">
-            <input type="range" id="tabSpacesSlider" min="1" max="5" value="4" step="1" />
-            <div class="slider-ticks tab-ticks">
-              <span class="tick">1</span>
-              <span class="tick">2</span>
-              <span class="tick">3</span>
-              <span class="tick">4</span>
-              <span class="tick">5</span>
+        <!-- Workspace -->
+        <div class="workspace" id="workspace">
+            <div id="editor-pane">
+                <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
+                    <div class="controls">
+                        <button class="btn format" type="button" title="Format code" id="btn-format">
+                            <span>Format</span>
+                        </button>
+                        <button class="btn download-editor" type="button" title="Download code" id="downloadEditorBtn">
+                            <ion-icon name="download-outline"></ion-icon>
+                        </button>
+                        <button class="btn expand-console" type="button" title="Expand console (collapse editor)" id="expandConsoleBtn">
+                            <ion-icon name="expand-outline"></ion-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="editor-shell">
+                    <div id="code"></div>
+                </div>
+
+                <div class="bottombar" role="bottombar" aria-live="polite">
+                    <div class="info">
+                        <span id="line-col-info">Ln 1, Col 1</span>
+                        <span class="tab-spaces-info">Tab Spaces: 4</span>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-        <div class="setting-group">
-          <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">14</span>px</label>
-          <div class="slider-container">
-            <input type="range" id="fontSizeSlider" min="6" max="38" value="14" step="1" />
-            <div class="slider-ticks font-ticks">
-              <span class="tick">6</span>
-              <span class="tick"></span>
-              <span class="tick">10</span>
-              <span class="tick"></span>
-              <span class="tick">14</span>
-              <span class="tick"></span>
-              <span class="tick">18</span>
-              <span class="tick"></span>
-              <span class="tick">22</span>
-              <span class="tick"></span>
-              <span class="tick">26</span>
-              <span class="tick"></span>
-              <span class="tick">30</span>
-              <span class="tick"></span>
-              <span class="tick">34</span>
-              <span class="tick"></span>
-              <span class="tick">38</span>
+
+            <div id="console-pane">
+
+                <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
+
+                <!-- Run Button -->
+                <div class="run-container">
+                    <button class="btn run" id="runBtn" type="button" title="Run code">Run</button>
+                </div>
+
+                <!-- Console -->
+                <section class="console" id="console">
+                    <div class="console-sidebar">
+                        <div class="console-controls">
+                            <button class="btn expand-editor" title="Expand editor (collapse console)" id="expandEditorBtn">
+                                <ion-icon name="expand-outline"></ion-icon>
+                            </button>
+                            <button class="btn clear" title="Clear console">
+                                <ion-icon name="trash"></ion-icon>
+                            </button>
+                            <button class="btn copy" title="Copy console output">
+                                <ion-icon name="copy"></ion-icon>
+                            </button>
+                            <button class="btn download" title="Download console output">
+                                <ion-icon name="download-outline"></ion-icon>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="console-main">
+                        <div id="terminal"></div>
+                    </div>
+                </section>
             </div>
-          </div>
         </div>
-        <div class="setting-group">
-          <label for="fontFamilySelect">Font Family:</label>
-          <select id="fontFamilySelect" class="font-select">
-            <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace">ACE Monospace</option>
-            <option value="'Courier New', Courier, monospace">Courier New</option>
-            <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-            <option value="'Consolas', 'Courier New', monospace">Consolas</option>
-            <option value="'Monaco', 'Menlo', monospace">Monaco</option>
-            <option value="'Source Code Pro', monospace">Source Code Pro</option>
-            <option value="'Fira Code', monospace">Fira Code</option>
-            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-            <option value="'Roboto Mono', monospace">Roboto Mono</option>
-            <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
-            <option value="'Inconsolata', monospace">Inconsolata</option>
-            <option value="'PT Mono', monospace">PT Mono</option>
-            <option value="'Space Mono', monospace">Space Mono</option>
-            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
-            <option value="'Hack', monospace">Hack</option>
-          </select>
+
+        <!-- Settings Overlay -->
+        <div id="settingsOverlay" class="settings-overlay" style="display: none;">
+            <div class="settings-panel">
+                <div class="settings-header">
+                    <h3>Settings</h3>
+                    <button class="btn close" type="button" id="closeSettings">✕</button>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-group">
+                        <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
+                        <div class="slider-container">
+                            <input type="range" id="tabSpacesSlider" min="1" max="5" value="4" step="1" />
+                            <div class="slider-ticks tab-ticks">
+                                <span class="tick">1</span>
+                                <span class="tick">2</span>
+                                <span class="tick">3</span>
+                                <span class="tick">4</span>
+                                <span class="tick">5</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">14</span>px</label>
+                        <div class="slider-container">
+                            <input type="range" id="fontSizeSlider" min="6" max="38" value="14" step="1" />
+                            <div class="slider-ticks font-ticks">
+                                <span class="tick">6</span>
+                                <span class="tick"></span>
+                                <span class="tick">10</span>
+                                <span class="tick"></span>
+                                <span class="tick">14</span>
+                                <span class="tick"></span>
+                                <span class="tick">18</span>
+                                <span class="tick"></span>
+                                <span class="tick">22</span>
+                                <span class="tick"></span>
+                                <span class="tick">26</span>
+                                <span class="tick"></span>
+                                <span class="tick">30</span>
+                                <span class="tick"></span>
+                                <span class="tick">34</span>
+                                <span class="tick"></span>
+                                <span class="tick">38</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label for="fontFamilySelect">Font Family:</label>
+                        <select id="fontFamilySelect" class="font-select">
+                            <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace">ACE Monospace</option>
+                            <option value="'Courier New', Courier, monospace">Courier New</option>
+                            <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
+                            <option value="'Consolas', 'Courier New', monospace">Consolas</option>
+                            <option value="'Monaco', 'Menlo', monospace">Monaco</option>
+                            <option value="'Source Code Pro', monospace">Source Code Pro</option>
+                            <option value="'Fira Code', monospace">Fira Code</option>
+                            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                            <option value="'Roboto Mono', monospace">Roboto Mono</option>
+                            <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
+                            <option value="'Inconsolata', monospace">Inconsolata</option>
+                            <option value="'PT Mono', monospace">PT Mono</option>
+                            <option value="'Space Mono', monospace">Space Mono</option>
+                            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
+                            <option value="'Hack', monospace">Hack</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editorThemeSelect">Editor Theme:</label>
+                        <select id="editorThemeSelect" class="font-select">
+                            <optgroup label="LIGHT">
+                                <option value="ace/theme/chrome">Chrome</option>
+                                <option value="ace/theme/clouds">Clouds</option>
+                                <option value="ace/theme/dawn">Dawn</option>
+                                <option value="ace/theme/dreamweaver">Dreamweaver</option>
+                                <option value="ace/theme/eclipse">Eclipse</option>
+                                <option value="ace/theme/github">GitHub</option>
+                                <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
+                                <option value="ace/theme/iplastic">iPlastic</option>
+                                <option value="ace/theme/katzenmilch">Katzenmilch</option>
+                                <option value="ace/theme/kuroir">Kuroir</option>
+                                <option value="ace/theme/solarized_light">Solarized Light</option>
+                                <option value="ace/theme/sqlserver">SQL Server</option>
+                                <option value="ace/theme/textmate">TextMate</option>
+                                <option value="ace/theme/tomorrow">Tomorrow</option>
+                                <option value="ace/theme/xcode">Xcode</option>
+                            </optgroup>
+                            <optgroup label="DARK">
+                                <option value="ace/theme/ambiance">Ambiance</option>
+                                <option value="ace/theme/chaos">Chaos</option>
+                                <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
+                                <option value="ace/theme/cobalt">Cobalt</option>
+                                <option value="ace/theme/dracula">Dracula</option>
+                                <option value="ace/theme/gruvbox">Gruvbox</option>
+                                <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
+                                <option value="ace/theme/idle_fingers">Idle Fingers</option>
+                                <option value="ace/theme/kr_theme">KR Theme</option>
+                                <option value="ace/theme/merbivore">Merbivore</option>
+                                <option value="ace/theme/monokai">Monokai</option>
+                                <option value="ace/theme/nord_dark">Nord Dark</option>
+                                <option value="ace/theme/one_dark">One Dark</option>
+                                <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
+                                <option value="ace/theme/solarized_dark">Solarized Dark</option>
+                                <option value="ace/theme/terminal">Terminal</option>
+                                <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
+                                <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
+                                <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
+                                <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
+                                <option value="ace/theme/twilight">Twilight</option>
+                                <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="setting-group">
-          <label for="editorThemeSelect">Editor Theme:</label>
-          <select id="editorThemeSelect" class="font-select">
-            <optgroup label="LIGHT">
-              <option value="ace/theme/chrome">Chrome</option>
-              <option value="ace/theme/clouds">Clouds</option>
-              <option value="ace/theme/dawn">Dawn</option>
-              <option value="ace/theme/dreamweaver">Dreamweaver</option>
-              <option value="ace/theme/eclipse">Eclipse</option>
-              <option value="ace/theme/github">GitHub</option>
-              <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
-              <option value="ace/theme/iplastic">iPlastic</option>
-              <option value="ace/theme/katzenmilch">Katzenmilch</option>
-              <option value="ace/theme/kuroir">Kuroir</option>
-              <option value="ace/theme/solarized_light">Solarized Light</option>
-              <option value="ace/theme/sqlserver">SQL Server</option>
-              <option value="ace/theme/textmate">TextMate</option>
-              <option value="ace/theme/tomorrow">Tomorrow</option>
-              <option value="ace/theme/xcode">Xcode</option>
-            </optgroup>
-            <optgroup label="DARK">
-              <option value="ace/theme/ambiance">Ambiance</option>
-              <option value="ace/theme/chaos">Chaos</option>
-              <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
-              <option value="ace/theme/cobalt">Cobalt</option>
-              <option value="ace/theme/dracula">Dracula</option>
-              <option value="ace/theme/gruvbox">Gruvbox</option>
-              <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
-              <option value="ace/theme/idle_fingers">Idle Fingers</option>
-              <option value="ace/theme/kr_theme">KR Theme</option>
-              <option value="ace/theme/merbivore">Merbivore</option>
-              <option value="ace/theme/monokai">Monokai</option>
-              <option value="ace/theme/nord_dark">Nord Dark</option>
-              <option value="ace/theme/one_dark">One Dark</option>
-              <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
-              <option value="ace/theme/solarized_dark">Solarized Dark</option>
-              <option value="ace/theme/terminal">Terminal</option>
-              <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
-              <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
-              <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
-              <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
-              <option value="ace/theme/twilight">Twilight</option>
-              <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
-            </optgroup>
-          </select>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span>Made with <ion-icon name="heart" style="color: red;"></ion-icon> in India</span>
         </div>
-      </div>
+        
+        <!-- JavaScript -->
+        <script src="script.js"></script>
+
+        <!-- Icons -->
+        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </div>
-  </div>
-
-  <!-- Footer -->
-  <div class="footer">
-    <span>Made with <ion-icon name="heart" style="color: red;"></ion-icon> in India</span>
-  </div>
-  
-  <!-- JavaScript -->
-  <script src="script.js"></script>
-
-  <!-- Icons -->
-  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </body>
 </html>
