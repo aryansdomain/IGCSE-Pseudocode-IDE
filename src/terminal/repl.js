@@ -62,7 +62,6 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             case 'help': {
                 const output =
                     'run                  Execute the code currently in the editor. If the program needs input, type and press Enter.\r\n' +
-                    'stop                 Stop the running program\r\n' +
                     'clear                Clear console\r\n' +
                     'format               Format the editor code\r\n' +
                     'tab <n>              Set editor tab size (0-8 spaces)\r\n' +
@@ -78,10 +77,6 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             case 'run':
                 runCtrl.run();
                 return;
-    
-            case 'stop':
-                runCtrl.stop();
-                break;
     
             case 'clear':
                 consoleOutput.clear();
@@ -244,8 +239,12 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             moveCursorRight();
 
         } else if (data === '\u0003') {        // ctrl-c
-            consoleOutput.newline();
-            writePrompt();
+            if (runCtrl.isRunning()) {
+                runCtrl.stop();
+            } else {
+                consoleOutput.newline();
+                writePrompt();
+            }
 
         } else if (data.length === 1 && data >= ' ') { // printable characters
             buf = buf.slice(0, cursorPos) + data + buf.slice(cursorPos);
