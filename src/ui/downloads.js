@@ -1,3 +1,5 @@
+import { formatISO } from '../utils/time.js';
+
 export async function saveTextAsFile(filename, text) {
 
     const blob = new Blob([text], { type: "text/plain" });
@@ -33,8 +35,7 @@ export function initEditorDownloads({ getCode, button, filenamePrefix = 'code' }
     const onClick = async () => {
         const code = getCode();
         if (!code.trim()) return; // ignore empty files
-        const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-        const filename = `${filenamePrefix}_${ts}.txt`;
+        const filename = `${filenamePrefix}_${formatISO(new Date(), { compact: true })}.txt`;
         await saveTextAsFile(filename, code);
     };
     button.disabled = false;
@@ -71,8 +72,7 @@ export function initConsoleDownloads({ terminal, copyBtn, downloadBtn, consoleOu
     if (downloadBtn) {
         const onDownload = async () => {
             const text = readTerminalText(terminal);
-            const ts = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const filename = `console_${ts}.txt`;
+            const filename = `console_${formatISO(new Date(), { compact: true })}.txt`;
             await saveTextAsFile(filename, text);
         };
         downloadBtn.disabled = false;
