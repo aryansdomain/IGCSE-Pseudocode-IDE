@@ -5,7 +5,7 @@
     const { initSpacingControls } = await import('./src/editor/tab.js');
     const { initThemeControls } = await import('./src/ui/themeCtrl.js');
     const { initFormatter } = await import('./src/format/format.js');
-    const { createRunController } = await import('./src/runtime/runController.js');
+    const { createRunCtrl } = await import('./src/runtime/runCtrl.js');
     const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
     const { createRepl } = await import('./src/terminal/repl.js');
     const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
@@ -217,7 +217,7 @@ OUTPUT greet("World")`,
 
     // Create run controller first; pass a callback that flips REPL into input mode.
     const runBtn = UI.runBtn;
-    const runCtrl = createRunController({
+    const runCtrl = createRunCtrl({
         consoleOutput,
         writePrompt,
         getCode,
@@ -244,7 +244,7 @@ OUTPUT greet("World")`,
 
     // run/stop button
     on(UI.runBtn, 'click', () => {
-        if (runCtrl.isRunning()) repl.execCommand('stop');
+        if (runCtrl.isRunning()) runCtrl.stop();
         else repl.execCommand('run');
     });
 
