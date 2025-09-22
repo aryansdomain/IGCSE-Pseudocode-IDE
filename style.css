@@ -1,3 +1,7 @@
+/* ==========================================================================
+   CSS VARIABLES & THEMES
+   ========================================================================== */
+
 :root {
     --bg: #0f1117;
     --panel: #1a1a1a;
@@ -21,27 +25,6 @@
     --bar-min: 22px;
 }
 
-/* Fix for splitter panes - allow them to shrink properly */
-#editor-pane, #console-pane { 
-    min-height: 0; 
-    min-width: 0; 
-    overflow: hidden; 
-}
-
-/* Ensure containers take full height */
-html, body { height: 100%; }
-.app, #workspace { height: 100%; }
-
-/* Lock down splitter handle size */
-#splitter { 
-    box-sizing: border-box; 
-    margin: 0; 
-}
-#splitter:active, #splitter:focus { 
-    outline: none; 
-    border-width: 0; 
-}
-
 .light {
     --bg: #f6f8fa;
     --panel: #ffffff;
@@ -56,6 +39,18 @@ html, body { height: 100%; }
     --warning: #ce8600;
 }
 
+/* ==========================================================================
+   GLOBAL RESET & BASE STYLES
+   ========================================================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+/* remove blue focus outline */
+*:focus { outline: none; }
+*:focus-visible { outline: none; }
+
 html, body {
     height: 100%;
     margin: 0;
@@ -64,21 +59,9 @@ html, body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
 }
 
-* {
-    box-sizing: border-box;
-}
-
-/* Remove blue focus outlines */
-*:focus {
-    outline: none;
-}
-
-*:focus-visible {
-    outline: none;
-}
-
-html, body { height: 100%; }
-.app, .workspace { height: 100%; }
+/* ==========================================================================
+   MAIN APP LAYOUT
+   ========================================================================== */
 
 .app {
     min-height: 100dvh;
@@ -87,7 +70,10 @@ html, body { height: 100%; }
     padding: var(--gap);
 }
 
-/* Workspace vertical splitter layout */
+/* ==========================================================================
+   WORKSPACE & LAYOUT SYSTEM
+   ========================================================================== */
+
 #workspace {
     display: flex;
     min-height: 0;
@@ -95,13 +81,92 @@ html, body { height: 100%; }
     position: relative;
 }
 
-.workspace {
+/* layout orientation */
+#workspace.layout-vertical   { flex-direction: column; }
+#workspace.layout-horizontal { flex-direction: row; }
+
+/* shrink panes */
+#editor-pane, #console-pane { 
+    display: flex; 
+    flex-direction: column; 
+    min-width: 0; 
+    min-height: 0; 
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 0;
+}
+
+/* add gap between splitter and terminal in horizontal layout */
+#workspace.layout-horizontal #console-pane {
+    margin-left: var(--gap);
+}
+
+/* ==========================================================================
+   SPLITTER
+   ========================================================================== */
+
+#splitter { 
+    box-sizing: border-box; 
+    margin: 0; 
+    position: relative;
+    z-index: 100;
+    background: var(--splitter-bg, rgba(127,127,127,.25));
+    flex: 0 0 var(--splitter-h);
+    touch-action: none;
+}
+
+#splitter:active, #splitter:focus { 
+    outline: none; 
+    border-width: 0; 
+}
+
+#splitter:hover {
+    background: #3e444f;
+}
+
+/* Splitter orientation rules */
+#workspace.layout-vertical #splitter {
+    height: var(--splitter-h);
+    width: 100%;
+    cursor: row-resize;
+}
+
+#workspace.layout-horizontal #splitter {
+    width: var(--splitter-h);
+    height: 100%;
+    cursor: col-resize;
+}
+
+/* While dragging, avoid text selection and keep the resize cursor */
+body.dragging {
+    user-select: none;
+    cursor: row-resize !important;
+}
+
+/* ==========================================================================
+   UTILITY BAR
+   ========================================================================== */
+
+.utilitybar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+}
+
+/* ==========================================================================
+   EDITOR PANE
+   ========================================================================== */
+
+#editor-pane {
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
 }
 
-/* topbar */
+/* Editor Top Bar */
 .topbar {
     flex: 0 1 var(--topbar-h);
     min-height: var(--bar-min);
@@ -114,6 +179,13 @@ html, body { height: 100%; }
     padding-right: 14px;
     overflow: hidden;
     container-type: size;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
 }
 
 .brand {
@@ -129,27 +201,7 @@ html, body { height: 100%; }
     align-items: center;
 }
 
-/* Panes + splitter */
-#editor-pane,
-#console-pane {
-    flex: 0 0 auto;
-    min-height: 0;
-    position: relative;
-    z-index: 0;
-}
-
-#workspace { overflow: hidden; }
-
-/* Editor pane grows */
-#editor-pane {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-/* Editor shell fills remaining space between bars and can shrink to 0 */
+/* Editor Shell */
 .editor-shell {
     position: relative;
     flex: 1 1 auto;
@@ -157,14 +209,13 @@ html, body { height: 100%; }
     overflow: hidden;
 }
 
-/* Ace should fill the shell */
 #code {
     position: absolute;
     inset: 0;
     overflow: hidden;
 }
 
-/* bottom bar */
+/* Editor Bottom Bar */
 .bottombar {
     flex: 0 1 var(--bottombar-h);
     min-height: var(--bar-min);
@@ -184,33 +235,15 @@ html, body { height: 100%; }
     gap: 20px;
 }
 
-.run-container {
-    display: flex;
-    justify-content: flex-start;
-    padding: 10px;
-    flex-shrink: 0;
+/* collapse bars */
+.topbar, .bottombar { 
+    overflow: hidden; 
 }
 
-#splitter {
-    position: relative;
-    z-index: 1000;
-    height: 8px;                /* must match the JS constant */
-    flex: 0 0 var(--splitter-h);
-    cursor: row-resize;
-    pointer-events: auto;
-    background: transparent;
-    /* CRITICAL: prevents touch from turning the drag into a page scroll */
-    touch-action: none;
-}
+/* ==========================================================================
+   CONSOLE
+   ========================================================================== */
 
-#splitter:hover {
-    background: #3e444f;
-}
-
-/* Let bars collapse cleanly while we animate heights */
-.topbar, .bottombar { overflow: hidden; }
-
-/* Console pane can shrink fully; let JS control mins */
 #console-pane {
     padding-top: 0;
     min-height: 0;
@@ -219,51 +252,14 @@ html, body { height: 100%; }
     flex-direction: column;
 }
 
-/* While dragging, avoid text selection and keep the resize cursor */
-body.dragging {
-    user-select: none;
-    cursor: row-resize !important;
+.run-container {
+    display: flex;
+    justify-content: flex-start;
+    padding: 10px;
+    flex-shrink: 0;
 }
 
-/* buttons */
-.btn {
-    appearance: none;
-    border: none;
-    background: none;
-    color: var(--text);
-    padding: 8px 12px;
-    cursor: pointer;
-}
-
-.btn.run {
-    border: 2px solid var(--green-accent);
-    background: var(--panel);
-    color: var(--green-accent);
-    font-weight: 600;
-    padding: 8px 16px;
-    transition: all 0.2s ease;
-}
-
-.btn.run:hover {
-    background: var(--green-accent);
-    color: white;
-}
-
-.btn.stop {
-    border: 2px solid var(--red);
-    background: var(--panel);
-    color: var(--red);
-    font-weight: 600;
-    padding: 8px 16px;
-    transition: all 0.2s ease;
-}
-
-.btn.stop:hover {
-    background: var(--red);
-    color: white;
-}
-
-/* Console layout */
+/* console layout */
 .console {
     margin-top: 0;
     display: flex;
@@ -323,9 +319,132 @@ body.dragging {
     height: 100%;
 }
 
+.console, .console-main { 
+    min-height: 0; 
+}
 
+/* ==========================================================================
+   TERMINAL
+   ========================================================================== */
 
-/* settings */
+#terminal {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 0;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    padding: 8px 12px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.light #terminal {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.btn {
+    appearance: none;
+    border: none;
+    background: none;
+    color: var(--text);
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+/* Icon Visibility */
+.btn.mode i[hidden],
+.btn.layout i[hidden] {display: none;}
+
+/* Run/Stop */
+.btn.run {
+    border: 2px solid var(--green-accent);
+    background: var(--panel);
+    color: var(--green-accent);
+    font-weight: 600;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+.btn.run:hover {
+    background: var(--green-accent);
+    color: white;
+}
+.btn.stop {
+    border: 2px solid var(--red);
+    background: var(--panel);
+    color: var(--red);
+    font-weight: 600;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+.btn.stop:hover {
+    background: var(--red);
+    color: white;
+}
+
+/* Utility Bar */
+.btn.settings,
+.btn.download-editor,
+.btn.mode {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    position: relative;
+}
+.btn.mode i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.2s ease;
+}
+
+/* Close */
+.btn.close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    transition: background 0.2s;
+}
+.btn.close:hover {
+    background: var(--elev);
+    transition: all 0.2s ease;
+}
+
+/* ==========================================================================
+   BUTTON HOVER
+   ========================================================================== */
+
+/* iscaling */
+.btn:hover i:not(.btn.layout i):not(.btn.mode i) {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+/* color */
+.btn:hover i:not(.btn.clear:hover i) { color: var(--green-accent); }
+.btn.clear:hover i { color: var(--red); }
+
+/* ==========================================================================
+   SETTINGS PANEL
+   ========================================================================== */
+
 .settings-overlay {
     position: fixed;
     top: 0;
@@ -363,13 +482,9 @@ body.dragging {
     font-weight: 600;
 }
 
-.settings-content {
-    padding: 20px;
-}
+.settings-content { padding: 20px; }
 
-.setting-group {
-    margin-bottom: 30px;
-}
+.setting-group { margin-bottom: 30px; }
 
 .setting-group label {
     display: block;
@@ -379,6 +494,11 @@ body.dragging {
     font-weight: 500;
 }
 
+/* ==========================================================================
+   FORM CONTROLS
+   ========================================================================== */
+
+/* Sliders */
 .setting-group input[type="range"] {
     width: 100%;
     height: 8px;
@@ -441,7 +561,7 @@ body.dragging {
     border: none;
 }
 
-/* Slider container and tick marks */
+/* Slider Container and Tick Marks */
 .slider-container {
     position: relative;
     margin: 15px 0 5px 0;
@@ -515,23 +635,7 @@ body.dragging {
     background: var(--border);
 }
 
-.btn.editortheme-changer {
-    width: 100%;
-    padding: 12px 16px;
-    color: var(--green-accent);
-    background: var(--panel);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn.editortheme-changer:hover {
-    background: var(--green-accent);
-    color: white;
-}
-
-/* Font select dropdown */
+/* Select Dropdowns */
 .font-select {
     width: 100%;
     padding: 8px 12px;
@@ -562,7 +666,26 @@ body.dragging {
     padding: 4px 8px;
 }
 
-/* Editor Theme sections */
+/* ==========================================================================
+   EDITOR THEME SELECTOR
+   ========================================================================== */
+
+.btn.editortheme-changer {
+    width: 100%;
+    padding: 12px 16px;
+    color: var(--green-accent);
+    background: var(--panel);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn.editortheme-changer:hover {
+    background: var(--green-accent);
+    color: white;
+}
+
 .editortheme-section {
     margin-bottom: 30px;
 }
@@ -576,7 +699,6 @@ body.dragging {
     border-bottom: 1px solid var(--border);
 }
 
-/* Editor Theme grid */
 .editortheme-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -681,85 +803,10 @@ body.dragging {
     padding-left: 28px;
 }
 
-.btn.close {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 18px;
-    cursor: pointer;
-    padding: 4px;
-    transition: background 0.2s;
-}
+/* ==========================================================================
+   LIGHT MODE OVERRIDES
+   ========================================================================== */
 
-.btn.close:hover {
-    background: var(--elev);
-    transition: all 0.2s ease;
-} 
-
-/* new utility bar sits above the topbar */
-.utilitybar, .topbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px;
-}
-
-/* Topbar buttons - settings, download, and mode */
-.btn.settings,
-.btn.download-editor,
-.btn.mode {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-/* General button hover effect (excludes format button) */
-.btn:hover:not(.btn.format) {
-    background-color: var(--panel);
-}
-
-/* Font Awesome icon hover effects */
-.btn:hover i {
-    transform: scale(1.1);
-    transition: transform 0.2s ease;
-}
-
-.btn.mode:hover i {
-    transform: translate(-50%, -50%) scale(1.1);
-}
-
-/* Specific hover effects for different icon types */
-.btn:hover i:not(.btn.clear:hover i) {
-    color: var(--green-accent);
-}
-
-.btn.clear:hover i {
-    color: var(--red);
-}
-
-/* mode button */
-.btn.mode {
-    position: relative;
-}
-
-.btn.mode i {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    transition: opacity 0.2s ease;
-}
-
-.btn.mode i[hidden],
-.btn.layout i[hidden] {
-    display: none;
-}
-
-/* Light mode console overrides */
 .light #console-body {
     background-color: #ffffff;
     color: #24292f;
@@ -791,13 +838,15 @@ body.dragging {
     color: var(--green);
 }
 
-/* Make sure the stack can actually shrink and there's no top padding */
-#workspace { min-height: 0; }
+/* ==========================================================================
+   UTILITY CLASSES & STATES
+   ========================================================================== */
 
-/* Inner flex containers must be allowed to shrink */
-.console, .console-main { min-height: 0; }
+#workspace { 
+    min-height: 0; 
+}
 
-/* Disable transitions during mode switching */
+/* disable transitions during mode switching */
 html.mode-switching *,
 html.mode-switching *::before,
 html.mode-switching *::after {
@@ -805,7 +854,10 @@ html.mode-switching *::after {
     animation: none !important;
 }
 
-/* Footer */
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+
 .footer {
     text-align: center;
     padding: 8px;
@@ -817,55 +869,4 @@ html.mode-switching *::after {
 
 .footer i {
     vertical-align: middle;
-}
-
-/* Terminal styling */
-#terminal {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    z-index: 0;
-    background-color: #000000;
-    color: #ffffff;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-size: 13px;
-    padding: 8px 12px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    flex: 1;
-    min-height: 0;
-}
-
-.light #terminal {
-    background-color: #ffffff;
-    color: #000000;
-}
-
-/* --- Layout orientation --- */
-/* ID-specific so it beats the bare #workspace rule */
-#workspace.layout-vertical   { flex-direction: column; }
-#workspace.layout-horizontal { flex-direction: row; }
-
-/* Let the panes shrink properly in either axis */
-#editor-pane, #console-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-
-/* --- Splitter handle --- */
-#splitter {
-  position: relative;
-  z-index: 100;
-  background: var(--splitter-bg, rgba(127,127,127,.25));
-  /* use flex-basis for thickness; dimension set by the orientation rules below */
-  flex: 0 0 var(--splitter-h);
-  touch-action: none;
-}
-
-#workspace.layout-vertical #splitter {
-  height: var(--splitter-h);
-  width: 100%;
-  cursor: row-resize;
-}
-#workspace.layout-horizontal #splitter {
-  width: var(--splitter-h);
-  height: 100%;
-  cursor: col-resize;
 }
