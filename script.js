@@ -12,7 +12,7 @@
     const { initMode } = await import('./src/ui/modeCtrl.js');
     const { initSettings } = await import('./src/ui/settings.js');
     const { initSplitter } = await import('./src/ui/splitter.js');
-    const { initDom, on, setVars } = await import('./src/utils/dom.js');
+    const { initDom, on } = await import('./src/utils/dom.js');
 
     // collect UI refs
     const UI = initDom();
@@ -182,23 +182,72 @@ OUTPUT greet("World")`,
         }
     });
     
-    // splitter
-    const splitter = initSplitter({
-        container: UI.workspace,
-        handle: UI.splitter,
-        paneA: UI.editorPane,
-        paneB: UI.consolePane,
-        axis: 'vertical',
-        minA: 0,
-        minB: 50,
-        normal_top: 45,
-        normal_bottom: 45,
-        initialRatio: 0.5,
-        storageKey: 'editor-console',
-        onResize: () => {
-            try { editor.resize(); } catch {}
-            try { refit(); } catch {}
-        }
+    // ---- Layout toggle + splitter ----
+    const LAYOUT_KEY = 'ui.layout:editor-console';
+    const layoutBtn  = document.getElementById('layoutBtn');
+
+    function setWorkspaceClass(layout) {
+        UI.workspace.classList.toggle('layout-vertical',   layout === 'vertical');
+        UI.workspace.classList.toggle('layout-horizontal', layout === 'horizontal');
+    }
+
+    let splitter;
+
+    function initSplitFor(layout) {
+        // Tear down previous
+        try { splitter?.destroy?.(); } catch {}
+
+        const axis = layout; // 'vertical' or 'horizontal'
+        const skey = axis === 'vertical' ? 'editor-console:v' : 'editor-console:h';
+
+        splitter = initSplitter({
+            container: UI.workspace,
+            handle: UI.splitter,
+            paneA: UI.editorPane,
+            paneB: UI.consolePane,
+            axis,
+            minA: 0,
+            minB: 0,
+            normal_top: 45,
+            normal_bottom: 45,
+            initialRatio: 0.5,
+            storageKey: skey,
+            onResize: () => {
+                try { editor.resize(); } catch {}
+                try { refit(); } catch {}
+            }
+        });
+    }
+
+    function updateLayoutButton(layout) {
+        if (!layoutBtn) return;
+        layoutBtn.querySelector('.to-horizontal')?.toggleAttribute('hidden', layout !== 'vertical');
+        layoutBtn.querySelector('.to-vertical')?.toggleAttribute('hidden',   layout !== 'horizontal');
+        layoutBtn.setAttribute('aria-pressed', layout === 'horizontal');
+        layoutBtn.title = layout === 'vertical' ? 'Side-by-side layout' : 'Top-bottom layout';
+    }
+
+    function applyLayout(layout) {
+        try { localStorage.setItem(LAYOUT_KEY, layout); } catch {}
+        setWorkspaceClass(layout);
+        initSplitFor(layout);
+        updateLayoutButton(layout);
+        
+        // Force reset to 50/50 split when switching layouts
+        setTimeout(() => {
+            try { splitter?.setRatio(0.5); } catch {}
+        }, 0);
+    }
+
+    // Initial layout on load
+    applyLayout((() => { try { return localStorage.getItem(LAYOUT_KEY) || 'vertical'; } catch { return 'vertical'; } })());
+
+    // Toggle on click
+    layoutBtn?.addEventListener('click', () => {
+        let current = 'vertical';
+        try { current = localStorage.getItem(LAYOUT_KEY) || 'vertical'; } catch {}
+        const next = current === 'vertical' ? 'horizontal' : 'vertical';
+        applyLayout(next);
     });
 
     // Expand buttons

@@ -17,6 +17,9 @@
     <script src="rules.js"></script>
     <script src="mode.js"></script>
 
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/145a379a6e.js" crossorigin="anonymous"></script>
+
     <!-- Interpreter -->
     <script src="interpreter.js"></script>
 </head>
@@ -31,11 +34,15 @@
         <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
             <div class="controls">
                 <button class="btn settings" type="button" title="Settings" id="settingsBtn">
-                    <ion-icon name="settings-outline" class="settings-icon"></ion-icon>
+                    <i class="fas fa-cog settings-icon"></i>
+                </button>
+                <button class="btn layout" type="button" title="Side-by-side layout" id="layoutBtn" aria-pressed="false">
+                    <i class="fas fa-columns to-horizontal"></i>
+                    <i class="fas fa-columns to-vertical fa-rotate-270" hidden></i>
                 </button>
                 <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
-                    <ion-icon name="moon-outline" class="moon-icon" hidden></ion-icon>
-                    <ion-icon name="sunny" class="sun-icon"></ion-icon>
+                    <i class="fas fa-moon moon-icon" hidden></i>
+                    <i class="fas fa-sun sun-icon"></i>
                 </button>
             </div>
         </div>
@@ -49,10 +56,10 @@
                             <span>Format</span>
                         </button>
                         <button class="btn download-editor" type="button" title="Download code" id="downloadEditorBtn">
-                            <ion-icon name="download-outline"></ion-icon>
+                            <i class="fas fa-download"></i>
                         </button>
                         <button class="btn expand-console" type="button" title="Expand console (collapse editor)" id="expandConsoleBtn">
-                            <ion-icon name="expand-outline"></ion-icon>
+                            <i class="fas fa-expand-alt"></i>
                         </button>
                     </div>
                 </div>
@@ -69,9 +76,9 @@
                 </div>
             </div>
 
-            <div id="console-pane">
+            <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
 
-                <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
+            <div id="console-pane">
 
                 <!-- Run Button -->
                 <div class="run-container">
@@ -83,16 +90,16 @@
                     <div class="console-sidebar">
                         <div class="console-controls">
                             <button class="btn expand-editor" title="Expand editor (collapse console)" id="expandEditorBtn">
-                                <ion-icon name="expand-outline"></ion-icon>
+                                <i class="fas fa-expand-alt"></i>
                             </button>
                             <button class="btn clear" title="Clear console">
-                                <ion-icon name="trash"></ion-icon>
+                                <i class="fas fa-trash"></i>
                             </button>
                             <button class="btn copy" title="Copy console output">
-                                <ion-icon name="copy"></ion-icon>
+                                <i class="fas fa-copy"></i>
                             </button>
                             <button class="btn download" title="Download console output">
-                                <ion-icon name="download-outline"></ion-icon>
+                                <i class="fas fa-download"></i>
                             </button>
                         </div>
                     </div>
@@ -222,15 +229,11 @@
 
         <!-- Footer -->
         <div class="footer">
-            <span>Made with <ion-icon name="heart" style="color: red;"></ion-icon> in India</span>
+            <span>Made with <i class="fas fa-heart" style="color: red;"></i> in India</span>
         </div>
         
         <!-- JavaScript -->
         <script src="script.js"></script>
-
-        <!-- Icons -->
-        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
     </div>
 </body>
 </html>
