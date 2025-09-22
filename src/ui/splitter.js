@@ -1,15 +1,13 @@
-// TODO: add button to change from editor top, terminal bottom, to terminal top, editor bottom or left/right
-
 const KEY_PREFIX = 'ui.splitter:';
 
 export function initSplitter({
     container,         // outer element containing paneA, handle, paneB
-    handle,
-    paneA,             // top of left
+    handle,            // splitter handle
+    paneA,             // top or left
     paneB,             // bottom or right
     axis,              // 'vertical' = A top, B bottom, 'horizontal' = A left, B right
-    minA,              // height/width of A in px
-    minB,              // height/width of B in px
+    minA,              // height/width of A
+    minB,              // height/width of B
     normal_top,        // height of topbar
     normal_bottom,     // height of bottombar
     initialRatio,      // initial fraction of space A takes up (0..1)
@@ -71,7 +69,7 @@ export function initSplitter({
         let sizeA = Math.round(free * ratio);
         let sizeB = free - sizeA;
 
-        if (sizeA < desiredBarHeight) {
+        if (axis === 'vertical' && sizeA < desiredBarHeight) {
             // Proportional shrink keeps lock-step behavior
             const scale = sizeA / desiredBarHeight;            // 0..1
             topH    = Math.max(MIN_BAR_HEIGHT, Math.round(normal_top    * scale));
