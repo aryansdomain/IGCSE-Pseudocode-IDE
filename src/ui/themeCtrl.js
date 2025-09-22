@@ -78,7 +78,7 @@ export function initThemeControls({
         });
         document.querySelectorAll('.topbar .btn').forEach(btn => {
             btn.style.color = editorFg;
-            btn.querySelectorAll('ion-icon').forEach(icon => (icon.style.color = editorFg));
+            btn.querySelectorAll('i').forEach(icon => (icon.style.color = editorFg));
         });
     }
 
