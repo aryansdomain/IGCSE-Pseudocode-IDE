@@ -70,7 +70,7 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
     if (tickSelector) {
         document.querySelectorAll(tickSelector).forEach((tick, idx) => {
             tick.addEventListener('click', () => {
-                const val = idx + 1; // 1, 2 ... n
+                const val = idx; // 0, 1, 2 ... 8
                 if (slider) slider.value = String(val);
                 setTabSpaces(val);
             });
