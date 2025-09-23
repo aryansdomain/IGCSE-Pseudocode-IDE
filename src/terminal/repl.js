@@ -95,7 +95,12 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
                     break;
                 }
                 editorApis?.setTab?.(n);
+                
                 consoleOutput.println(`Tab spaces: ${n}`)
+                if (n === 0) {
+                    consoleOutput.warnln('Warning: setting tab spacing to another value will not work.');
+                    consoleOutput.warnln('Press Cmd/Ctrl+Z to undo.');
+                }
                 break;
             }
     
@@ -130,7 +135,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             case 'theme': {
                 const name = (arg || '').trim().toLowerCase();
                 if (!name) {
-                    consoleOutput.println('Usage: theme <name>');
+                    consoleOutput.errln('Usage: theme <name>');
                     break;
                 }
 
@@ -153,7 +158,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
                 break;
     
             default:
-                consoleOutput.println(`Unknown command: ${cmd}`);
+                consoleOutput.errln(`Unknown command: ${cmd}`);
                 break;
         }
     
