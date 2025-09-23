@@ -334,7 +334,7 @@ body.dragging {
     z-index: 0;
     background-color: #000000;
     color: #ffffff;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 13px;
     padding: 8px 12px;
     overflow-y: auto;

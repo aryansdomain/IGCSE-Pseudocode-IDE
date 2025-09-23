@@ -42,8 +42,6 @@ OUTPUT greet("World")`,
         editor,
         sizeInput: UI.fontSizeSlider,
         familySelect: UI.fontFamilySelect,
-        incBtn: document.querySelector('[data-font="inc"]'),
-        decBtn: document.querySelector('[data-font="dec"]'),
         min: 6,
         max: 38,
         step: 1,
@@ -52,6 +50,11 @@ OUTPUT greet("World")`,
 
     // set font size
     editorApis.setFontSize = (n) => fontCtrl.setFontSize(n);
+
+    // nudge editor after fonts finish loading
+    document.fonts?.ready?.then(() => { 
+        try { editor.resize(true); } catch {} 
+    });
 
     // formatter
     const formatBtn = document.getElementById('btn-format');
@@ -233,10 +236,8 @@ OUTPUT greet("World")`,
         initSplitFor(layout);
         updateLayoutButton(layout);
         
-        // Force reset to 50/50 split when switching layouts
-        setTimeout(() => {
-            try { splitter?.setRatio(0.5); } catch {}
-        }, 0);
+        // reset to a 50-50 split
+        try { splitter?.setRatio(0.5); } catch {}
     }
 
     // Initial layout on load

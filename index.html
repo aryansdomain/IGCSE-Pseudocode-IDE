@@ -6,6 +6,12 @@
     <title>IGCSE Pseudocode IDE</title>
     <link rel="stylesheet" href="style.css"/>
     
+    <!-- Load font families -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=IBM+Plex+Mono:wght@300..700&family=Inconsolata:wght@300..900&family=JetBrains+Mono:wght@100..800&family=PT+Mono&family=Roboto+Mono:wght@100..700&family=Source+Code+Pro:wght@200..900&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+    
     <!-- xterm.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
@@ -122,13 +128,17 @@
                     <div class="setting-group">
                         <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
                         <div class="slider-container">
-                            <input type="range" id="tabSpacesSlider" min="1" max="5" value="4" step="1" />
+                            <input type="range" id="tabSpacesSlider" min="0" max="8" value="4" step="1" />
                             <div class="slider-ticks tab-ticks">
+                                <span class="tick">0</span>
                                 <span class="tick">1</span>
                                 <span class="tick">2</span>
                                 <span class="tick">3</span>
                                 <span class="tick">4</span>
                                 <span class="tick">5</span>
+                                <span class="tick">6</span>
+                                <span class="tick">7</span>
+                                <span class="tick">8</span>
                             </div>
                         </div>
                     </div>
@@ -173,7 +183,6 @@
                             <option value="'Inconsolata', monospace">Inconsolata</option>
                             <option value="'PT Mono', monospace">PT Mono</option>
                             <option value="'Space Mono', monospace">Space Mono</option>
-                            <option value="'IBM Plex Mono', monospace">IBM Plex Mono</option>
                             <option value="'Hack', monospace">Hack</option>
                         </select>
                     </div>
