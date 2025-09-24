@@ -169,6 +169,9 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
     // keyboard input
     terminal.onData((data) => {
 
+        // ignore all input except ctrl-c (stops program) when terminal is locked
+        if (runCtrl.isTerminalLocked() && data !== '\u0003') return;
+
         // INPUT mode
         if (awaitingProgramInput) {
             if (data === '\r') {                 // submit input to program
@@ -204,8 +207,8 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             return;
         }
 
-        // SHELL mode
-        if (data === '\r') {                   // enter, submit command
+        // shell mode
+        if (data === '\r') {                   // enter
             const line = buf;
             if (line.trim()) hist.push(line);
 
@@ -247,8 +250,10 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
             if (runCtrl.isRunning()) {
                 runCtrl.stop();
             } else {
+                consoleOutput.hideCursor();
                 consoleOutput.newline();
                 writePrompt();
+                consoleOutput.showCursor();
             }
 
         } else if (data.length === 1 && data >= ' ') { // printable characters
