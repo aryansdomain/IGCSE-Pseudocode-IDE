@@ -1,15 +1,17 @@
 export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl, tickSelector = null} = {}) {
-    if (!editor || !editorApis) throw new Error('initSpacingControls: editor & editorApis are required');
 
     const Range = ace.require('ace/range').Range;
 
-    function getCurrentTabSize(session) {
+    function getTabSpaces() {
+
+        const session = editor.session;
+
         return typeof session.getTabSize === 'function'
             ? session.getTabSize()
-            : (session.$tabSize || 4);
+            : (session.$tabSize);
     }
 
-    // convert leading indent to newSize
+    // convert original indent to the new size
     function retabDocumentByUnits(session, oldSize, newSize) {
         const doc = session.getDocument();
         const lineCount = session.getLength();
@@ -47,17 +49,18 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
     function setTabSpaces(n) {
         const session = editor.session;
         const newSize = parseInt(n, 10);
-        const oldSize = getCurrentTabSize(session);
+        const oldSize = getTabSpaces();
         if (!Number.isFinite(newSize) || newSize === oldSize) return oldSize;
 
         editorApis.setTab(newSize);
         retabDocumentByUnits(session, oldSize, newSize);
 
         // refresh ui
-        slider && (slider.value = String(newSize));
+        slider  && (slider.value = String(newSize));
         valueEl && (valueEl.textContent = newSize);
         infoEl  && (infoEl.textContent  = `Tab Spaces: ${newSize}`);
         editor.renderer.updateFull();
+
         return newSize;
     }
 
@@ -66,11 +69,11 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
     slider?.addEventListener('input', onSlider);
     slider?.addEventListener('change', onSlider);
 
-    // clickable ticks
+    // slider ticks are clickable
     if (tickSelector) {
         document.querySelectorAll(tickSelector).forEach((tick, idx) => {
             tick.addEventListener('click', () => {
-                const val = idx; // 0, 1, 2 ... 8
+                const val = idx; // 0, 1, 2, ... 8
                 if (slider) slider.value = String(val);
                 setTabSpaces(val);
             });
@@ -78,24 +81,10 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
     }
 
     // initial ui
-    const initial = getCurrentTabSize(editor.session);
+    const initial = getTabSpaces();
     if (slider) slider.value = String(initial);
     valueEl && (valueEl.textContent = initial);
     infoEl  && (infoEl.textContent  = `Tab Spaces: ${initial}`);
 
-    function getTabSpaces() {
-        return getCurrentTabSize(editor.session);
-    }
-
-    function destroy() {
-        slider?.removeEventListener('input', onSlider);
-        slider?.removeEventListener('change', onSlider);
-        if (tickSelector) {
-            document.querySelectorAll(tickSelector).forEach((tick) => {
-                tick.replaceWith(tick.cloneNode(true));
-            });
-        }
-    }
-
-    return { setTabSpaces, getTabSpaces, destroy };
+    return { setTabSpaces, getTabSpaces };
 }
