@@ -201,7 +201,24 @@ OUTPUT greet("World")`,
         try { splitter?.destroy?.(); } catch {}
 
         const axis = layout; // 'vertical' or 'horizontal'
-        const skey = axis === 'vertical' ? 'editor-console:v' : 'editor-console:h';
+        
+        // percentage of space editor takes up
+        let editorPercentage = 0.5; // default
+        if (splitter) {
+            editorPercentage = splitter.getRatio();
+        } else {
+            // on first load
+            try {
+                const saved = localStorage.getItem('ui.splitter:editor-percentage');
+                if (saved) {
+                    const parsed = parseFloat(saved);
+                    if (!isNaN(parsed) && parsed > 0 && parsed < 1) {
+                        editorPercentage = parsed;
+                    }
+                }
+            } catch {}
+        }
+        try { localStorage.setItem('ui.splitter:editor-percentage', String(editorPercentage)); } catch {}
 
         splitter = initSplitter({
             container: UI.workspace,
@@ -213,8 +230,8 @@ OUTPUT greet("World")`,
             minB: 0,
             normal_top: 45,
             normal_bottom: 45,
-            initialRatio: 0.5,
-            storageKey: skey,
+            initialRatio: editorPercentage,
+            storageKey: 'editor-console',
             onResize: () => {
                 try { editor.resize(); } catch {}
                 try { refit(); } catch {}
@@ -235,9 +252,6 @@ OUTPUT greet("World")`,
         setWorkspaceClass(layout);
         initSplitFor(layout);
         updateLayoutButton(layout);
-        
-        // reset to a 50-50 split
-        try { splitter?.setRatio(0.5); } catch {}
     }
 
     // Initial layout on load
