@@ -6,7 +6,8 @@ export function createRunCtrl({
     onInputRequested = () => {},
     onStateChange = () => {},
 } = {}) {
-    // --- state ---
+
+    // states
     let worker = null;
     let runId = 0;
     let isRunning = false;
@@ -16,23 +17,18 @@ export function createRunCtrl({
     let warningStorage = [];
     let hadFlushOutput = false;
 
-    function rearmDots(delay = 75) {
-        if (runningTimer) clearTimeout(runningTimer);
-        hadFlushOutput = false;
-        runningTimer = setTimeout(() => {
-            if (isRunning && !indicatorShown && !hadFlushOutput) startDots();
-        }, delay);
-    }
 
-    // dots
-    let indicatorShown = false;
+    // -------------------------------- RUNNING DOTS --------------------------------
+    let dotsShown = false;
     let runningTimer = null;
     let dotTimer = null;
     let dotPhase = 0;
+    let terminalLocked = false;
 
     const startDots = () => {
-        if (indicatorShown) return;
-        indicatorShown = true;
+        if (dotsShown) return;
+        dotsShown = true;
+        terminalLocked = true;
 
         // print warnings above dots
         if (warningStorage.length) {
@@ -55,11 +51,13 @@ export function createRunCtrl({
     const clearDots = () => {
         if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
         if (dotTimer)     { clearInterval(dotTimer);   dotTimer = null; }
-        if (indicatorShown) {
+        if (dotsShown) {
             consoleOutput.clearline(); // clear dots
-            indicatorShown = false;
+            dotsShown = false;
+            terminalLocked = false;
         }
     };
+
 
     function finishRun(localRunId) {
         if (localRunId !== runId) return;  // stale
@@ -73,12 +71,14 @@ export function createRunCtrl({
         writePrompt();
     }
 
+    // attach event handlers to the worker for processing execution results
     function attachWorkerHandlers(localRunId) {
         worker.onmessage = (e) => {
             const { type } = e.data || {};
 
             if (type === 'flush') {
-                // interpreter flushed an in-progress OUTPUT
+
+                // flush all output
                 const s = String(e.data.output || '');
                 const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
                 __flushedPrefix += newPart;
@@ -90,7 +90,8 @@ export function createRunCtrl({
                 if (msg) warningStorage.push(msg);
 
             } else if (type === 'input_request') {
-                // Before switching to input mode, show warnings and flushed prompt text
+
+                // before switching to input mode, show any warnings/output
                 clearDots();
 
                 if (warningStorage.length) {
@@ -109,21 +110,21 @@ export function createRunCtrl({
                 onInputRequested();
 
             } else if (type === 'done') {
-                const hadInd = indicatorShown;
+                const hadDots = dotsShown;
                 clearDots();
 
-                // if no dots ever showed, print queued warnings now (once)
-                if (!hadInd && warningStorage.length) {
+                // if no dots showed, print warnings now
+                if (!hadDots && warningStorage.length) {
                     warningStorage.forEach(msg => consoleOutput.warnln(msg));
                     warningStorage = [];
                 }
 
-                // Dump buffered output
+                // output stored output
                 if (outputStorage.length) {
                     const combined = outputStorage.join('');
                     const parts = combined.split('\n');
 
-                    if (!hadInd) consoleOutput.newline();
+                    if (!hadDots) consoleOutput.newline();
                     parts.slice(1).forEach(line => consoleOutput.println(line));
                     outputStorage = [];
                 }
@@ -138,6 +139,7 @@ export function createRunCtrl({
                 clearDots();
                 const msg = String(e.data.error || 'Unknown error');
                 consoleOutput.lnerrln(msg);
+
                 finishRun(localRunId);
             }
         };
@@ -146,6 +148,7 @@ export function createRunCtrl({
             clearDots();
             consoleOutput.clearline();
             consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
+            consoleOutput.errln(`Please reload the page.`);
             finishRun(localRunId);
         };
     }
@@ -161,35 +164,33 @@ export function createRunCtrl({
         warningStorage = [];
         hadFlushOutput = false;
 
-        // Start worker and schedule dots (only if still silent after 75ms)
         worker = new Worker(workerPath);
         attachWorkerHandlers(localRunId);
 
         worker.postMessage({ type: 'run', code: getCode() });
 
-        // Always transition to stop button after a short delay
+        // transition to stop button and show dots (after timeout)
         setTimeout(() => {
             if (isRunning && localRunId === runId) {
                 onStateChange(true);
+                if (!hadFlushOutput) startDots();
             }
         }, 100);
-
-        runningTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId && !hadFlushOutput) {
-                startDots();
-            }
-        }, 75);
     }
 
     function stop() {
+
         if (!isRunning || !worker) {
             consoleOutput.errln('No running execution to stop');
             return;
         }
+
+        try { worker.postMessage({ type: 'stop' }); } catch {}
+
         clearDots();
         consoleOutput.errln('Execution stopped');
-        try { worker.postMessage({ type: 'stop' }); } catch {}
-        // Force-stop fallback
+
+        // force-stop fallback
         setTimeout(() => {
             if (!worker) return;
             try { worker.terminate(); } catch {}
@@ -203,8 +204,12 @@ export function createRunCtrl({
     function sendUserInput(text) {
         worker.postMessage({ type: 'input_response', value: text });
 
-        rearmDots();
+        if (runningTimer) clearTimeout(runningTimer);
+        hadFlushOutput = false;
+        runningTimer = setTimeout(() => {
+            if (isRunning && !dotsShown && !hadFlushOutput) startDots();
+        }, 75);
     }
 
-    return { run, stop, sendUserInput, isRunning: () => isRunning };
+    return { run, stop, sendUserInput, isRunning: () => isRunning, isTerminalLocked: () => terminalLocked };
 }
