@@ -374,6 +374,10 @@ body.dragging {
     padding: 8px 16px;
     transition: all 0.2s ease;
 }
+.btn.run:hover {
+    background: var(--green-accent);
+    color: white;
+}
 .btn.stop {
     border: 2px solid var(--red);
     background: var(--panel);
@@ -381,6 +385,10 @@ body.dragging {
     font-weight: 600;
     padding: 8px 16px;
     transition: all 0.2s ease;
+}
+.btn.stop:hover {
+    background: var(--red);
+    color: white;
 }
 
 /* utiltiy bar */
