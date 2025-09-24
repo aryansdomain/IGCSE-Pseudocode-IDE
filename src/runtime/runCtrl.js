@@ -153,7 +153,6 @@ export function createRunCtrl({
     function run() {
         if (isRunning) return;
         isRunning = true;
-        onStateChange(true);
 
         const localRunId = ++runId;
 
@@ -168,8 +167,17 @@ export function createRunCtrl({
 
         worker.postMessage({ type: 'run', code: getCode() });
 
+        // Always transition to stop button after a short delay
+        setTimeout(() => {
+            if (isRunning && localRunId === runId) {
+                onStateChange(true);
+            }
+        }, 100);
+
         runningTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId && !hadFlushOutput) startDots();
+            if (isRunning && localRunId === runId && !hadFlushOutput) {
+                startDots();
+            }
         }, 75);
     }
 
