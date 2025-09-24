@@ -64,9 +64,9 @@ html, body {
    ========================================================================== */
 
 .app {
-    min-height: 100dvh;
+    height: 100dvh;
     display: grid;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto 1fr auto;
     padding: var(--gap);
 }
 
@@ -114,6 +114,47 @@ html, body {
     background: var(--splitter-bg, rgba(127,127,127,.25));
     flex: 0 0 var(--splitter-h);
     touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* grip dots on splitter */
+#splitter::before {
+    content: '';
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 2px;
+    width: 24px;
+    height: 6px;
+    background-image: 
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px),
+        radial-gradient(circle, var(--text) 1px, transparent 1px);
+    background-size: 3px 3px;
+    background-position: 
+        0px 0px, 3px 0px, 6px 0px, 9px 0px, 12px 0px, 15px 0px, 18px 0px, 21px 0px,
+        0px 3px, 3px 3px, 6px 3px, 9px 3px, 12px 3px, 15px 3px, 18px 3px, 21px 3px;
+    opacity: 0.6;
+}
+
+/* rotate dots in horizontal layout */
+#workspace.layout-horizontal #splitter::before {
+    transform: rotate(90deg);
 }
 
 #splitter:active, #splitter:focus { 
