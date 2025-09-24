@@ -361,11 +361,11 @@ body.dragging {
     cursor: pointer;
 }
 
-/* Icon Visibility */
+/* icon visibility */
 .btn.mode i[hidden],
 .btn.layout i[hidden] {display: none;}
 
-/* Run/Stop */
+/* run/stop */
 .btn.run {
     border: 2px solid var(--green-accent);
     background: var(--panel);
@@ -373,10 +373,6 @@ body.dragging {
     font-weight: 600;
     padding: 8px 16px;
     transition: all 0.2s ease;
-}
-.btn.run:hover {
-    background: var(--green-accent);
-    color: white;
 }
 .btn.stop {
     border: 2px solid var(--red);
@@ -386,12 +382,8 @@ body.dragging {
     padding: 8px 16px;
     transition: all 0.2s ease;
 }
-.btn.stop:hover {
-    background: var(--red);
-    color: white;
-}
 
-/* Utility Bar */
+/* utiltiy bar */
 .btn.settings,
 .btn.download-editor,
 .btn.mode {
@@ -412,7 +404,7 @@ body.dragging {
     transition: opacity 0.2s ease;
 }
 
-/* Close */
+/* close */
 .btn.close {
     background: none;
     border: none;
@@ -422,24 +414,17 @@ body.dragging {
     padding: 4px;
     transition: background 0.2s;
 }
-.btn.close:hover {
-    background: var(--elev);
-    transition: all 0.2s ease;
-}
 
-/* ==========================================================================
-   BUTTON HOVER
-   ========================================================================== */
-
-/* iscaling */
-.btn:hover i:not(.btn.layout i):not(.btn.mode i) {
+/* icon scaling */
+.btn:hover i:not(.btn.mode i) {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }
+.btn.mode:hover i {
+    transform: translate(-50%, -50%) scale(1.1);
+    transition: transform 0.2s ease;
+}
 
-/* color */
-.btn:hover i:not(.btn.clear:hover i) { color: var(--green-accent); }
-.btn.clear:hover i { color: var(--red); }
 
 /* ==========================================================================
    SETTINGS PANEL
