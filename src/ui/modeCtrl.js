@@ -7,7 +7,7 @@ export function initMode({
     sunIcon  = null,
     defaultMode = 'dark',
 } = {}) {
-    // Store the initial themeCtrl reference
+    // store the initial themeCtrl reference (it could change)
     let currentThemeCtrl = themeCtrl;
 
     function isLightMode() {
@@ -16,8 +16,8 @@ export function initMode({
 
     function setIcons() {
         const light = isLightMode();
-        if (moonIcon) moonIcon.hidden = !light;  // in light mode, show moon
-        if (sunIcon) sunIcon.hidden = light;      // in dark mode, show sun
+        moonIcon.hidden = !light;  // in light mode, show moon
+        sunIcon.hidden = light;    // in dark mode, show sun
         
         button.setAttribute('aria-pressed', String(light));
         button.title = light ? 'Switch to dark mode' : 'Switch to light mode';
@@ -33,8 +33,18 @@ export function initMode({
             document.documentElement.classList.remove('light');
         }
 
-        // Call themeCtrl to handle theme updates and terminal recoloring
+        // handle theme updates
         if (currentThemeCtrl) {
+            const currentTheme = currentThemeCtrl.getCurrentEditorTheme();
+            const themeInfo = currentThemeCtrl.hasTheme(currentTheme);
+            
+            // handle theme updates
+            if (mode === 'light' && themeInfo.kind === 'dark') {
+                currentThemeCtrl.setEditorTheme('github');
+            } else if (mode === 'dark' && themeInfo.kind === 'light') {
+                currentThemeCtrl.setEditorTheme('monokai');
+            }
+            
             currentThemeCtrl.updateTerminalTheme();
             currentThemeCtrl.refreshEditorChrome();
         }
@@ -46,7 +56,7 @@ export function initMode({
         setMode(isLightMode() ? 'dark' : 'light');
     }
 
-    // Initialize mode from storage or system preference
+    // init mode from storage or system preference
     let initial = null;
     try { initial = localStorage.getItem(KEY); } catch {}
     if (!initial) {
@@ -54,7 +64,7 @@ export function initMode({
         initial = prefersLight ? 'light' : defaultMode;
     }
 
-    // Apply initial mode
+    // apply initial mode
     setMode(initial);
     setIcons();
 
@@ -67,7 +77,7 @@ export function initMode({
     };
     button.addEventListener('click', onClick);
 
-    // if the OS changes
+    // if OS changes
     const mql = window.matchMedia?.('(prefers-color-scheme: light)');
     const onPref = (e) => {
         let saved = null;
