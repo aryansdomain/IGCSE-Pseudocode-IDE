@@ -14,7 +14,6 @@
     const { initSplitter } = await import('./src/ui/splitter.js');
     const { initDom, on } = await import('./src/utils/dom.js');
 
-    // collect UI refs
     const UI = initDom();
 
     // ace editor
@@ -68,7 +67,8 @@ OUTPUT greet("World")`,
     // spacing controls
     let spacingCtrl;
     if (UI.tabSpacesSlider && UI.tabSpacesValue && UI.tabSpacesInfo) {
-        // store original setTab before overriding
+
+        // store original function before overriding
         const originalSetTab = editorApis.setTab;
         
         spacingCtrl = initSpacingControls({
@@ -80,7 +80,7 @@ OUTPUT greet("World")`,
             tickSelector: '#tabSpacesSlider + .slider-ticks.tab-ticks .tick',
         });
 
-        // override editorApis.setTab to use spacing controls
+        // override builtin function
         editorApis.setTab = (n) => spacingCtrl.setTabSpaces(n);
     }
 
@@ -108,9 +108,6 @@ OUTPUT greet("World")`,
     
     // if mode changes, re-apply completers
     editor.on('changeMode', () => {editor.completers = completers.slice();} );
-
-    const Range = ace.require('ace/range').Range;
-
     editor.focus();
 
     // ------------------------ Line/Column Info ------------------------
@@ -118,8 +115,9 @@ OUTPUT greet("World")`,
         const pos = editor.getCursorPosition();
         const selText = editor.getSelectedText() || '';
         UI.lineColInfo.textContent =
-        `Ln ${pos.row + 1}, Col ${pos.column + 1}` +
-        (selText ? ` (${selText.length} selected)` : '');
+            `Ln ${pos.row + 1}, Col ${pos.column + 1}` +
+            
+            (selText ? ` (${selText.length} selected)` : '');
     }
 
     editor.session.selection.on('changeCursor', updateCursorPos);
@@ -130,7 +128,7 @@ OUTPUT greet("World")`,
     // ---------- Terminal wiring ----------
     const { initTerminal } = await import('./src/terminal/terminal.js');
     
-    // Initialize terminal with module
+    // initialize terminal
     const { terminal, writePrompt, refit } = initTerminal({
         container: UI.terminalEl,
         fontSize: 14,
@@ -140,7 +138,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const consoleOutput = createConsoleOutput(terminal);
+    const consoleOutput = createConsoleOutput(terminal, writePrompt);
     
     const modeCtrl = initMode({
         themeCtrl: null,
@@ -279,19 +277,27 @@ OUTPUT greet("World")`,
     // init repl
     let repl;
 
-    // Create run controller first; pass a callback that flips REPL into input mode.
     const runBtn = UI.runBtn;
     const runCtrl = createRunCtrl({
         consoleOutput,
         writePrompt,
         getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
-        onInputRequested: () => repl?.setAwaitingInput(true),
+        onInputRequested: () => {
+            repl?.setAwaitingInput(true);
+            repl?.focus();
+        },
         onStateChange: (running) => {
             if (!runBtn) return;
             runBtn.textContent = running ? 'Stop' : 'Run';
             runBtn.classList.toggle('run', !running);
             runBtn.classList.toggle('stop', running);
+        },
+        onLoadingChange: (loading) => {
+            try {
+                UI.terminalLoadingBar?.classList.toggle('loading', !!loading);
+                UI.terminalLoadingBar?.setAttribute('aria-hidden', loading ? 'false' : 'true');
+            } catch {}
         }
     });
     

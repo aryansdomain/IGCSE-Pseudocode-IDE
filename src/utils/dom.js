@@ -17,6 +17,7 @@ export function initDom() {
     const consolePane = byId('console-pane');
     const splitter    = byId('splitter');
     const terminalEl  = byId('terminal');
+    const terminalLoadingBar = byId('terminalLoadingBar');
     const codeEl      = byId('code');
 
     // Bars & UI
@@ -53,7 +54,7 @@ export function initDom() {
 
     return {
         // roots
-        workspace, editorPane, consolePane, splitter, terminalEl, codeEl,
+        workspace, editorPane, consolePane, splitter, terminalEl, terminalLoadingBar, codeEl,
         topbar, bottombar,
 
         // controls

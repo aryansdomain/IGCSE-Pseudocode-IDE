@@ -2,6 +2,8 @@
    CSS VARIABLES & THEMES
    ========================================================================== */
 
+/* TODO: No button should have a curved background */
+
 :root {
     --bg: #0f1117;
     --panel: #1a1a1a;
@@ -128,7 +130,7 @@ html, body {
     gap: 2px;
     width: 24px;
     height: 6px;
-    background-image: 
+    background-image: /* TODO - these are getting cut off */
         radial-gradient(circle, var(--text) 1px, transparent 1px),
         radial-gradient(circle, var(--text) 1px, transparent 1px),
         radial-gradient(circle, var(--text) 1px, transparent 1px),
@@ -151,7 +153,6 @@ html, body {
         0px 3px, 3px 3px, 6px 3px, 9px 3px, 12px 3px, 15px 3px, 18px 3px, 21px 3px;
     opacity: 0.6;
 }
-
 /* rotate dots in horizontal layout */
 #workspace.layout-horizontal #splitter::before {
     transform: rotate(90deg);
@@ -166,13 +167,12 @@ html, body {
     background: #3e444f;
 }
 
-/* Splitter orientation rules */
+/* orientation */
 #workspace.layout-vertical #splitter {
     height: var(--splitter-h);
     width: 100%;
     cursor: row-resize;
 }
-
 #workspace.layout-horizontal #splitter {
     width: var(--splitter-h);
     height: 100%;
@@ -308,7 +308,6 @@ body.dragging {
     flex-direction: row;
     height: 100%;
     min-height: 0;
-    border: 1px solid var(--border);
     border-radius: var(--radius-xs);
     flex: 1 1 auto;
     background-color: black;
@@ -318,7 +317,6 @@ body.dragging {
 .console-sidebar {
     width: 40px;
     background-color: var(--elev);
-    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -368,6 +366,18 @@ body.dragging {
 /* ==========================================================================
    TERMINAL
    ========================================================================== */
+
+/* loading bar above terminal that turns red while loading */
+.console-loadingbar {
+    height: 3px;
+    background: transparent;
+    width: 100%;
+    flex: 0 0 auto;
+    display: block;
+}
+.console-loadingbar.loading {
+    background: var(--red);
+}
 
 #terminal {
     width: 100%;
@@ -507,7 +517,6 @@ body.dragging {
     max-width: 500px;
     background: var(--panel);
     border-radius: var(--radius);
-    border: 1px solid var(--border);
 }
 
 .settings-header {
@@ -858,7 +867,6 @@ body.dragging {
 .light .console-prompt {
     background-color: #ffffff;
     color: #24292f;
-    border-top-color: #d0d7de;
 }
 
 .light .prompt-text .command-text {
