@@ -86,6 +86,10 @@ export function initThemeControls({
         editorApis.setTheme(name);
     }
 
+    function getCurrentEditorTheme() {
+        return editor.getTheme().replace('ace/theme/', '');
+    }
+
     // UI event listeners
     editorThemeSelect?.addEventListener('change', (e) => {
         const themeName = String(e.target.value || '').replace('ace/theme/', '');
@@ -105,6 +109,7 @@ export function initThemeControls({
 
     return { 
         setEditorTheme, 
+        getCurrentEditorTheme,
         refreshEditorChrome, 
         updateTerminalTheme,
         hasTheme, 
