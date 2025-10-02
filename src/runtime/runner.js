@@ -10,7 +10,7 @@ self.readInput = function () {
         const handle = (e) => {
             if (e.data && e.data.type === 'input_response') {
                 self.removeEventListener('message', handle);
-                resolve(String(e.data.value || ''));
+                resolve(String(e.data.data || e.data.value || ''));
             }
         };
         self.addEventListener('message', handle);

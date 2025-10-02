@@ -5,6 +5,7 @@ export function createRunCtrl({
     workerPath = 'runner.js',
     onInputRequested = () => {},
     onStateChange = () => {},
+    onLoadingChange = () => {},
 } = {}) {
 
     // states
@@ -17,52 +18,22 @@ export function createRunCtrl({
     let warningStorage = [];
     let hadFlushOutput = false;
 
-
-    // -------------------------------- RUNNING DOTS --------------------------------
-    let dotsShown = false;
-    let runningTimer = null;
-    let dotTimer = null;
-    let dotPhase = 0;
+    // ------------------------------- RUNTIME STATE -------------------------------
     let terminalLocked = false;
+    let awaitingInput = false;
+    let loadingTimer = null;
+    const setLoading = (v) => { try { onLoadingChange(!!v); } catch {} };
 
-    const startDots = () => {
-        if (dotsShown) return;
-        dotsShown = true;
-        terminalLocked = true;
-
-        // print warnings above dots
-        if (warningStorage.length) {
-            warningStorage.forEach(msg => consoleOutput.warnln(msg));
-            warningStorage = [];
-            consoleOutput.newline();
-        }
-
-        consoleOutput.newline();
-
-        dotPhase = 0;
-        dotTimer = setInterval(() => {
-            dotPhase = (dotPhase + 1) % 4;
-            consoleOutput.clearline();
-            consoleOutput.print('\x1b[32m' + '.'.repeat(dotPhase));
-            consoleOutput.print('\x1b[0m'); // reset
-        }, 300);
+    const clearLoadingTimer = () => {
+        if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null; }
     };
-
-    const clearDots = () => {
-        if (runningTimer) { clearTimeout(runningTimer); runningTimer = null; }
-        if (dotTimer)     { clearInterval(dotTimer);   dotTimer = null; }
-        if (dotsShown) {
-            consoleOutput.clearline(); // clear dots
-            dotsShown = false;
-            terminalLocked = false;
-        }
-    };
-
 
     function finishRun(localRunId) {
         if (localRunId !== runId) return;  // stale
         isRunning = false;
         onStateChange(false);
+        clearLoadingTimer();
+        setLoading(false);
 
         try { worker && worker.terminate(); } catch {}
         worker = null;
@@ -76,7 +47,7 @@ export function createRunCtrl({
         worker.onmessage = (e) => {
             const { type } = e.data || {};
 
-            if (type === 'flush') {
+                   if (type === 'flush') {
 
                 // flush all output
                 const s = String(e.data.output || '');
@@ -91,52 +62,69 @@ export function createRunCtrl({
 
             } else if (type === 'input_request') {
 
-                // before switching to input mode, show any warnings/output
-                clearDots();
+                // switch to input mode
+                awaitingInput = true;
+                terminalLocked = false;
+                clearLoadingTimer();
+                setLoading(false);
 
+                // print pending stuff
                 if (warningStorage.length) {
                     warningStorage.forEach(msg => consoleOutput.warnln(msg));
                     warningStorage = [];
                 }
-
                 if (outputStorage.length) {
                     const combined = outputStorage.join('');
                     const parts = combined.split('\n');
-
-                    parts.slice(1).forEach(line => consoleOutput.lnprint(line));
+                    parts.forEach((line, idx) => {
+                        if (idx !== parts.length - 1) consoleOutput.println(line);
+                        else consoleOutput.print(line);
+                    });
                     outputStorage = [];
                 }
 
                 onInputRequested();
 
             } else if (type === 'done') {
-                const hadDots = dotsShown;
-                clearDots();
+                awaitingInput = false;
+                terminalLocked = false;
+                clearLoadingTimer();
+                setLoading(false);
 
-                // if no dots showed, print warnings now
-                if (!hadDots && warningStorage.length) {
+                // print warnings
+                if (warningStorage.length) {
                     warningStorage.forEach(msg => consoleOutput.warnln(msg));
                     warningStorage = [];
                 }
 
                 // output stored output
-                if (outputStorage.length) {
-                    const combined = outputStorage.join('');
-                    const parts = combined.split('\n');
+                const combinedFromFlush = outputStorage.join('');
+                const combined = combinedFromFlush.length ? combinedFromFlush : String(e.data.output || '');
+                const parts = combined ? combined.split('\n') : [];
 
-                    if (!hadDots) consoleOutput.newline();
-                    parts.slice(1).forEach(line => consoleOutput.println(line));
-                    outputStorage = [];
+                if (parts.length) {
+                    parts.forEach((line, idx) => { 
+                        if (idx === 0) {
+                            if (parts.length === 1) consoleOutput.println(line);
+                        } else consoleOutput.println(line);
+                    });
                 }
+                outputStorage = [];
 
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
-                clearDots();
+                awaitingInput = false;
+                terminalLocked = false;
+                clearLoadingTimer();
+                setLoading(false);
                 finishRun(localRunId);
 
             } else if (type === 'error') {
-                clearDots();
+                awaitingInput = false;
+                terminalLocked = false;
+                clearLoadingTimer();
+                setLoading(false);
                 const msg = String(e.data.error || 'Unknown error');
                 consoleOutput.lnerrln(msg);
 
@@ -145,8 +133,9 @@ export function createRunCtrl({
         };
 
         worker.onerror = (e) => {
-            clearDots();
-            consoleOutput.clearline();
+            terminalLocked = false;
+            clearLoadingTimer();
+            setLoading(false);
             consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
             consoleOutput.errln(`Please reload the page.`);
             finishRun(localRunId);
@@ -156,6 +145,8 @@ export function createRunCtrl({
     function run() {
         if (isRunning) return;
         isRunning = true;
+        awaitingInput = false;
+        terminalLocked = true;
 
         const localRunId = ++runId;
 
@@ -168,18 +159,23 @@ export function createRunCtrl({
         attachWorkerHandlers(localRunId);
 
         worker.postMessage({ type: 'run', code: getCode() });
-
-        // transition to stop button and show dots (after timeout)
+        
+        // change run button to "Stop" after a delay
         setTimeout(() => {
             if (isRunning && localRunId === runId) {
                 onStateChange(true);
-                if (!hadFlushOutput) startDots();
+            }
+        }, 100);
+        
+        // show loading bar after a delay
+        loadingTimer = setTimeout(() => {
+            if (isRunning && localRunId === runId && !hadFlushOutput) {
+                setLoading(true);
             }
         }, 100);
     }
 
     function stop() {
-
         if (!isRunning || !worker) {
             consoleOutput.errln('No running execution to stop');
             return;
@@ -187,29 +183,33 @@ export function createRunCtrl({
 
         try { worker.postMessage({ type: 'stop' }); } catch {}
 
-        clearDots();
-        consoleOutput.errln('Execution stopped');
+        consoleOutput.lnerrln('Execution stopped');
 
-        // force-stop fallback
-        setTimeout(() => {
-            if (!worker) return;
-            try { worker.terminate(); } catch {}
-            worker = null;
-            clearDots();
+        try { worker.terminate(); } catch {}
+        worker = null;
+        terminalLocked = false;
+        clearLoadingTimer();
+        setLoading(false);
 
-            finishRun(runId);
-        }, 600);
+        finishRun(runId);
     }
 
-    function sendUserInput(text) {
-        worker.postMessage({ type: 'input_response', value: text });
+    function provideInput(line) {
 
-        if (runningTimer) clearTimeout(runningTimer);
-        hadFlushOutput = false;
-        runningTimer = setTimeout(() => {
-            if (isRunning && !dotsShown && !hadFlushOutput) startDots();
+        // lock again while program runs
+        awaitingInput = false;
+        terminalLocked = true;
+        worker.postMessage({ type: 'input_response', data: String(line) });
+        
+        // Show loading bar after a delay for program input
+        loadingTimer = setTimeout(() => {
+            if (isRunning) {
+                setLoading(true);
+            }
         }, 75);
     }
 
-    return { run, stop, sendUserInput, isRunning: () => isRunning, isTerminalLocked: () => terminalLocked };
+    window.runCtrlProvideInput = provideInput;
+
+    return { run, stop, provideInput, isRunning: () => isRunning, isTerminalLocked: () => terminalLocked };
 }

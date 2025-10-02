@@ -1,29 +1,64 @@
 async function interpret(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
-    const OUTPUT_BUFFER = [];
-    const warnedKeywords = new Set();
+    const OUTPUT_LOG = [];
     let __capSummaryEmitted = false;
     const CAPITALIZATION_SEEN = new Set();
     const constants = Object.create(null);
     const globals   = Object.create(null);
 
     // clear tracking
-    warnedKeywords.clear();
     CAPITALIZATION_SEEN.clear();
     __capSummaryEmitted = false;
 
-    // output error
+    const PSC_KEYWORDS = new Set([
+        'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
+        'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
+        'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
+        'INPUT','OUTPUT','DECLARE','CONSTANT',
+        'TRUE','FALSE','AND','OR','NOT',
+        'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY',
+        'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
+    ]);
+
+    const NAME_KEYWORD_SEEN = new Set();
+    function assertNotKeyword(id) {
+        const key = String(id).toUpperCase();
+        if (PSC_KEYWORDS.has(key)) {
+            if (!NAME_KEYWORD_SEEN.has(key)) {
+                throwWarning(`Warning: "${id}" is a keyword. Do not use keywords as identifiers.`);
+                NAME_KEYWORD_SEEN.add(key);
+            }
+        }
+    }
+
+    function isLiteral(text){
+        const t = String(text ?? '').trim();
+        return /^-?\d+$/.test(t)                                 // INTEGER
+            || /^-?\d+\.\d+$/.test(t)                            // REAL (digit both sides)
+            || /^'(?:\\.|[^'\\])'$/.test(t)                      // CHAR
+            || /^"(?:\\.|[^"\\])*"$/.test(t)                     // STRING
+            || /^(?:TRUE|FALSE)$/i.test(t);                      // BOOLEAN
+    }
+    function expectBoolean(v, ctx){
+        if (typeof v !== 'boolean') throwErr('', `${ctx} must be BOOLEAN`, __LINE_NUMBER);
+        return v;
+    }
+
+    function throwWarning(text) {
+        if (isWorkerEnv()) {
+            try { self.postMessage({ type: 'warning', message: text }); } catch {}
+        }
+    }
     function throwErr(message, name, line) {
         const e = new Error(name + message);
         e.line = line;
         throw e;
     }
 
-    function emitWarning(text) {
-        if (typeof self !== 'undefined' && self.postMessage) {
-            try { self.postMessage({ type: 'warning', message: text }); } catch {}
-        }
+    // Worker vs window check: only postMessage in a worker
+    function isWorkerEnv() {
+        return (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
     }
 
     // remove all comments
@@ -56,17 +91,8 @@ async function interpret(code) {
     // check if keywords are capitalized
     function checkCapitalization(text, lineNumber) {
         const scan = stripStringsAndComments(text);
-        const KEYWORDS = [
-            'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
-            'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
-            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
-            'INPUT','OUTPUT','DECLARE','CONSTANT',
-            'TRUE','FALSE','AND','OR','NOT',
-            'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY',
-            'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
-        ]
       
-        for (const kw of KEYWORDS) {
+        for (const kw of PSC_KEYWORDS) {
             // whole-word match, case-insensitive
             const re = new RegExp(`\\b${kw}\\b`, 'gi');
             let m;
@@ -76,7 +102,7 @@ async function interpret(code) {
                     if (!CAPITALIZATION_SEEN.has(sig)) {
                         CAPITALIZATION_SEEN.add(sig);
                         if (!__capSummaryEmitted) {
-                            emitWarning(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
+                            throwWarning(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
                             __capSummaryEmitted = true;
                         }
                     }
@@ -96,11 +122,12 @@ async function interpret(code) {
     }
     function declareName(scope, name) {
         ensureDeclSet(scope);
-        scope.__decl.add(name);
+        scope.__decl.add(String(name));
     }
     function isDeclared(scope, name) {
+        const N = String(name);
         for (let s = scope; s; s = Object.getPrototypeOf(s)) {
-            if (s.__decl && s.__decl.has(name)) return true;
+            if (s.__decl && s.__decl.has(N)) return true;
         }
         return false;
     }
@@ -113,15 +140,15 @@ async function interpret(code) {
     }
     function setType(scope, name, type) {
         ensureTypeMap(scope);
-        scope.__types[name] = String(type || '').toUpperCase();
+        scope.__types[String(name)] = String(type || '').toUpperCase();
     }
     function getType(scope, name) {
+        const N = String(name);
         for (let s = scope; s; s = Object.getPrototypeOf(s)) {
-            if (s.__types && s.__types[name]) return s.__types[name];
+            if (s.__types && s.__types[N]) return s.__types[N];
         }
         return undefined;
     }
-    const NUMERIC_TYPES = new Set(['INTEGER', 'REAL']);
 
     // destination type helpers
     function getDestTypeForLValue(lv, scope) {
@@ -133,7 +160,7 @@ async function interpret(code) {
     function assignChecked(lv, scope, rhsExpr, value, isInput) {
         const destType = getDestTypeForLValue(lv, scope);
         if (!destType) {
-            throwErr('Undeclared variable ', lv.name, __LINE_NUMBER);
+            throwErr(lv.name, 'Undeclared variable ', __LINE_NUMBER);
         }
 
         // accept numeric strings like "0", "3.5", "-2e3"
@@ -156,13 +183,10 @@ async function interpret(code) {
         }
         if (typeof value === 'boolean') return 'BOOLEAN';
         if (typeof value === 'string') {
-            // CHAR vs STRING
             if (rhsExpr && typeof rhsExpr === 'string') {
                 if (isSingleQuoted(rhsExpr)) return 'CHAR';
                 if (isDoubleQuoted(rhsExpr)) return 'STRING';
             }
-            // fallback - one letter: char
-            if (value.length === 1) return 'CHAR';
             return 'STRING';
         }
         if (typeof value === 'object' && Array.isArray(value)) return 'ARRAY';
@@ -217,8 +241,7 @@ async function interpret(code) {
 
     // type checking
     function isReal(src) {
-        return /^\s*[+-]?(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?\s*$/.test(src)
-            || /^\s*[+-]?\d+(?:[eE][+-]?\d+)\s*$/.test(src);
+        return /^\s*[+-]?\d+\.\d+\s*$/.test(src);
     }
     function isSingleQuoted(src) {
         return /^\s*'(?:\\.|[^'\\])*'\s*$/.test(src);
@@ -236,7 +259,27 @@ async function interpret(code) {
     // output buffer
     function out(values) {
         const s = values.map(v => toString(v)).join("");
-        OUTPUT_BUFFER.push(s);
+        OUTPUT_LOG.push(s);
+        // Append per line when running in a Worker; never overwrite prior lines
+        if (isWorkerEnv()) {
+            try { self.postMessage({ type: 'append', line: s }); } catch {}
+        }
+    }
+
+    // Render one OUTPUT argument with type-aware formatting when possible.
+    function renderForOutput(exprText, value, scope) {
+        // variable or array element?
+        const varMatch = exprText.match(/^\s*([A-Za-z][A-Za-z0-9]*)(?:\s*\[.*\])?\s*$/);
+        if (varMatch) {
+            const name = varMatch[1];
+            const t = getType(scope, name);
+            if (t === 'REAL' && typeof value === 'number') {
+                if (Number.isInteger(value)) {
+                    return value.toFixed(1);
+                } else return String(value);
+            }
+        }
+        return toString(value);
     }
 
     // parse input value
@@ -248,7 +291,7 @@ async function interpret(code) {
         .trim();
 
         // numeric? -> number
-        if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(cleaned)) {
+        if (/^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(cleaned)) {
             return Number(cleaned);
         }
         // booleans
@@ -264,7 +307,7 @@ async function interpret(code) {
         const t = type.toUpperCase();
         if (t === 'INTEGER' || t === 'REAL') return 0;
         if (t === 'BOOLEAN') return false;
-        if (t === 'CHAR') return '';
+        if (t === 'CHAR') return ' ';
         if (t === 'STRING') return '';
         return undefined;
     }
@@ -342,7 +385,10 @@ async function interpret(code) {
     }
       
     const builtins = {
-        RANDOM: () => Math.random(),
+        RANDOM: () => {
+            const K = 1_000_000;
+            return Math.floor(Math.random() * (K + 1)) / K; // allows 0 and 1
+        },
         
         ROUND: (x, places) => {
             assertNumber(x, 'ROUND(x)');
@@ -364,8 +410,10 @@ async function interpret(code) {
             const str = assertString(s, 'SUBSTRING argument');
             assertInteger(start, 'SUBSTRING start');
             assertInteger(len, 'SUBSTRING length');
-            const st = Math.max(1, start);
-            const ln = Math.max(0, len);
+            if (start <= 0 || len <= 0) throwErr('', 'SUBSTRING start and length must be positive', __LINE_NUMBER);
+            const st = start;
+            const ln = len;
+
             return str.substring(st - 1, st - 1 + ln);
         },
         
@@ -562,33 +610,6 @@ async function interpret(code) {
         }
         return s;
     }
-    
-    // check that arithmetic operators have numeric operands
-    function validateArithmeticOperators(expr) {
-        // Check for +, -, *, /, ^ operators
-        const operators = ['+', '-', '*', '/', '^'];
-        for (const op of operators) {
-            const regex = new RegExp(`([^+\\-*/=<>!&|^\\s]+)\\s*\\${op}\\s*([^+\\-*/=<>!&|^\\s]+)`, 'g');
-            let match;
-            while ((match = regex.exec(expr)) !== null) {
-                const left = match[1].trim();
-                const right = match[2].trim();
-
-                if (op === '/' && right == 0) {
-                    throwErr('', `Error: Division by 0.`, __LINE_NUMBER);
-                }
-                
-                // Skip if it's already a function call or complex expression
-                if (left.includes('(') || right.includes('(') || left.includes('[') || right.includes('[')) {
-                    continue;
-                }
-                
-                if (!isNumericExpr(left) || !isNumericExpr(right)) {
-                    throwErr('', `Arithmetic operator ${op} requires numeric operands.\r\nDid you mean to concatenate strings? Use commas instead.`, __LINE_NUMBER);
-                }
-            }
-        }
-    }
 
     // replace commas with + (string concatenation)
     function replaceCommas(s) {
@@ -636,6 +657,66 @@ async function interpret(code) {
         return result;
     }
 
+    // numeric ops to enforce numeric types & trap division by 0
+    function num(x, ctx) { if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('', `${ctx} requires a finite number`, __LINE_NUMBER); return x; }
+    const NUM = {
+        ADD: (a,b) => num(a,'+ operation') + num(b,'+ operation'),
+        SUB: (a,b) => num(a,'- operation') - num(b,'- operation'),
+        MUL: (a,b) => num(a,'* operation') * num(b,'* operation'),
+        DIV: (a,b) => {
+            a = num(a,'/ operation');
+            b = num(b,'/ operation');
+            if (b===0) throwErr('', 'Division by 0', __LINE_NUMBER);
+            return a/b;
+        }
+    };
+
+    // comparison helpers enforcing type rules
+    const CMP = {
+        EQ(a, b) {
+            if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b);
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            return a === b;
+        },
+        NE(a, b) {
+            if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) !== (!!b);
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            return a !== b;
+        },
+        LT(a, b) {
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            if (typeof a === 'number') return a < b;
+            if (typeof a === 'string') return a < b;
+            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+        },
+        GT(a, b) {
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            if (typeof a === 'number') return a > b;
+            if (typeof a === 'string') return a > b;
+            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+        },
+        LE(a, b) {
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            if (typeof a === 'number') return a <= b;
+            if (typeof a === 'string') return a <= b;
+            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+        },
+        GE(a, b) {
+            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            if (typeof a === 'number') return a >= b;
+            if (typeof a === 'string') return a >= b;
+            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+        },
+    };
+
+    function typeName(v){
+        if (typeof v === 'number') return Number.isInteger(v) ? 'INTEGER' : 'REAL';
+        if (typeof v === 'boolean') return 'BOOLEAN';
+        if (typeof v === 'string')  return 'STRING';
+        if (Array.isArray(v))       return 'ARRAY';
+        return 'UNKNOWN';
+    }
+
     // ------------------------ Expression evaluation ------------------------
     async function evalExpr(expr, scope) {
 
@@ -662,22 +743,131 @@ async function interpret(code) {
         s = s.replace(/\bNOT\b/g, '!');
 
         // not-equal
-        s = s.replace(/<>/g, '!=');
-
-        validateArithmeticOperators(s);
-
-        // commas + for string concatenation (but not inside function calls)
-        s = replaceCommas(s);
+        s = s.replace(/<>/g, '!==');
 
         // power
         s = replacePowerOperators(s);
 
+        // div and mod
+        s = replaceBinaryWordOperator(s, 'DIV', '__BUILTIN_DIV');
+        s = replaceBinaryWordOperator(s, 'MOD', '__BUILTIN_MOD');
+
+        // arithmetic operations
+        s = replaceBinarySymbolOperator(s, '*', '__NUM.MUL');
+        s = replaceBinarySymbolOperator(s, '/', '__NUM.DIV');
+        s = replaceBinarySymbolOperator(s, '+', '__NUM.ADD');
+        s = replaceBinarySymbolOperator(s, '-', '__NUM.SUB');
+
         // comparison
-        s = s.replace(/(?<![<>])=/g,'==');
+        s = s.replace(/(?<![<>])=/g,'===');
+
+        function replaceBinarySymbolOperator(src, symbol, callee) {
+            const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
+            function grabLeft(str, opStart) {
+                let i = opStart - 1;
+                while (i >= 0 && str[i] === ' ') i--;
+                if (str[i] === '\uE001') {
+                    let j = i - 1;
+                    while (j >= 0 && str[j] !== '\uE000') j--;
+                    const start = Math.max(0, j);
+                    return { start, text: str.slice(start, opStart).trim() };
+                }
+                if (str[i] === ')') {
+                    let depth = 1;
+                    i--;
+                    while (i >= 0 && depth > 0) {
+                        if (str[i] === ')') depth++;
+                        else if (str[i] === '(') depth--;
+                        i--;
+                    }
+                    let j = i;
+                    while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
+                    const start = j + 1; // start at the function/prop name
+                    return { start, text: str.slice(start, opStart).trim() };
+                }
+                if (str[i] === ']') {
+                    let depth = 1;
+                    i--;
+                    while (i >= 0 && depth > 0) {
+                        if (str[i] === ']') depth++;
+                        else if (str[i] === '[') depth--;
+                        i--;
+                    }
+                    let j = i;
+                    while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
+                    const start = j + 1; // start at the function/prop name
+                    return { start, text: str.slice(start, opStart).trim() };
+                }
+                while (i >= 0 && isIdChar(str[i])) i--;
+                if (i >= 0 && (str[i] === '+' || str[i] === '-') && (i === 0 || /\s|\(|\[/.test(str[i-1]))) i--;
+                const start = i + 1;
+                return { start, text: str.slice(start, opStart).trim() };
+            }
+            function grabRight(str, opEnd) {
+                let i = opEnd + 1;
+                while (i < str.length && str[i] === ' ') i++;
+                const start = i;
+                if (str[i] === '\uE000') {
+                    let j = i + 1;
+                    while (j < str.length && str[j] !== '\uE001') j++;
+                    j = Math.min(str.length, j + 1);
+                    return { end: j, text: str.slice(start, j).trim() };
+                }
+                if (str[i] === '(') {
+                    let depth = 1;
+                    i++;
+                    while (i < str.length && depth > 0) {
+                        if (str[i] === '(') depth++;
+                        else if (str[i] === ')') depth--;
+                        i++;
+                    }
+                    return { end: i, text: str.slice(start, i).trim() };
+                }
+                if (str[i] === '[') {
+                    let depth = 1;
+                    i++;
+                    while (i < str.length && depth > 0) {
+                        if (str[i] === '[') depth++;
+                        else if (str[i] === ']') depth--;
+                        i++;
+                    }
+                    return { end: i, text: str.slice(start, i).trim() };
+                }
+                if (str[i] === '+' || str[i] === '-') i++;
+                while (i < str.length && isIdChar(str[i])) i++;
+                if (i < str.length && str[i] === '(') {
+                    let depth = 1;
+                    i++;
+                    while (i < str.length && depth > 0) {
+                        if (str[i] === '(') depth++;
+                        else if (str[i] === ')') depth--;
+                        i++;
+                    }
+                }
+                return { end: i, text: str.slice(start, i).trim() };
+            }
+
+            let out = src;
+            let idx = out.indexOf(symbol);
+            while (idx !== -1) {
+                const left = grabLeft(out, idx);
+                const right = grabRight(out, idx + symbol.length - 1);
+                out = out.slice(0, left.start) + `${callee}(${left.text}, ${right.text})` + out.slice(right.end);
+                idx = out.indexOf(symbol);
+            }
+            return out;
+        }
+
+        s = replaceBinarySymbolOperator(s, '!==', '__CMP.NE');
+        s = replaceBinarySymbolOperator(s, '===', '__CMP.EQ');
+        s = replaceBinarySymbolOperator(s, '<=',  '__CMP.LE');
+        s = replaceBinarySymbolOperator(s, '>=',  '__CMP.GE');
+        s = replaceBinarySymbolOperator(s, '<',   '__CMP.LT');
+        s = replaceBinarySymbolOperator(s, '>',   '__CMP.GT');
 
         // arrays A[i] / A[i,j]
         s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\[\s*([^\]\[]+?)\s*(?:,\s*([^\]\[]+?)\s*)?\]/g,
-            (m, name, i1, i2) => `__AG('${name}', ${i1}${i2 ? `, ${i2}` : ''})`);
+            (m, name, i1, i2) => `__AG("${name}", ${i1}${i2 ? `, ${i2}` : ''})`);
 
         // calls: builtins vs user functions
         s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\(/g, (m, name, off, str) => {
@@ -685,32 +875,38 @@ async function interpret(code) {
             if (off > 0 && str[off-1] === '.') return m;
             const U = name.toUpperCase();
             if (U === 'TRUE' || U === 'FALSE') return m;
+
+            if (U === 'DIV' || U === 'MOD') {
+                throwErr('', `Use a ${U} b form`, __LINE_NUMBER);
+            }
             if (builtins[U]) return `__BUILTIN_${U}(`;
+
             return `__CALL('${name}',`;
         });
 
-        // div and mod
-        s = replaceBinaryWordOperator(s, 'DIV', '__DIV');
-        s = replaceBinaryWordOperator(s, 'MOD', '__MOD');
-
         // replace vars that conflict with keywords
-        const jsKeywords = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
-        const pscKeywords = ['procedure', 'function', 'returns', 'endprocedure', 'endfunction', 'declare', 'constant', 'array', 'of', 'input', 'output', 'call', 'if', 'then', 'else', 'endif', 'case', 'endcase', 'for', 'to', 'step', 'next', 'while', 'do', 'endwhile', 'repeat', 'until', 'return', 'true', 'false', 'div', 'mod', 'and', 'or', 'not', 'integer', 'real', 'boolean', 'char', 'string'];
+        const js_keywords = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
         
         s = s.replace(
             /\b([A-Za-z][A-Za-z0-9]*)\b/g,
             (match, name) => {
-                if (jsKeywords.includes(name.toLowerCase())) {
+                if (js_keywords.includes(name.toLowerCase())) {
                     return `__SCOPE["${name}"]`;
                 }
-                if (pscKeywords.includes(name.toLowerCase())) {
-                    if (!warnedKeywords.has(name.toLowerCase())) {
-                        emitWarning(`Warning: Variable "${name}" is the same as a keyword, please change the variable name`);
-                        warnedKeywords.add(name.toLowerCase());
+
+                const low = name.toLowerCase();
+                if (low === 'true' || low === 'false') return match; // already boolean
+
+                if ([...PSC_KEYWORDS].some(k => k.toLowerCase() === low)) {
+                    const key = name.toUpperCase();
+                    if (!NAME_KEYWORD_SEEN.has(key)) {
+                        throwWarning(`Warning: Variable "${name}" is the same as a keyword; please rename it.`);
+                        NAME_KEYWORD_SEEN.add(key);
                     }
                     return `__SCOPE["${name}"]`;
                 }
                 return match;
+
             }
         );
 
@@ -718,22 +914,20 @@ async function interpret(code) {
         s = s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
 
         const IDENT = /^[A-Za-z][A-Za-z0-9]*$/;
+
         const SAFE_GLOBALS = new Set(['Math']); // allow Math.pow
 
         const scopeProxy = new Proxy(scope, {
             has: (o, k) => {
-                // with() will ask about symbol keys like Symbol.unscopables
-                if (typeof k !== 'string') return false;         // let real global handle symbols
-                if (SAFE_GLOBALS.has(k))   return false;         // fall through to real global
-                if (IDENT.test(k))         return true;          // force our getter to run
+                if (typeof k !== 'string')      return false;         // let real global handle symbols
+                if (SAFE_GLOBALS.has(k))        return false;         // fall through to real global
+                if (IDENT.test(k))              return true;          // force our getter to run
                 return (k in o);
             },
             get: (o, k) => {
                 if (typeof k !== 'string') return o[k];          // pass symbols through
                 if (IDENT.test(k)) {
-                    if (!isDeclared(o, k)) {
-                        throwErr('', 'Undeclared variable ' + k, __LINE_NUMBER);
-                    }
+                    if (!isDeclared(o, k)) throwErr('', 'Undeclared variable ' + k, __LINE_NUMBER);
                     return o[k];
                 }
                 return o[k];
@@ -741,7 +935,8 @@ async function interpret(code) {
         });
 
         const fn = Function(
-            '__SCOPE', '__DIV', '__MOD', '__CALL', '__AG', ...Object.keys(builtins).map(k => `__BUILTIN_${k}`),
+            '__SCOPE', '__DIV', '__MOD', '__CALL', '__AG', '__NUM', '__CMP',
+            ...Object.keys(builtins).map(k => `__BUILTIN_${k}`),
             `with (__SCOPE) { return (${s}); }`
         );
 
@@ -751,7 +946,17 @@ async function interpret(code) {
                 scopeProxy,
                 builtins.DIV,
                 builtins.MOD,
-                async (name, ...args) => await callFunction(name, args),
+                async (name, ...args) => {
+                    const def = funcs[name];
+                    const ret = await callFunction(name, args);
+                    if (def && def.returns) {
+                        const want = String(def.returns || '').toUpperCase();
+                        if (want) {
+                            checkAssignCompatible(want, '', ret, false);
+                        }
+                    }
+                    return ret;
+                },
                 (name, ...idx) => {
                     if (!isDeclared(scope, name)) {
                         const e = new Error('Undeclared array ' + name);
@@ -760,6 +965,8 @@ async function interpret(code) {
                     }
                     return arrGet(scope[name], ...idx);
                 },
+                NUM,
+                CMP,
                 ...builtinFns
             );
         } catch (e) {
@@ -778,7 +985,8 @@ async function interpret(code) {
 
         const m = ref.match(/^([A-Za-z][A-Za-z0-9]*)(\s*\[(.*)\])?$/);
         if (!m) throwErr(ref, 'Invalid identifier: ', __LINE_NUMBER);
-        const name = m[1];
+        const name = m[1]
+
         if (m[2]) {
 
             // check if array is declared
@@ -874,15 +1082,17 @@ async function interpret(code) {
     // first pass: extract procedures/functions and store their bodies
     function extractDefs(lines) {
         const main = [];
+        let sawMain = false;
+
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
             const s = cleanLine(raw);
             if (!s) continue;
             
-            // Check capitalization for this line before processing
             checkCapitalization(raw, i + 1);
             
             let m;
+
             if ((m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
                 const params = (m[2] || '').trim();
@@ -898,6 +1108,8 @@ async function interpret(code) {
                 funcs[name] = { params, returns, body: block };
                 i = next; continue;
             }
+
+            sawMain = true;
             main.push({ line: i + 1, content: raw });
         }
         return main;
@@ -962,12 +1174,14 @@ async function interpret(code) {
             // Check capitalization and output warnings
             checkCapitalization(content, currentLine);
 
-
             // ARRAY declare: DECLARE A : ARRAY[1:10] OF INTEGER  or  DECLARE M : ARRAY[1:3, 1:3] OF CHAR
             if ((m = s.match(/^DECLARE\s+([A-Za-z][A-Za-z0-9]*)\s*:\s*ARRAY\s*\[([^\]]+)\]\s*OF\s*([A-Za-z]+)\s*$/i))) {
                 const name = m[1];
+                assertNotKeyword(name);
+
                 const dims = m[2].split(',').map(x => x.trim());
                 const type = m[3];
+
                 if (dims.length === 1) {
                     const [l, u] = dims[0].split(':').map(Number);
                     scope[name] = makeArray(l, u, null, null, defaultForType(type));
@@ -981,7 +1195,7 @@ async function interpret(code) {
                 continue;
             }
 
-            // CALL Procedure(args?)
+            // CALL a PROCEDURE
             if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
                 const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
@@ -990,14 +1204,29 @@ async function interpret(code) {
             }
 
             // IF ... THEN ... (single-line form)
-            if ((m = s.match(/^IF\s+(.+)\s+THEN\s+(.+)$/i))) {
+            if ((m = s.match(/^IF\s+(.+)\s+THEN\s*$/i))) {
+                const condExpr = m[1];
                 
-                const cond = m[1];
-                const thenStmt = m[2];
-                
-                if (toBool(await evalExpr(cond, scope))) {
-                    await runLine(thenStmt, scope, allowReturn);
+                // collect THEN..ENDIF (like the existing two-line logic)
+                const thenBlock = [];
+                const elseBlock = [];
+                let inElse = false, depth = 0;
+                for (k = i + 1; k < blockLines.length; k++) {
+                    const rawK = blockLines[k];
+                    const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
+                    const c    = cleanLine(txt);
+                    if (!c) { (inElse ? elseBlock : thenBlock).push(rawK); continue; }
+
+                    if (/^IF\b/i.test(c) && !/\bTHEN\b/i.test(c)) { depth++; (inElse ? elseBlock : thenBlock).push(rawK); continue; }
+                    if (/^ENDIF\b/i.test(c)) { if (depth>0){ depth--; (inElse?elseBlock:thenBlock).push(rawK); continue; } break; }
+                    if (/^ELSE\b/i.test(c) && depth===0) { inElse = true; continue; }
+
+                    (inElse ? elseBlock : thenBlock).push(rawK);
                 }
+                if (k >= blockLines.length) { const e = new Error(`Missing ENDIF for IF starting at line ${currentLine}`); e.line=currentLine; throw e; }
+                i = k;
+                if (expectBoolean(await evalExpr(condExpr, scope), 'IF condition')) await runBlock(thenBlock, scope, undefined, allowReturn);
+                else await runBlock(elseBlock, scope, undefined, allowReturn);
                 continue;
             }
 
@@ -1023,19 +1252,18 @@ async function interpret(code) {
                     e.line = currentLine; throw e;
                 }
 
-                // Depth-aware collect: build THEN and ELSE blocks until ENDIF at depth 0
+                // depth/nesting 
                 const thenBlock = [];
                const elseBlock = [];
                 let inElse = false;
-                let depth  = 0; // nested IF (two-line form) depth
-                let k = t + 1;
-                for (; k < blockLines.length; k++) {
+                let depth  = 0; // depth of nested IF
+                for (let k = t + 1; k < blockLines.length; k++) {
                     const rawK = blockLines[k];
                     const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
                     const c    = cleanLine(txt);
                     if (!c) { (inElse ? elseBlock : thenBlock).push(rawK); continue; }
 
-                    // Detect nested two-line IF starts/ends
+                    // detect nested IF starts/ends
                     if (/^IF\b/i.test(c) && !/\bTHEN\b/i.test(c)) {
                         depth++;
                         (inElse ? elseBlock : thenBlock).push(rawK);
@@ -1047,11 +1275,11 @@ async function interpret(code) {
                             (inElse ? elseBlock : thenBlock).push(rawK);
                             continue;
                         }
-                        // depth == 0: this ENDIF closes the OUTER IF
+                        // depth is equal to 0 here
                         break;
                     }
                     if (/^ELSE\b/i.test(c) && depth === 0) {
-                        // switch to ELSE (do not include the ELSE token)
+                        // switch to ELSE
                         inElse = true;
                         continue;
                     }
@@ -1065,9 +1293,9 @@ async function interpret(code) {
                     e.line = currentLine; throw e;
                 }
 
-                // Execute and continue after the ENDIF we just consumed
+                // execute the IF
                 i = k;
-                if (toBool(await evalExpr(condExpr, scope))) {
+                if (expectBoolean(await evalExpr(condExpr, scope), 'IF condition')) {
                     await runBlock(thenBlock, scope, undefined, allowReturn);
                 } else {
                     await runBlock(elseBlock, scope, undefined, allowReturn);
@@ -1076,15 +1304,15 @@ async function interpret(code) {
             }
 
             // CASE OF X ... ENDCASE
-            if ((m = s.match(/^CASE\s+OF\s+(.+)$/i))) {
-                const identExpr = m[1];
+            if ((m = s.match(/^CASE\s+OF\s+([A-Za-z][A-Za-z0-9]*)$/i))) {
+                const idName = m[1];
                 const { block, next } = collectUntil(blockLines, i + 1, /^(ENDCASE)\b/i);
                 if (next >= blockLines.length) {
                     const e = new Error(`Missing ENDCASE for CASE starting at line ${currentLine}`);
                     e.line = currentLine; throw e;
                 }
                 i = next;
-                const val = await evalExpr(identExpr, scope);
+                const val = await evalExpr(idName, scope);
                 let chosen = null, otherwise = null;
                 for (let k = 0; k < block.length; k++) {
                     const rawk = block[k];
@@ -1095,9 +1323,7 @@ async function interpret(code) {
                         otherwise = [block[k]]; // run via runBlock for consistency
                     } else if ((mm = ln.match(/^(.+?)\s*:\s*(.+)$/))) {
                         const caseVal = await evalExpr(mm[1], scope);
-                        if (chosen == null && eq(val, caseVal)) { chosen = [block[k]]; }
-                    } else {
-                        // treat as a normal statement in the case body (allow multi-line via following lines until next case)
+                        if (chosen == null && val === caseVal) { chosen = [block[k]]; }
                     }
                 }
                 // Simple one-liner cases: execute the single statement after ':'
@@ -1126,13 +1352,39 @@ async function interpret(code) {
                 if (!isDeclared(scope, varName)) {
                     throwErr(varName, 'Undeclared variable ', currentLine);
                 }
+
                 const varType = getType(scope, varName);
-                if (!NUMERIC_TYPES.has(varType)) {
-                    throwErr(varType || 'unknown', `FOR variable ${varName} must be INTEGER or REAL, found `, currentLine);
+                if (varType !== 'INTEGER') {
+                    throwErr(varType , `FOR variable ${varName} must be INTEGER`, currentLine);
                 }
 
-                // collect body
-                const endRE = new RegExp(`^(?:NEXT\\s+${varName}|NEXT|ENDFOR\\s+${varName}|ENDFOR)$`, 'i');
+                // detect wrong NEXT variable
+                (function () {
+                    let depth = 0;
+                    for (let t = i + 1; t < blockLines.length; t++) {
+                        const rawT = blockLines[t];
+                        const txt  = (typeof rawT === 'object') ? rawT.content : rawT;
+                        const c    = cleanLine(txt);
+                        if (!c) continue;
+                        if (/^FOR\b/i.test(c)) { depth++; continue; }
+                        const nm = c.match(/^NEXT\s+([A-Za-z][A-Za-z0-9]*)$/i);
+                        if (nm) {
+                            if (depth === 0 && nm[1] !== varName) {
+                                const e = new Error(`Mismatched NEXT: expected NEXT ${varName} but found NEXT ${nm[1]}`);
+                                e.line = (typeof rawT === 'object') ? rawT.line : (t + 1);
+                                throw e;
+                            }
+                            if (depth === 0 && nm[1] === varName) break;
+                            if (depth > 0) {
+                                depth--;
+                                continue;
+                            }
+                        }
+                    }
+                })();
+
+                // collect correct body
+                const endRE = new RegExp(`^(?:NEXT\\s+${varName})$`, 'i');
                 const { block, next } = collectUntil(blockLines, i + 1, endRE, forStartLine);
                 if (next >= blockLines.length) {
                     throwErr('', `Missing NEXT/ENDFOR ${varName} for FOR starting at line ${forStartLine}`, forStartLine);
@@ -1141,10 +1393,10 @@ async function interpret(code) {
 
                 // evaluate bounds
                 const start = Number(await evalExpr(startExpr, scope));
-                const end   = Number(await evalExpr(toExpr,   scope));
-                const step  = Number(await evalExpr(stepExpr, scope));
-                if (![start, end, step].every(Number.isFinite)) {
-                    throwErr('', 'FOR bounds and STEP must be numeric', currentLine);
+                const end   = Number(await evalExpr(toExpr,    scope));
+                const step  = Number(await evalExpr(stepExpr,  scope));
+                if (![start, end, step].every(Number.isFinite) || ![start,end,step].every(Number.isInteger)) {
+                    throwErr('', 'FOR bounds and STEP must be INTEGERs', currentLine);
                 }
                 if (step === 0) {
                     throwErr('', 'FOR STEP cannot be 0', currentLine);
@@ -1180,7 +1432,7 @@ async function interpret(code) {
                 i = next;
                 
                 let count = 0;
-                while (toBool(await evalExpr(cond, scope))) {
+                while (expectBoolean(await evalExpr(cond, scope), 'WHILE condition')) {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
                     await runBlock(block, scope, undefined, allowReturn);
                     if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
@@ -1202,7 +1454,7 @@ async function interpret(code) {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
                     await runBlock(block, scope, undefined, allowReturn);
                     if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
-                } while (!toBool(await evalExpr(mm[1], scope)));
+                } while (!expectBoolean(await evalExpr(mm[1], scope), 'UNTIL condition'));
                 continue;
             }
 
@@ -1221,18 +1473,30 @@ async function interpret(code) {
             // simple statement table (DECLARE, CONSTANT, INPUT, OUTPUT, ASSIGNMENT)
             const SIMPLE = [
                 [ /^DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)\s*:\s*([A-Za-z]+)\s*$/i,
-                  (m,scope)=> m[1].split(',').map(t=>t.trim()).forEach(n => {
-                    scope[n]=defaultForType(m[2]);
-                    declareName(scope,n);
-                    setType(scope,n,m[2]);
-                }) ],
+                    (m,scope) => m[1].split(',').map(t=>t.trim()).forEach(n => {
+                        assertNotKeyword(n);
+
+                        scope[n] = defaultForType(m[2]);
+                        declareName(scope, n);
+                        setType(scope, n, m[2]);
+                    })
+                ],
                 
                 [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)$/i,
-                    async (m,scope)=>{ constants[m[1]]=true; scope[m[1]]=await evalExpr(m[2],scope); declareName(scope,m[1]); 
-                        const val = scope[m[1]];
+                    async (m,scope) => {
+                        assertNotKeyword(m[1]);
+                        if (!isLiteral(m[2])) throwErr('', 'CONSTANT must be assigned a literal', __LINE_NUMBER);
+                        const N = m[1];   
+
+                        constants[N] = true;
+                        scope[N] = await evalExpr(m[2],scope);
+
+                        declareName(scope, N);
+                        const val = scope[N];
                         const t = (typeof val === 'number') ? (Number.isInteger(val) ? 'INTEGER' : 'REAL') : (typeof val === 'boolean') ? 'BOOLEAN' : 'STRING';
-                        setType(scope,m[1],t);
-                    } ],
+                        setType(scope, N, t);
+                    }
+                ],
 
                 [ /^INPUT\s+(.+)$/i,
                     async (m, scope) => {
@@ -1242,11 +1506,8 @@ async function interpret(code) {
                         }
                     
                         // Flush any pending OUTPUT so prompts appear before the caret
-                        if (typeof self !== 'undefined' && self.postMessage) {
-                            try {
-                                self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join("\n") });
-                                OUTPUT_BUFFER.length = 0;
-                            } catch {}
+                        if (isWorkerEnv()) {
+                            try { self.postMessage({ type: 'flush', output: OUTPUT_LOG.join("\n") }); } catch {}
                         }
                     
                         const raw = String(await readInput());
@@ -1258,13 +1519,10 @@ async function interpret(code) {
                   
                 [ /^OUTPUT\s+(.+)$/i,
                     async (m, scope) => {
-                        // Evaluate each OUTPUT argument independently, then concatenate as text.
                         const parts = splitArgs(m[1]);
                         const vals  = await Promise.all(parts.map(p => evalExpr(p, scope)));
-                        OUTPUT_BUFFER.push(''); // newline first
-                        OUTPUT_BUFFER.push(vals.map(v => toString(v)).join(''));
-                        self.postMessage({ type: 'flush', output: OUTPUT_BUFFER.join('\n') });
-                        OUTPUT_BUFFER.length = 0;
+                        const rendered = parts.map((p, i) => renderForOutput(p, vals[i], scope));
+                        out(rendered);
                     }
                 ],
 
@@ -1293,14 +1551,6 @@ async function interpret(code) {
             // eval simple statements first
             if (await execSimple(s, scope)) continue;
 
-            if (/^[A-Za-z][A-Za-z0-9]*\s*\(/.test(s)) {
-                try {
-                    await evalExpr(s, scope);
-                } catch (err) {
-                    if (err && !err.line) err.line = currentLine;
-                    throw err;
-                }
-            } else {
                 let msg = `Unknown statement '${s}'`;
 
                 // if = is used in place of <-
@@ -1311,14 +1561,11 @@ async function interpret(code) {
                 }
                 
                 throwErr('', msg, currentLine);
-            }
         }
     }
 
     // checks if two values are equal
-    function eq(a, b) {
-        return a === b || toString(a) === toString(b);
-    }
+    function eq(a, b) { return a === b; }
 
     // calls a PROCEDURE
     async function callProcedure(name, args, callerScope) {
@@ -1351,20 +1598,33 @@ async function interpret(code) {
 
     // puts parameters in a PROCEDURE or FUNCTION
     function bindParams(paramSpec, argVals, scope) {
-        const params = (paramSpec || '').trim() ? paramSpec.split(',').map(p => p.trim()) : [];
+        const params = (paramSpec || '').trim() ? paramSpec.split(',').map(p => p.trim()).filter(Boolean) : [];
+        if (argVals.length !== params.length) {
+            throwErr('', `Parameter count mismatch: expected ${params.length} got ${argVals.length}`, __LINE_NUMBER);
+        }
         for (let i = 0; i < params.length; i++) {
             const part = params[i];
-            const [name, typeMaybe] = part.split(':').map(x => x.trim());
-            scope[name] = argVals[i];
-            declareName(scope, name);
-            if (typeMaybe) setType(scope, name, typeMaybe); // record param type if provided
+            const [rawName, rawType] = part.split(':').map(x => x.trim());
+            assertNotKeyword(rawName);
+            const P = rawName;
+            const v = argVals[i];
+            if (rawType) {
+                setType(scope, P, rawType);
+                checkAssignCompatible(String(rawType).toUpperCase(), '', v, false);
+            }
+            scope[P] = v;
+            declareName(scope, P);
         }
     }
 
     // ------------------------ Execute! ------------------------
     try {
         await runBlock(mainLines, globals, 1, false);
-        return OUTPUT_BUFFER.join("\n");
+
+        if (isWorkerEnv()) {
+            try { self.postMessage({ type: 'flush', output: OUTPUT_LOG.join("\n") }); } catch {}
+        }
+        return OUTPUT_LOG.join("\n");
     } catch (err) {
         // add line number to error
         const line = (err && err.line) ? err.line : (__LINE_NUMBER || 'unknown');
