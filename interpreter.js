@@ -21,6 +21,8 @@ async function interpret(code) {
         'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
     ]);
 
+    const JS_KEYWORDS = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
+
     const NAME_KEYWORD_SEEN = new Set();
     function assertNotKeyword(id) {
         const key = String(id).toUpperCase();
@@ -46,9 +48,7 @@ async function interpret(code) {
     }
 
     function throwWarning(text) {
-        if (isWorkerEnv()) {
-            try { self.postMessage({ type: 'warning', message: text }); } catch {}
-        }
+        if (isWorkerEnv()) try { self.postMessage({ type: 'warning', message: text }); } catch {}
     }
     function throwErr(name = '', message, line) {
         const e = new Error(name + message);
@@ -190,7 +190,7 @@ async function interpret(code) {
             return 'STRING';
         }
         if (typeof value === 'object' && Array.isArray(value)) return 'ARRAY';
-        return 'UNKNOWN';
+        return 'unknown';
     }
 
     function checkAssignCompatible(destType, rhsExpr, value, isInput) {
@@ -219,8 +219,7 @@ async function interpret(code) {
                     throwErr('ValueError: ', 'CHAR literal must be a single character', __LINE_NUMBER)
                 return;
             case 'STRING':
-                if (typeof value !== 'string')
-                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to STRING', __LINE_NUMBER)
+                // no check here, anything can be string
                 if (!isInput && hasRhsText && isSingleQuoted(rhsExpr))
                     throwErr('SyntaxError: ', 'STRING literal must use double quotes', __LINE_NUMBER)
                 return;
@@ -234,9 +233,6 @@ async function interpret(code) {
         if (v == null) return "";
         if (typeof v === 'symbol') return v.description ?? v.toString();
         return String(v);
-    }
-    function toBool(v) {
-        return !!v;
     }
 
     // type checking
@@ -399,15 +395,14 @@ async function interpret(code) {
         },
         
         LENGTH: (s) => {
-            assertString(s, 'LENGTH argument');
-            return s.length;
+            return toString(s).length;
         },
         
-        LCASE: (x) => assertString(x, 'LCASE argument').toLowerCase(),
-        UCASE: (x) => assertString(x, 'UCASE argument').toUpperCase(),
+        LCASE: (x) => toString(x).toLowerCase(),
+        UCASE: (x) => toString(x).toUpperCase(),
         
         SUBSTRING: (s, start, len) => {
-            const str = assertString(s, 'SUBSTRING argument');
+            const str = toString(s);
             assertInteger(start, 'SUBSTRING start');
             assertInteger(len, 'SUBSTRING length');
             if (start <= 0 || len <= 0) throwErr('ValueError: ', 'SUBSTRING start and length must be positive', __LINE_NUMBER)
@@ -610,7 +605,7 @@ async function interpret(code) {
         if (expr == null) return undefined;
         let s = String(expr).trim();
 
-        // replace pseudocode tokens with js tokens
+        // ------------------------ REPLACE PSEUDOCODE THINGS WITH JS TOKENS ------------------------
 
         // string and char literals
         const lit = [];
@@ -646,43 +641,50 @@ async function interpret(code) {
 
         function replaceBinarySymbolOperator(src, symbol, callee) {
             const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
+          
+            function prevNonSpace(str, i) {
+                let j = i - 1;
+                while (j >= 0 && str[j] === ' ') j--;
+                return j >= 0 ? str[j] : null;
+            }
+            function isUnaryAt(str, idx) {
+                // only matters for + and -
+                if (symbol !== '+' && symbol !== '-') return false;
+                const p = prevNonSpace(str, idx);
+                // unary if at start, or after another operator / open delimiter / comma
+                return (
+                    idx === 0 ||
+                    p == null ||
+                    /[+\-*/^(<\[,=!:]/.test(p)
+                );
+            }
+          
             function grabLeft(str, opStart) {
                 let i = opStart - 1;
                 while (i >= 0 && str[i] === ' ') i--;
-                if (str[i] === '\uE001') {
-                    let j = i - 1;
-                    while (j >= 0 && str[j] !== '\uE000') j--;
+                if (str[i] === '\uE001') {                 // protected literal
+                    let j = i - 1; while (j >= 0 && str[j] !== '\uE000') j--;
                     const start = Math.max(0, j);
                     return { start, text: str.slice(start, opStart).trim() };
                 }
-                if (str[i] === ')') {
-                    let depth = 1;
-                    i--;
-                    while (i >= 0 && depth > 0) {
-                        if (str[i] === ')') depth++;
-                        else if (str[i] === '(') depth--;
-                        i--;
-                    }
-                    let j = i;
-                    while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
-                    const start = j + 1; // start at the function/prop name
+                if (str[i] === ')') {                      // (...) group
+                    let depth = 1; i--;
+                    while (i >= 0 && depth > 0) { if (str[i] === ')') depth++; else if (str[i] === '(') depth--; i--; }
+                    // include possible function/identifier before the '('
+                    let j = i; while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
+                    const start = j + 1;
                     return { start, text: str.slice(start, opStart).trim() };
                 }
-                if (str[i] === ']') {
-                    let depth = 1;
-                    i--;
-                    while (i >= 0 && depth > 0) {
-                        if (str[i] === ']') depth++;
-                        else if (str[i] === '[') depth--;
-                        i--;
-                    }
-                    let j = i;
-                    while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
-                    const start = j + 1; // start at the function/prop name
+                if (str[i] === ']') {                      // [...] indexer
+                    let depth = 1; i--;
+                    while (i >= 0 && depth > 0) { if (str[i] === ']') depth++; else if (str[i] === '[') depth--; i--; }
+                    let j = i; while (j >= 0 && /[A-Za-z0-9_.]/.test(str[j])) j--;
+                    const start = j + 1;
                     return { start, text: str.slice(start, opStart).trim() };
                 }
+                // identifier/number
                 while (i >= 0 && isIdChar(str[i])) i--;
-                if (i >= 0 && (str[i] === '+' || str[i] === '-') && (i === 0 || /\s|\(|\[/.test(str[i-1]))) i--;
+                // DO NOT consume a unary sign here — that caused empty LHS
                 const start = i + 1;
                 return { start, text: str.slice(start, opStart).trim() };
             }
@@ -690,63 +692,52 @@ async function interpret(code) {
                 let i = opEnd + 1;
                 while (i < str.length && str[i] === ' ') i++;
                 const start = i;
-                if (str[i] === '\uE000') {
-                    let j = i + 1;
-                    while (j < str.length && str[j] !== '\uE001') j++;
+            
+                if (str[i] === '\uE000') {                 // protected literal
+                    let j = i + 1; while (j < str.length && str[j] !== '\uE001') j++;
                     j = Math.min(str.length, j + 1);
                     return { end: j, text: str.slice(start, j).trim() };
                 }
-
-                while (i < str.length && (str[i] === '(' || str[i] === '[')) {
-                    const open  = str[i];
-                    const close = (open === '(') ? ')' : ']';
-                    let depth = 1;
-                    i++;
-                    while (i < str.length && depth > 0) {
-                        if (str[i] === open)  depth++;
-                        else if (str[i] === close) depth--;
-                        i++;
-                    }
-                }
-
+            
+                // optional unary +/-
                 if (str[i] === '+' || str[i] === '-') i++;
+            
+                // identifier / number
                 while (i < str.length && isIdChar(str[i])) i++;
-                
+            
+                // possible function call (...) immediately after identifier
                 if (i < str.length && str[i] === '(') {
-                    let depth = 1;
-                    i++;
-                    while (i < str.length && depth > 0) {
-                        if (str[i] === '(') depth++;
-                        else if (str[i] === ')') depth--;
-                        i++;
-                    }
+                    let depth = 1; i++;
+                    while (i < str.length && depth > 0) { if (str[i] === '(') depth++; else if (str[i] === ')') depth--; i++; }
                 }
-
+            
+                // possible indexers [...] chained
                 while (i < str.length && str[i] === '[') {
-                    let depth = 1;
-                    i++;
-                    while (i < str.length && depth > 0) {
-                        if (str[i] === '[') depth++;
-                        else if (str[i] === ']') depth--;
-                        i++;
-                    }
+                    let depth = 1; i++;
+                    while (i < str.length && depth > 0) { if (str[i] === '[') depth++; else if (str[i] === ']') depth--; i++; }
                 }
-
+            
                 return { end: i, text: str.slice(start, i).trim() };
             }
-
+          
             let out = src;
             let idx = out.indexOf(symbol);
             while (idx !== -1) {
-                const left = grabLeft(out, idx);
+                // Skip unary +/-
+                if (isUnaryAt(out, idx)) { idx = out.indexOf(symbol, idx + 1); continue; }
+            
+                const left  = grabLeft(out, idx);
                 const right = grabRight(out, idx + symbol.length - 1);
+            
+                // If either side is empty, it's not a valid binary op — skip
+                if (!left.text || !right.text) { idx = out.indexOf(symbol, idx + 1); continue; }
+            
                 out = out.slice(0, left.start) + `${callee}(${left.text}, ${right.text})` + out.slice(right.end);
-                idx = out.indexOf(symbol);
+                idx = out.indexOf(symbol, left.start + callee.length + 1); // continue after the replacement
             }
             return out;
-        }
-
-        console.log("s before comparison operators: ", s);
+          }
+          
 
         s = replaceBinarySymbolOperator(s, '!==', '__CMP.NE');
         s = replaceBinarySymbolOperator(s, '===', '__CMP.EQ');
@@ -754,8 +745,6 @@ async function interpret(code) {
         s = replaceBinarySymbolOperator(s, '>=',  '__CMP.GE');
         s = replaceBinarySymbolOperator(s, '<',   '__CMP.LT');
         s = replaceBinarySymbolOperator(s, '>',   '__CMP.GT');
-
-        console.log("s after comparison operators: ", s);
 
         // arrays A[i] / A[i,j]
         s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\[\s*([^\]\[]+?)\s*(?:,\s*([^\]\[]+?)\s*)?\]/g,
@@ -773,13 +762,11 @@ async function interpret(code) {
             return `__CALL('${name}',`;
         });
 
-        // replace vars that conflict with keywords
-        const js_keywords = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
-        
+        // replace var names that conflict with keywords
         s = s.replace(
             /\b([A-Za-z][A-Za-z0-9]*)\b/g,
             (match, name) => {
-                if (js_keywords.includes(name.toLowerCase())) {
+                if (JS_KEYWORDS.includes(name.toLowerCase())) {
                     return `__SCOPE["${name}"]`;
                 }
 
@@ -801,6 +788,8 @@ async function interpret(code) {
 
         // unprotect literals
         s = s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
+
+        console.log("s after everything: ", s);
 
         const IDENT = /^[A-Za-z][A-Za-z0-9]*$/;
 
@@ -1419,7 +1408,7 @@ async function interpret(code) {
                 ],
 
                 // assignment
-                [ /^(.+?)\s*(?:\u2190|<-)\s*(.+)$/,
+                [ /^(.+?)\s*(?:\u2190|<-|<--)\s*(.+)$/, // <- or <-- or ← accepted
                     async (m,scope)=>{ 
                         const lv=await getLValue(m[1].trim(),scope); 
                         const rhsExpr = m[2];
