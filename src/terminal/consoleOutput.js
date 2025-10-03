@@ -1,8 +1,8 @@
-export function createConsoleOutput(terminal, writePrompt) {
+export function createConsoleOutput(terminal, getline) {
     
     const write = (text, color = null) => {
         if (color) terminal.write(`\x1b[${color}m${text}\x1b[0m`);
-        else terminal.write(text);
+              else terminal.write(text);
     };
 
     return {
@@ -39,17 +39,12 @@ export function createConsoleOutput(terminal, writePrompt) {
         // so it will stop deleting at the user-typed "% "
         clearLineProtectPrompt: () => {
             try {
-                const buf = terminal?.buffer?.active;
-                if (!buf) { write('\x1b[2K\r'); return; }
-            
-                const line = buf.getLine(buf.cursorY)?.translateToString(false) ?? '';
-                const hadPrompt = line.startsWith('% ');
-
-                // clear the line
-                write('\x1b[2K\r');
+                if (!terminal?.buffer?.active) { write('\x1b[2K\r'); return; }
                 
-                // if line had prompt, restore it
-                if (hadPrompt) writePrompt();
+                const hadPrompt = getline().startsWith('%');
+
+                write('\x1b[2K\r'); // clear line
+                if (hadPrompt) write('% ', '90'); // if line had prompt, restore it
             } catch {
                 write('\x1b[2K\r');
             }
@@ -61,6 +56,8 @@ export function createConsoleOutput(terminal, writePrompt) {
         moveCursorRight: (n = 1) => write('\x1b[' + n + 'C'),
         moveCursorLeft:  (n = 1) => write('\x1b[' + n + 'D'),
         moveCursorTo:    (n) =>     write('\x1b[' + n + 'G'),
-        
+
+        writePrompt: () => write('% ', '90')
+
     };
 }

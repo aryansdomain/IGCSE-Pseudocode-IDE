@@ -1,4 +1,4 @@
-export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, editorApis, themeCtrl, modeCtrl }) {
+export function createRepl({ terminal, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl }) {
   
     let hist = []; // history of commands
     let hIdx = -1; // -1 = live buffer
@@ -184,7 +184,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
                 break;
         }
         
-        writePrompt();
+        consoleOutput.writePrompt();
     }
     
     // ------------------------ KEYBOARD INPUT ------------------------
@@ -236,7 +236,7 @@ export function createRepl({ terminal, consoleOutput, writePrompt, runCtrl, edit
                 } else {
                     consoleOutput.hideCursor();
                     consoleOutput.newline();
-                    writePrompt();
+                    consoleOutput.writePrompt();
                     consoleOutput.showCursor();
                 }
             } else if (data === '\u007F') deleteChar();         // backspace

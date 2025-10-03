@@ -308,7 +308,6 @@ body.dragging {
     flex-direction: row;
     height: 100%;
     min-height: 0;
-    border-radius: var(--radius-xs);
     flex: 1 1 auto;
     background-color: black;
     overflow: hidden;
@@ -338,7 +337,6 @@ body.dragging {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
     transition: all 0.2s ease;
 }
 
@@ -452,7 +450,6 @@ body.dragging {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
     transition: all 0.2s ease;
     position: relative;
 }

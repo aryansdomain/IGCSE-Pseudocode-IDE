@@ -36,10 +36,20 @@ export function initTerminal({
     // initial fit
     queueMicrotask(() => { try { if (fitAddon) fitAddon.fit(); } catch {} });
 
-    const writePrompt = () => terminal.write('\x1b[90m% \x1b[0m'); // muted gray "% "
+    const getline = () => {
+        try {
+            const buf = terminal?.buffer?.active;
+            if (!buf) return '';
+            
+            const line = buf.getLine(buf.cursorY)?.translateToString(false) ?? '';
+            return line;
+        } catch {
+            return '';
+        }
+    };
 
     function refit() { try { if (fitAddon) fitAddon.fit(); } catch {} }
     function dispose() { try { terminal.dispose(); } catch {} }
 
-    return { terminal, writePrompt, refit, dispose };
+    return { terminal, getline, refit, dispose };
 }

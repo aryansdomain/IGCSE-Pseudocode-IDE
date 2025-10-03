@@ -129,7 +129,7 @@ OUTPUT greet("World")`,
     const { initTerminal } = await import('./src/terminal/terminal.js');
     
     // initialize terminal
-    const { terminal, writePrompt, refit } = initTerminal({
+    const { terminal, getline, refit } = initTerminal({
         container: UI.terminalEl,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
@@ -138,7 +138,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const consoleOutput = createConsoleOutput(terminal, writePrompt);
+    const consoleOutput = createConsoleOutput(terminal, getline);
     
     const modeCtrl = initMode({
         themeCtrl: null,
@@ -272,7 +272,7 @@ OUTPUT greet("World")`,
     });
     
     // initial prompt
-    writePrompt();
+    consoleOutput.writePrompt();
 
     // init repl
     let repl;
@@ -280,7 +280,7 @@ OUTPUT greet("World")`,
     const runBtn = UI.runBtn;
     const runCtrl = createRunCtrl({
         consoleOutput,
-        writePrompt,
+        getline,
         getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
         onInputRequested: () => {
@@ -305,7 +305,6 @@ OUTPUT greet("World")`,
     repl = createRepl({
         terminal,
         consoleOutput,
-        writePrompt,
         runCtrl,
         editorApis,
         themeCtrl,
