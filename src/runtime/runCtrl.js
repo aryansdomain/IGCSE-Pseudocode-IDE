@@ -1,6 +1,6 @@
 export function createRunCtrl({
     consoleOutput,
-    writePrompt,
+    getline,
     getCode,
     workerPath = 'runner.js',
     onInputRequested = () => {},
@@ -39,10 +39,10 @@ export function createRunCtrl({
         worker = null;
 
         consoleOutput.newline();
-        writePrompt();
+        consoleOutput.writePrompt();
     }
 
-    // attach event handlers to the worker for processing execution results
+    // process execution results
     function attachWorkerHandlers(localRunId) {
         worker.onmessage = (e) => {
             const { type } = e.data || {};
@@ -126,7 +126,11 @@ export function createRunCtrl({
                 clearLoadingTimer();
                 setLoading(false);
                 const msg = String(e.data.error || 'Unknown error');
-                consoleOutput.lnerrln(msg);
+
+                // output the error
+                let line = getline().replace(/\s+$/, '');
+                if (line.length > 0) consoleOutput.newline();
+                consoleOutput.errln(msg);
 
                 finishRun(localRunId);
             }
@@ -183,7 +187,10 @@ export function createRunCtrl({
 
         try { worker.postMessage({ type: 'stop' }); } catch {}
 
-        consoleOutput.lnerrln('Execution stopped');
+        // output the stop message
+        let line = getline().replace(/\s+$/, '');
+        if (line.length > 0) consoleOutput.newline();
+        consoleOutput.errln('Execution stopped');
 
         try { worker.terminate(); } catch {}
         worker = null;

@@ -34,14 +34,14 @@ async function interpret(code) {
 
     function isLiteral(text){
         const t = String(text ?? '').trim();
-        return /^-?\d+$/.test(t)                                 // INTEGER
-            || /^-?\d+\.\d+$/.test(t)                            // REAL (digit both sides)
-            || /^'(?:\\.|[^'\\])'$/.test(t)                      // CHAR
-            || /^"(?:\\.|[^"\\])*"$/.test(t)                     // STRING
-            || /^(?:TRUE|FALSE)$/i.test(t);                      // BOOLEAN
+        return /^-?\d+$/.test(t)                // INTEGER
+            || /^-?\d+\.\d+$/.test(t)           // REAL (digit on both sides)
+            || /^'(?:\\.|[^'\\])'$/.test(t)     // CHAR
+            || /^"(?:\\.|[^"\\])*"$/.test(t)    // STRING
+            || /^(?:TRUE|FALSE)$/i.test(t);     // BOOLEAN
     }
-    function expectBoolean(v, ctx){
-        if (typeof v !== 'boolean') throwErr('', `${ctx} must be BOOLEAN`, __LINE_NUMBER);
+    function assertBoolean(v, ctx){
+        if (typeof v !== 'boolean') throwErr('TypeError: ', String(ctx) + ' must be a BOOLEAN', __LINE_NUMBER)
         return v;
     }
 
@@ -50,7 +50,7 @@ async function interpret(code) {
             try { self.postMessage({ type: 'warning', message: text }); } catch {}
         }
     }
-    function throwErr(message, name, line) {
+    function throwErr(name = '', message, line) {
         const e = new Error(name + message);
         e.line = line;
         throw e;
@@ -160,7 +160,7 @@ async function interpret(code) {
     function assignChecked(lv, scope, rhsExpr, value, isInput) {
         const destType = getDestTypeForLValue(lv, scope);
         if (!destType) {
-            throwErr(lv.name, 'Undeclared variable ', __LINE_NUMBER);
+            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', __LINE_NUMBER)
         }
 
         // accept numeric strings like "0", "3.5", "-2e3"
@@ -200,29 +200,29 @@ async function interpret(code) {
         switch (destType) {
             case 'INTEGER':
                 if (typeof value !== 'number' || !Number.isInteger(value))
-                    throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to INTEGER', __LINE_NUMBER);
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to INTEGER', __LINE_NUMBER)
                 if (hasRhsText && isReal(rhsExpr))
-                    throwErr('', 'Type mismatch: assigning REAL value to INTEGER', __LINE_NUMBER);
+                    throwErr('', 'Cannot assign REAL value to INTEGER', __LINE_NUMBER)
                 return;
             case 'REAL':
                 if (typeof value !== 'number' || !Number.isFinite(value))
-                    throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to REAL', __LINE_NUMBER);
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to REAL', __LINE_NUMBER)
                 return;
             case 'BOOLEAN':
                 if (typeof value !== 'boolean')
-                    throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to BOOLEAN', __LINE_NUMBER);
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to BOOLEAN', __LINE_NUMBER)
                 return;
             case 'CHAR':
                 if (!isInput && hasRhsText && isDoubleQuoted(rhsExpr))
-                    throwErr('', 'Type mismatch: expected CHAR literal in single quotes', __LINE_NUMBER);
+                    throwErr('SyntaxError: ', 'invalid CHAR literal', __LINE_NUMBER)
                 if (toString(value).length !== 1)
-                    throwErr('', 'CHAR literal must be a single character', __LINE_NUMBER);
+                    throwErr('ValueError: ', 'CHAR literal must be a single character', __LINE_NUMBER)
                 return;
             case 'STRING':
                 if (typeof value !== 'string')
-                    throwErr('', 'Type mismatch: assigning ' + getValueType(value, rhsExpr) + ' value to STRING', __LINE_NUMBER);
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to STRING', __LINE_NUMBER)
                 if (!isInput && hasRhsText && isSingleQuoted(rhsExpr))
-                    throwErr('', 'Type mismatch: STRING literals must use double quotes', __LINE_NUMBER);
+                    throwErr('SyntaxError: ', 'STRING literal must use double quotes', __LINE_NUMBER)
                 return;
         }
     }
@@ -339,13 +339,13 @@ async function interpret(code) {
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
-                throwErr('', 'Invalid array access: 1D array accessed with 2D syntax', __LINE_NUMBER);
+                throwErr('TypeError: ', 'ARRAY indices must be INTEGERs, not tuple', __LINE_NUMBER)
             }
             if (A.__lb1 != null && A.__lb2 != null && j == null) {
-                throwErr('', 'Invalid array access: 2D array accessed with 1D syntax', __LINE_NUMBER);
+                throwErr('TypeError: ', 'too few indices for ARRAY', __LINE_NUMBER)
             }
         }
-        throwErr('', 'Invalid array access: not an array', __LINE_NUMBER);
+        throwErr('TypeError: ', 'object is not subscriptable', __LINE_NUMBER)
     }
 
     // set array element
@@ -356,30 +356,30 @@ async function interpret(code) {
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
-                throwErr('', 'Invalid array assignment: 1D array accessed with 2D syntax', __LINE_NUMBER);
+                throwErr('TypeError: ', 'ARRAY assignment index must be INTEGER, not tuple', __LINE_NUMBER)
             }
             if (A.__lb1 != null && A.__lb2 != null && j == null) {
-                throwErr('', 'Invalid array assignment: 2D array accessed with 1D syntax', __LINE_NUMBER);
+                throwErr('TypeError: ', 'too few indices for ARRAY assignment', __LINE_NUMBER)
             }
         }
-        throwErr('', 'Invalid array assignment: not an array', __LINE_NUMBER);
+        throwErr('TypeError: ', 'object does not support item assignment', __LINE_NUMBER)
     }
 
     // builtin functions
     function assertNumber(n, name) {
         if (typeof n !== 'number' || !Number.isFinite(n)) {
-          throwErr(name, ' must be a finite number', __LINE_NUMBER);
+            throwErr('TypeError: ', String(name) + ' must be a REAL', __LINE_NUMBER)
         }
       }
     function assertInteger(n, name) {
         assertNumber(n, name);
         if (!Number.isInteger(n)) {
-          throwErr(name, ' must be an INTEGER', __LINE_NUMBER);
+            throwErr('TypeError: ', String(name) + ' must be an INTEGER', __LINE_NUMBER)
         }
     }
     function assertString(n, name) {
         if (typeof n !== 'string') {
-            throwErr('', name + ' must be a string', __LINE_NUMBER);
+            throwErr('TypeError: ', String(name) + ' must be a STRING', __LINE_NUMBER)
         }
         return n;
     }
@@ -410,7 +410,7 @@ async function interpret(code) {
             const str = assertString(s, 'SUBSTRING argument');
             assertInteger(start, 'SUBSTRING start');
             assertInteger(len, 'SUBSTRING length');
-            if (start <= 0 || len <= 0) throwErr('', 'SUBSTRING start and length must be positive', __LINE_NUMBER);
+            if (start <= 0 || len <= 0) throwErr('ValueError: ', 'SUBSTRING start and length must be positive', __LINE_NUMBER)
             const st = start;
             const ln = len;
 
@@ -420,14 +420,14 @@ async function interpret(code) {
         DIV: (a, b) => {
             assertInteger(a, 'DIV first argument');
             assertInteger(b, 'DIV second argument');
-            if (b === 0) throwErr('', 'Division by 0', __LINE_NUMBER);
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
             return (a / b) >= 0 ? Math.floor(a / b) : Math.ceil(a / b);
         },
         
         MOD: (a, b) => {
             assertInteger(a, 'MOD first argument');
             assertInteger(b, 'MOD second argument');
-            if (b === 0) throwErr('', 'Division by 0', __LINE_NUMBER);
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
             const m = a % b;
             return m < 0 ? m + Math.abs(b) : m;
         },
@@ -527,7 +527,7 @@ async function interpret(code) {
             const R = grabRight(s, idx);
         
             if (!isNumericExpr(L.text) || !isNumericExpr(R.text)) {
-                throw new Error('Power operator ^ requires numeric operands');
+                throw new Error('Power operator ^ requires numeric operands', __LINE_NUMBER);
             }
         
             const before = s.slice(0, L.start);
@@ -602,7 +602,7 @@ async function interpret(code) {
             
             // Check if both operands are numeric for DIV and MOD
             if ((word === 'DIV' || word === 'MOD') && (!isNumericExpr(L.text) || !isNumericExpr(R.text))) {
-                throwErr('', `${word} operator requires numeric operands`, __LINE_NUMBER);
+                throwErr('TypeError: ', `${word} operands must be numeric`, __LINE_NUMBER)
             }
             
             s = s.slice(0, L.start) + `${callee}(${L.text},${R.text})` + s.slice(R.end);
@@ -658,15 +658,18 @@ async function interpret(code) {
     }
 
     // numeric ops to enforce numeric types & trap division by 0
-    function num(x, ctx) { if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('', `${ctx} requires a finite number`, __LINE_NUMBER); return x; }
+    function num(x, ctx) {
+        if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('TypeError: ', String(ctx) + ' requires a finite number', __LINE_NUMBER)
+        return x;
+    }
     const NUM = {
         ADD: (a,b) => num(a,'+ operation') + num(b,'+ operation'),
         SUB: (a,b) => num(a,'- operation') - num(b,'- operation'),
         MUL: (a,b) => num(a,'* operation') * num(b,'* operation'),
-        DIV: (a,b) => {
+        DIVIDE: (a,b) => {
             a = num(a,'/ operation');
             b = num(b,'/ operation');
-            if (b===0) throwErr('', 'Division by 0', __LINE_NUMBER);
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
             return a/b;
         }
     };
@@ -675,37 +678,32 @@ async function interpret(code) {
     const CMP = {
         EQ(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b);
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
-            return a === b;
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
         },
         NE(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) !== (!!b);
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             return a !== b;
         },
         LT(a, b) {
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
-            if (typeof a === 'number') return a < b;
-            if (typeof a === 'string') return a < b;
-            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a === 'number' || typeof a === 'string') return a < b;
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         GT(a, b) {
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
-            if (typeof a === 'number') return a > b;
-            if (typeof a === 'string') return a > b;
-            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a === 'number' || typeof a === 'string') return a > b;
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         LE(a, b) {
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
-            if (typeof a === 'number') return a <= b;
-            if (typeof a === 'string') return a <= b;
-            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a === 'number' || typeof a === 'string') return a <= b;
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         GE(a, b) {
-            if (typeof a !== typeof b) throwErr('', `Type mismatch in comparison: ${typeName(a)} vs ${typeName(b)}`, __LINE_NUMBER);
-            if (typeof a === 'number') return a >= b;
-            if (typeof a === 'string') return a >= b;
-            throwErr('', 'Relational comparison requires numbers or strings', __LINE_NUMBER);
+            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a === 'number' || typeof a === 'string') return a >= b;
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
     };
 
@@ -754,7 +752,7 @@ async function interpret(code) {
 
         // arithmetic operations
         s = replaceBinarySymbolOperator(s, '*', '__NUM.MUL');
-        s = replaceBinarySymbolOperator(s, '/', '__NUM.DIV');
+        s = replaceBinarySymbolOperator(s, '/', '__NUM.DIVIDE');
         s = replaceBinarySymbolOperator(s, '+', '__NUM.ADD');
         s = replaceBinarySymbolOperator(s, '-', '__NUM.SUB');
 
@@ -877,8 +875,9 @@ async function interpret(code) {
             if (U === 'TRUE' || U === 'FALSE') return m;
 
             if (U === 'DIV' || U === 'MOD') {
-                throwErr('', `Use a ${U} b form`, __LINE_NUMBER);
+                throwErr('SyntaxError: ', 'invalid syntax', __LINE_NUMBER)
             }
+
             if (builtins[U]) return `__BUILTIN_${U}(`;
 
             return `__CALL('${name}',`;
@@ -927,7 +926,7 @@ async function interpret(code) {
             get: (o, k) => {
                 if (typeof k !== 'string') return o[k];          // pass symbols through
                 if (IDENT.test(k)) {
-                    if (!isDeclared(o, k)) throwErr('', 'Undeclared variable ' + k, __LINE_NUMBER);
+                    if (!isDeclared(o, k)) throwErr('NameError: ', 'name ' + String(k) + ' is not defined', __LINE_NUMBER)
                     return o[k];
                 }
                 return o[k];
@@ -948,7 +947,7 @@ async function interpret(code) {
                 builtins.MOD,
                 async (name, ...args) => {
                     const def = funcs[name];
-                    const ret = await callFunction(name, args);
+                    const ret = await callFunction(name, args, 0);
                     if (def && def.returns) {
                         const want = String(def.returns || '').toUpperCase();
                         if (want) {
@@ -973,7 +972,7 @@ async function interpret(code) {
             const msg = String(e && e.message || e);
             const m   = msg.match(/(^|')([A-Za-z][A-Za-z0-9]*) is not defined/);
             if (m) {
-                throwErr(m[2], 'Undeclared variable ', __LINE_NUMBER);
+                throwErr('NameError: ', 'name ' + String(m[2]) + ' is not defined', __LINE_NUMBER)
             }
             throw e;
         }
@@ -984,14 +983,16 @@ async function interpret(code) {
         // ref is identifier, or identifier[index], or identifier[i,j]
 
         const m = ref.match(/^([A-Za-z][A-Za-z0-9]*)(\s*\[(.*)\])?$/);
-        if (!m) throwErr(ref, 'Invalid identifier: ', __LINE_NUMBER);
+        if (!m) {
+            throwErr('SyntaxError: ', 'invalid identifier ' + String(ref), __LINE_NUMBER)
+        }
         const name = m[1]
 
         if (m[2]) {
 
             // check if array is declared
             if (!isDeclared(scope, name)) {
-                throwErr('', 'Undeclared array ' + name, __LINE_NUMBER);
+                throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
             }
             
             const idxRaw = m[3];
@@ -1020,13 +1021,13 @@ async function interpret(code) {
                 name: name,
                 get: () => {
                     if (!isDeclared(scope, name)) {
-                        throwErr(name, 'Undeclared variable ' + name, __LINE_NUMBER);
+                        throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
                     }
                     return scope[name];
                 },
                 set: (v) => {
-                    if (name in constants) throwErr(name, 'Cannot assign to CONSTANT ', __LINE_NUMBER);
-                    if (!isDeclared(scope, name)) throwErr(name, 'Undeclared variable ' + name, __LINE_NUMBER);
+                    if (name in constants) throwErr('TypeError: ', 'cannot assign to constant', __LINE_NUMBER)
+                    if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
                     scope[name] = v;
                 }
             };
@@ -1199,7 +1200,7 @@ async function interpret(code) {
             if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
                 const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
-                await callProcedure(name, args, scope);
+                await callProcedure(name, args, currentLine);
                 continue;
             }
 
@@ -1225,7 +1226,7 @@ async function interpret(code) {
                 }
                 if (k >= blockLines.length) { const e = new Error(`Missing ENDIF for IF starting at line ${currentLine}`); e.line=currentLine; throw e; }
                 i = k;
-                if (expectBoolean(await evalExpr(condExpr, scope), 'IF condition')) await runBlock(thenBlock, scope, undefined, allowReturn);
+                if (assertBoolean(await evalExpr(condExpr, scope), 'IF condition')) await runBlock(thenBlock, scope, undefined, allowReturn);
                 else await runBlock(elseBlock, scope, undefined, allowReturn);
                 continue;
             }
@@ -1295,7 +1296,7 @@ async function interpret(code) {
 
                 // execute the IF
                 i = k;
-                if (expectBoolean(await evalExpr(condExpr, scope), 'IF condition')) {
+                if (assertBoolean(await evalExpr(condExpr, scope), 'IF condition')) {
                     await runBlock(thenBlock, scope, undefined, allowReturn);
                 } else {
                     await runBlock(elseBlock, scope, undefined, allowReturn);
@@ -1350,12 +1351,12 @@ async function interpret(code) {
                 const startExpr = m[2], toExpr = m[3], stepExpr = m[4] || '1';
 
                 if (!isDeclared(scope, varName)) {
-                    throwErr(varName, 'Undeclared variable ', currentLine);
+                    throwErr('NameError: ', 'name ' + String(varName) + ' is not defined', currentLine)
                 }
 
                 const varType = getType(scope, varName);
                 if (varType !== 'INTEGER') {
-                    throwErr(varType , `FOR variable ${varName} must be INTEGER`, currentLine);
+                    throwErr('TypeError: ', 'variable must be int', currentLine)
                 }
 
                 // detect wrong NEXT variable
@@ -1387,7 +1388,7 @@ async function interpret(code) {
                 const endRE = new RegExp(`^(?:NEXT\\s+${varName})$`, 'i');
                 const { block, next } = collectUntil(blockLines, i + 1, endRE, forStartLine);
                 if (next >= blockLines.length) {
-                    throwErr('', `Missing NEXT/ENDFOR ${varName} for FOR starting at line ${forStartLine}`, forStartLine);
+                    throwErr('SyntaxError: ', 'expected ' + '"NEXT"', forStartLine)
                 }
                 i = next;
 
@@ -1396,29 +1397,25 @@ async function interpret(code) {
                 const end   = Number(await evalExpr(toExpr,    scope));
                 const step  = Number(await evalExpr(stepExpr,  scope));
                 if (![start, end, step].every(Number.isFinite) || ![start,end,step].every(Number.isInteger)) {
-                    throwErr('', 'FOR bounds and STEP must be INTEGERs', currentLine);
+                    throwErr('TypeError: ', 'range() INTEGER arguments expected', currentLine)
                 }
                 if (step === 0) {
-                    throwErr('', 'FOR STEP cannot be 0', currentLine);
+                    throwErr('ValueError: ', 'step argument must not be zero', currentLine)
                 }
                 if (!Number.isInteger(step)) {
-                    throwErr('', 'FOR STEP must be an integer', currentLine);
+                    throwErr('TypeError: ', 'range() INTEGER step argument expected', currentLine)
                 }
 
                 let count = 0;
-                if (step > 0) {
-                    for (scope[varName] = start; scope[varName] <= end; scope[varName] += step) {
-                        if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                        await runBlock(block, scope, undefined, allowReturn);
-                        if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
-                    }
-                } else {
-                    for (scope[varName] = start; scope[varName] >= end; scope[varName] += step) {
-                        if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                        await runBlock(block, scope, undefined, allowReturn);
-                        if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
-                    }
-                }
+            // Single loop with direction-aware condition
+            for (scope[varName] = start; 
+                    (step > 0) ? scope[varName] <= end : scope[varName] >= end; // step is positive/negative 
+                    scope[varName] += step) {
+                
+                if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
+                await runBlock(block, scope, undefined, allowReturn);
+                if (++count > LOOP_LIMIT) throwErr('RuntimeError: ', 'maximum iteration limit exceeded', currentLine)
+            }
                 continue;
             }
 
@@ -1427,15 +1424,15 @@ async function interpret(code) {
                 const cond = m[1];
                 const { block, next } = collectUntil(blockLines, i + 1, /^(ENDWHILE)\b/i);
                 if (next >= blockLines.length) {
-                    throwErr('', `Missing ENDWHILE for WHILE starting at line ${currentLine}`, currentLine);
+                    throwErr('SyntaxError: ', 'expected ' + '"ENDWHILE"', currentLine)
                 }
                 i = next;
                 
                 let count = 0;
-                while (expectBoolean(await evalExpr(cond, scope), 'WHILE condition')) {
+                while (assertBoolean(await evalExpr(cond, scope), 'WHILE condition')) {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
                     await runBlock(block, scope, undefined, allowReturn);
-                    if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
+                    if (++count > LOOP_LIMIT) throwErr('RuntimeError: ', 'maximum iteration limit exceeded', currentLine)
                 }
                 continue;
             }
@@ -1446,22 +1443,22 @@ async function interpret(code) {
                 const untilRaw  = blockLines[next];
                 const untilLine = cleanLine(typeof untilRaw === 'object' ? untilRaw.content : untilRaw);
                 const mm = untilLine && untilLine.match(/^UNTIL\s+(.+)$/i);
-                if (!mm) throwErr('', 'UNTIL expected', currentLine);
+                if (!mm) throwErr('SyntaxError: ', 'expected ' + '"UNTIL"', currentLine)
                 i = next;
 
                 let count = 0;
                 do {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
                     await runBlock(block, scope, undefined, allowReturn);
-                    if (++count > LOOP_LIMIT) throwErr('', 'Loop limit exceeded', currentLine);
-                } while (!expectBoolean(await evalExpr(mm[1], scope), 'UNTIL condition'));
+                    if (++count > LOOP_LIMIT) throwErr('RuntimeError: ', 'maximum iteration limit exceeded', currentLine)
+                } while (!assertBoolean(await evalExpr(mm[1], scope), 'UNTIL condition'));
                 continue;
             }
 
             // RETURN expr (when executing inside a function)
             if ((m = s.match(/^RETURN\s+(.+)$/i))) {
                 if (!allowReturn) {
-                    throwErr('', 'RETURN used outside FUNCTION', currentLine);
+                    throwErr('SyntaxError: ', '\'RETURN\' outside function', currentLine)
                 }
                 const parts = splitArgs(m[1]);                         // support comma-separated parts
                 const vals  = await Promise.all(parts.map(p => evalExpr(p, scope)));
@@ -1485,7 +1482,7 @@ async function interpret(code) {
                 [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)$/i,
                     async (m,scope) => {
                         assertNotKeyword(m[1]);
-                        if (!isLiteral(m[2])) throwErr('', 'CONSTANT must be assigned a literal', __LINE_NUMBER);
+                        if (!isLiteral(m[2])) throwErr('TypeError: ', 'CONSTANT value must be a literal', __LINE_NUMBER)
                         const N = m[1];   
 
                         constants[N] = true;
@@ -1502,12 +1499,13 @@ async function interpret(code) {
                     async (m, scope) => {
                         const lv = await getLValue(m[1].trim(), scope);
                         if (!isDeclared(scope, lv.name)) {
-                            throwErr(lv.name, 'Undeclared variable ', __LINE_NUMBER);
+                            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', __LINE_NUMBER)
                         }
                     
                         // Flush any pending OUTPUT so prompts appear before the caret
                         if (isWorkerEnv()) {
                             try { self.postMessage({ type: 'flush', output: OUTPUT_LOG.join("\n") }); } catch {}
+                            OUTPUT_LOG.length = 0;
                         }
                     
                         const raw = String(await readInput());
@@ -1551,16 +1549,16 @@ async function interpret(code) {
             // eval simple statements first
             if (await execSimple(s, scope)) continue;
 
-                let msg = `Unknown statement '${s}'`;
+            let msg = 'invalid syntax';
 
-                // if = is used in place of <-
-                if (/^[A-Za-z][A-Za-z0-9]*\s*=\s*.+$/.test(s)) {
-                    const lhs = s.split('=')[0].trim();
-                    const rhs = s.slice(s.indexOf('=') + 1).trim();
-                    msg += `. Did you mean ${lhs} <- ${rhs}?`; // helpful message
-                }
-                
-                throwErr('', msg, currentLine);
+            // if = is used in place of <-
+            if (/^[A-Za-z][A-Za-z0-9]*\s*=\s*.+$/.test(s)) {
+                const lhs = s.split('=')[0].trim();
+                const rhs = s.slice(s.indexOf('=') + 1).trim();
+                msg += `. Did you mean ${lhs} <- ${rhs}?`; // helpful message
+            }
+            
+            throwErr('SyntaxError: ', msg, currentLine);
         }
     }
 
@@ -1568,9 +1566,9 @@ async function interpret(code) {
     function eq(a, b) { return a === b; }
 
     // calls a PROCEDURE
-    async function callProcedure(name, args, callerScope) {
+    async function callProcedure(name, args, line) {
         const def = procs[name];
-        if (!def) throwErr(name, 'Unknown procedure ', 0);
+        if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
         const scope = Object.create(globals);
         ensureDeclSet(scope);
         ensureTypeMap(scope);
@@ -1579,9 +1577,9 @@ async function interpret(code) {
     }
 
     // calls a FUNCTION
-    async function callFunction(name, args) {
+    async function callFunction(name, args, line) {
         const def = funcs[name];
-        if (!def) throwErr(name, 'Unknown function ', 0);
+        if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
         const scope = Object.create(globals);
         ensureDeclSet(scope);
         ensureTypeMap(scope);
@@ -1600,7 +1598,7 @@ async function interpret(code) {
     function bindParams(paramSpec, argVals, scope) {
         const params = (paramSpec || '').trim() ? paramSpec.split(',').map(p => p.trim()).filter(Boolean) : [];
         if (argVals.length !== params.length) {
-            throwErr('', `Parameter count mismatch: expected ${params.length} got ${argVals.length}`, __LINE_NUMBER);
+            throwErr('TypeError: ', `expected ${params.length} arguments, got ${argVals.length}`, __LINE_NUMBER)
         }
         for (let i = 0; i < params.length; i++) {
             const part = params[i];
@@ -1623,12 +1621,14 @@ async function interpret(code) {
 
         if (isWorkerEnv()) {
             try { self.postMessage({ type: 'flush', output: OUTPUT_LOG.join("\n") }); } catch {}
+            OUTPUT_LOG.length = 0;
         }
         return OUTPUT_LOG.join("\n");
     } catch (err) {
+
         // add line number to error
         const line = (err && err.line) ? err.line : (__LINE_NUMBER || 'unknown');
         const msg  = (err && err.message) ? err.message : String(err);
-        throwErr('', `Line ${line}: ${msg}`, line);
+        throwErr('', `Line ${line}: ${msg}`, line)
     }
 }
