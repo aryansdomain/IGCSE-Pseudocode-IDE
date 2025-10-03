@@ -29,7 +29,8 @@ export function createRunCtrl({
     };
 
     function finishRun(localRunId) {
-        if (localRunId !== runId) return;  // stale
+        if (localRunId !== runId) return;  // if run is stale
+
         isRunning = false;
         onStateChange(false);
         clearLoadingTimer();
@@ -97,27 +98,26 @@ export function createRunCtrl({
                     warningStorage = [];
                 }
 
-                // output stored output
                 const combinedFromFlush = outputStorage.join('');
-                const combined = combinedFromFlush.length ? combinedFromFlush : String(e.data.output || '');
-                const parts = combined ? combined.split('\n') : [];
-
-                if (parts.length) {
-                    parts.forEach((line, idx) => { 
-                        if (idx === 0) {
-                            if (parts.length === 1) consoleOutput.println(line);
-                        } else consoleOutput.println(line);
-                    });
-                }
+                const combined = combinedFromFlush.length
+                    ? combinedFromFlush
+                    : String(e.data.output || '');
                 outputStorage = [];
+
+                if (combined.length) {
+                    const parts = combined.split('\n');
+                    parts.forEach(line => consoleOutput.println(line));
+                }
 
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
+
                 awaitingInput = false;
                 terminalLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
+
                 finishRun(localRunId);
 
             } else if (type === 'error') {
@@ -125,7 +125,7 @@ export function createRunCtrl({
                 terminalLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
-                const msg = String(e.data.error || 'Unknown error');
+                let msg = String(e.data.error || 'Unknown error');
 
                 // output the error
                 let line = getline().replace(/\s+$/, '');
@@ -185,13 +185,11 @@ export function createRunCtrl({
             return;
         }
 
-        try { worker.postMessage({ type: 'stop' }); } catch {}
-
-        // output the stop message
         let line = getline().replace(/\s+$/, '');
         if (line.length > 0) consoleOutput.newline();
         consoleOutput.errln('Execution stopped');
 
+        try { worker.postMessage({ type: 'stop' }); } catch {}
         try { worker.terminate(); } catch {}
         worker = null;
         terminalLocked = false;
