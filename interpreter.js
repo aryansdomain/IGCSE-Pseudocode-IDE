@@ -536,125 +536,6 @@ async function interpret(code) {
             idx = s.lastIndexOf('^');
         }
         return s;
-    }  
-
-    // turn keywords into functions ( a DIV b -> __DIV(a,b) )
-    function replaceBinaryWordOperator(expr, word, callee) {
-        const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
-
-        // find left operand of operator
-        function grabLeft(s, opStart) {
-            let i = opStart - 1;
-            while (i >= 0 && s[i] === ' ') i--;
-            if (s[i] === ')') {
-                let depth = 1; i--;
-                while (i >= 0 && depth > 0) {
-                    if      (s[i] === ')') depth++;
-                    else if (s[i] === '(') depth--; i--; }
-                return { start: i + 1, text: s.slice(i + 1, opStart).trim() };
-            }
-            if (s[i] === ']') {
-                let depth = 1; i--;
-                while (i >= 0 && depth > 0) {
-                    if      (s[i] === ']') depth++;
-                    else if (s[i] === '[') depth--; i--; }
-                return { start: i + 1, text: s.slice(i + 1, opStart).trim() };
-            }
-            while (i >= 0 && isIdChar(s[i])) i--;
-
-            return { start: i + 1, text: s.slice(i + 1, opStart).trim() };
-        }
-
-        // find right operand of operator
-        function grabRight(s, opEnd) {
-            let i = opEnd + 1;
-            while (i < s.length && s[i] === ' ') i++;
-            const start = i;
-            if (s[i] === '(') {
-                let depth = 1; i++;
-                while (i < s.length && depth > 0) {
-                    if      (s[i] === '(') depth++;
-                    else if (s[i] === ')') depth--; i++; }
-                return { end: i, text: s.slice(start, i).trim() };
-            }
-            if (s[i] === '[') {
-                let depth = 1; i++;
-                while (i < s.length && depth > 0) {
-                    if      (s[i] === '[') depth++;
-                    else if (s[i] === ']') depth--; i++; }
-                return { end: i, text: s.slice(start, i).trim() };
-            }
-            if (s[i] === '+' || s[i] === '-') i++; // unary
-            while (i < s.length && isIdChar(s[i])) i++;
-
-            return { end: i, text: s.slice(start, i).trim() };
-        }
-
-        
-        let s = expr;
-        const re = new RegExp(`\\b${word}\\b`, 'i'); // case-insensitive token
-        let idx = s.search(re);
-        while (idx !== -1) {
-            const opStart = idx;
-            const opEnd   = opStart + word.length - 1;
-            const L = grabLeft(s, opStart);
-            const R = grabRight(s, opEnd);
-            
-            // Check if both operands are numeric for DIV and MOD
-            if ((word === 'DIV' || word === 'MOD') && (!isNumericExpr(L.text) || !isNumericExpr(R.text))) {
-                throwErr('TypeError: ', `${word} operands must be numeric`, __LINE_NUMBER)
-            }
-            
-            s = s.slice(0, L.start) + `${callee}(${L.text},${R.text})` + s.slice(R.end);
-            idx = s.search(re); // keep going (left-to-right)
-        }
-        return s;
-    }
-
-    // replace commas with + (string concatenation)
-    function replaceCommas(s) {
-        let result = '';
-        let depth = 0;
-        let inString = false;
-        let quote = '';
-        
-        for (let i = 0; i < s.length; i++) {
-            const ch = s[i];
-            if (inString) {
-                result += ch;
-                if (ch === quote && s[i - 1] !== '\\') {
-                    inString = false;
-                }
-                continue;
-            }
-            
-            if (ch === '"' || ch === "'") {
-                inString = true;
-                quote = ch;
-                result += ch;
-                continue;
-            }
-            
-            if (ch === '(' || ch === '[') {
-                depth++;
-                result += ch;
-                continue;
-            }
-            
-            if (ch === ')' || ch === ']') {
-                depth--;
-                result += ch;
-                continue;
-            }
-            
-            if (ch === ',' && depth === 0) {
-                result += ' + ';
-                continue;
-            }
-            
-            result += ch;
-        }
-        return result;
     }
 
     // numeric ops to enforce numeric types & trap division by 0
@@ -677,8 +558,12 @@ async function interpret(code) {
     // comparison helpers enforcing type rules
     const CMP = {
         EQ(a, b) {
-            if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b);
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b); // bool
+
+            if (typeof a !== typeof b) // different types
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER);
+
+            return a === b; // otherwise
         },
         NE(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) !== (!!b);
@@ -731,6 +616,10 @@ async function interpret(code) {
         const lit = [];
         s = s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, m => { lit.push(m); return `\uE000${lit.length-1}\uE001`; });
 
+        if (/\bDIV\b(?!\s*\()/i.test(s) || /\bMOD\b(?!\s*\()/i.test(s)) {
+            throwErr('SyntaxError: ', 'invalid syntax', __LINE_NUMBER);
+        }
+
         // bools
         s = s.replace(/\bTRUE\b/g,  'true')
         s = s.replace(/\bFALSE\b/g, 'false');
@@ -745,10 +634,6 @@ async function interpret(code) {
 
         // power
         s = replacePowerOperators(s);
-
-        // div and mod
-        s = replaceBinaryWordOperator(s, 'DIV', '__BUILTIN_DIV');
-        s = replaceBinaryWordOperator(s, 'MOD', '__BUILTIN_MOD');
 
         // arithmetic operations
         s = replaceBinarySymbolOperator(s, '*', '__NUM.MUL');
@@ -811,28 +696,22 @@ async function interpret(code) {
                     j = Math.min(str.length, j + 1);
                     return { end: j, text: str.slice(start, j).trim() };
                 }
-                if (str[i] === '(') {
+
+                while (i < str.length && (str[i] === '(' || str[i] === '[')) {
+                    const open  = str[i];
+                    const close = (open === '(') ? ')' : ']';
                     let depth = 1;
                     i++;
                     while (i < str.length && depth > 0) {
-                        if (str[i] === '(') depth++;
-                        else if (str[i] === ')') depth--;
+                        if (str[i] === open)  depth++;
+                        else if (str[i] === close) depth--;
                         i++;
                     }
-                    return { end: i, text: str.slice(start, i).trim() };
                 }
-                if (str[i] === '[') {
-                    let depth = 1;
-                    i++;
-                    while (i < str.length && depth > 0) {
-                        if (str[i] === '[') depth++;
-                        else if (str[i] === ']') depth--;
-                        i++;
-                    }
-                    return { end: i, text: str.slice(start, i).trim() };
-                }
+
                 if (str[i] === '+' || str[i] === '-') i++;
                 while (i < str.length && isIdChar(str[i])) i++;
+                
                 if (i < str.length && str[i] === '(') {
                     let depth = 1;
                     i++;
@@ -842,6 +721,17 @@ async function interpret(code) {
                         i++;
                     }
                 }
+
+                while (i < str.length && str[i] === '[') {
+                    let depth = 1;
+                    i++;
+                    while (i < str.length && depth > 0) {
+                        if (str[i] === '[') depth++;
+                        else if (str[i] === ']') depth--;
+                        i++;
+                    }
+                }
+
                 return { end: i, text: str.slice(start, i).trim() };
             }
 
@@ -856,12 +746,16 @@ async function interpret(code) {
             return out;
         }
 
+        console.log("s before comparison operators: ", s);
+
         s = replaceBinarySymbolOperator(s, '!==', '__CMP.NE');
         s = replaceBinarySymbolOperator(s, '===', '__CMP.EQ');
         s = replaceBinarySymbolOperator(s, '<=',  '__CMP.LE');
         s = replaceBinarySymbolOperator(s, '>=',  '__CMP.GE');
         s = replaceBinarySymbolOperator(s, '<',   '__CMP.LT');
         s = replaceBinarySymbolOperator(s, '>',   '__CMP.GT');
+
+        console.log("s after comparison operators: ", s);
 
         // arrays A[i] / A[i,j]
         s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\[\s*([^\]\[]+?)\s*(?:,\s*([^\]\[]+?)\s*)?\]/g,
@@ -873,10 +767,6 @@ async function interpret(code) {
             if (off > 0 && str[off-1] === '.') return m;
             const U = name.toUpperCase();
             if (U === 'TRUE' || U === 'FALSE') return m;
-
-            if (U === 'DIV' || U === 'MOD') {
-                throwErr('SyntaxError: ', 'invalid syntax', __LINE_NUMBER)
-            }
 
             if (builtins[U]) return `__BUILTIN_${U}(`;
 
@@ -1212,6 +1102,7 @@ async function interpret(code) {
                 const thenBlock = [];
                 const elseBlock = [];
                 let inElse = false, depth = 0;
+                let k;
                 for (k = i + 1; k < blockLines.length; k++) {
                     const rawK = blockLines[k];
                     const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
@@ -1232,7 +1123,7 @@ async function interpret(code) {
             }
 
             // IF ... (two-line form: THEN on its own line) with nesting support
-            if (/^IF\b/i.test(s) && !/\bTHEN\b/i.test(s)) {
+            if (/^IF\b/i.test(s) && !/\bTHEN\b/i.test(s)) { // line contains IF but no THEN
                 const condExpr = s.replace(/^IF\s+/i, '').trim();
 
                 // Find the standalone THEN
@@ -1255,10 +1146,11 @@ async function interpret(code) {
 
                 // depth/nesting 
                 const thenBlock = [];
-               const elseBlock = [];
+                const elseBlock = [];
                 let inElse = false;
                 let depth  = 0; // depth of nested IF
-                for (let k = t + 1; k < blockLines.length; k++) {
+                let k;
+                for (k = t + 1; k < blockLines.length; k++) {
                     const rawK = blockLines[k];
                     const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
                     const c    = cleanLine(txt);
@@ -1343,12 +1235,14 @@ async function interpret(code) {
                 }
                 continue;
             }
-
-            // FOR i <- a TO b [STEP s] ... NEXT i
-            if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
+        
+            // FOR i <- a TOTEP s] ... NEXT i
+            if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
                 const forStartLine = __LINE_NUMBER; // capture the exact line where FOR appeared
                 const varName   = m[1];
-                const startExpr = m[2], toExpr = m[3], stepExpr = m[4] || '1';
+                const startExpr = m[2];
+                const toExpr    = m[3];
+                const stepExpr  = (m[4] == null || m[4].trim() === '') ? '1' : m[4];
 
                 if (!isDeclared(scope, varName)) {
                     throwErr('NameError: ', 'name ' + String(varName) + ' is not defined', currentLine)
