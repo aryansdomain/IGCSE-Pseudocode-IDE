@@ -21,6 +21,42 @@ function(require, exports, module) {
     // extract all names from the code
     const langCompleter = {
         getCompletions: function(editor, session, pos, prefix, callback) {
+
+            // ------------------------ String/Comment Check ------------------------
+            const beforeCursor = session.getLine(pos.row).substring(0, pos.column);
+
+            let inSingle = false; // in single quotes
+            let inDouble = false; // in double quotes
+            let inComment = false; // in comment
+            
+            for (let i = 0; i < beforeCursor.length; i++) {
+                const ch = beforeCursor[i];
+                
+                // comment start only if not in a string
+                if (!inSingle && !inDouble && ch === '/' && beforeCursor[i + 1] === '/') {
+                    inComment = true;
+                    break;
+                }
+                
+                // toggle in single-quoted string (if not already in double)
+                if (!inDouble && ch === '\'') {
+                    inSingle = !inSingle;
+                    continue;
+                }
+                
+                // toggle in double-quoted string (if not already in single)
+                if (!inSingle && ch === '"') {
+                    inDouble = !inDouble;
+                    continue;
+                }
+            }
+            
+            // if inside string or comment, dont suggest
+            if (inSingle || inDouble || inComment) {
+                callback(null, []);
+                return;
+            }
+            
             // extract variable names
             const code = editor.getValue();
             const varNames  = new Set();
