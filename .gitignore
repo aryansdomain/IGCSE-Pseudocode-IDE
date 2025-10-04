@@ -47,3 +47,4 @@ temp/
 *.pid
 *.seed
 *.tgz
+*.pdf
