@@ -5,6 +5,7 @@ ace.define('ace/mode/lang', ['require',
                              'ace/mode/text',
                              'ace/mode/rules',
                              'ace/mode/behaviour'],
+                             
 function(require, exports, module) {
     const oop = require('ace/lib/oop');
     const TextMode = require('ace/mode/text').Mode;
@@ -220,7 +221,6 @@ function(require, exports, module) {
 
         // increase indent after opening keywords
         const fullIndentOpeners = [
-            /^OF\b/i,
             /^FOR\b.*\bTO\b/i,
             /^WHILE\b.*\bDO\b/i,
             /^REPEAT\b/i,
@@ -231,7 +231,7 @@ function(require, exports, module) {
         // after these, half the tab size
         const halfIndentOpeners = [
             /^IF\b/i,
-            /^CASE\b/i,
+            /^CASE\s+OF\b/i,
             /^THEN\b/i,
             /^ELSE\b/i,
         ];
@@ -239,7 +239,10 @@ function(require, exports, module) {
         if (fullIndentOpeners.some(r => r.test(trimmed))) {
             indent += tab;
         } else if (halfIndentOpeners.some(r => r.test(trimmed))) {
-            indent += tab.slice(0, Math.floor(tab.length / 2)); // half the tab size
+            const halfCols = Math.max(1, Math.floor(tab.length / 2));
+            const halfIndent = ' '.repeat(halfCols);
+
+            indent += halfIndent;
         }
 
         return indent;
