@@ -41,7 +41,7 @@ function format(src) {
 function formatOnce(src) {
     if (typeof src !== 'string') return '';
 
-    // ---- literal protection ----
+    // protect literals
     const lit = [];
     const protect = s => s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
         m => { lit.push(m); return `\uE000${lit.length - 1}\uE001`; });
@@ -341,53 +341,53 @@ function formatOnce(src) {
             }
         }
 
-        // ==== protect assignment arrows so generic operator rules don't split them ====
-        code = code.replace(/\s*(?:←|<-)\s*/g, ' \uE100 ');
+        // protect assignment arrows
+        code = code.replace(/\s*(?:←|<-|<--)\s*/g, '\uE100');
 
-        // --- Tidy spacing on protected text ---
+        // normalize spacing between operators and other tokens
         code = code
-            .replace(/\s*,\s*/g, ', ')
-            .replace(/\s*:\s*/g, ' : ')
-            // Handle arithmetic operators, but avoid spacing unary minus
-            .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ')
-            // Handle binary minus (space before and after, but not for unary minus)
-            .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ')
+            .replace(/\s*,\s*/g, ', ') // |1  ,3|becomes |1, 3|
+            .replace(/\s*:\s*/g, ' : ') // |1  :3|becomes |1: 3|
+
+            //             +  *  /  ^ (not - )
+            .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ') // |1  +3| becomes |1 + 3|
+            //                  -
+            .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // |1  -3| becomes |1 - 3
+            
             .trim();
 
-        // keep unary minus tight after STEP and at expression starts/after delimiters
-        code = code
-            .replace(/\bSTEP\s*-\s+(?=[0-9.])/gi, 'STEP -')                // STEP - 0.5 -> STEP -0.5
-            .replace(/(^|\(|,|=|\bTO\b)\s*-\s+(?=[0-9.])/gi, (m, p1) => p1 + '-'); // (- 3 -> (-3, etc.
+        // combine split relational operators
+        code = code.replace(/<\s*=/g, '<=') // |< =|  becomes |<=|
+                   .replace(/>\s*=/g, '>=') // |> =|  becomes |>=|
+                   .replace(/<\s*>/g, '<>'); // |< >|  becomes |<>|
 
-        // 1) fuse split relational operators (arrow hidden)
-        code = code.replace(/<\s*=/g, '<=')
-                   .replace(/>\s*=/g, '>=')
-                   .replace(/<\s*>/g, '<>');
-
-        // protect composites so singletons don’t split them again
+        // protect combined operators (assign to private characters)
         code = code.replace(/<=/g, '\uE201')
                    .replace(/>=/g, '\uE202')
                    .replace(/<>/g, '\uE203');
 
-        // 2) space single-char relationals, then restore composites
-        code = code.replace(/\s*(=|<|>)\s*/g, ' $1 ')
-                   .replace(/\uE201/g, '<=')
+        code = code.replace(/\s*(=|<|>)\s*/g, ' $1 ') // |  =  |becomes | = |
+
+        // unprotect combined operators
+        code = code.replace(/\uE201/g, '<=')
                    .replace(/\uE202/g, '>=')
                    .replace(/\uE203/g, '<>')
-                   .replace(/\s*(<>|<=|>=)\s*/g, ' $1 ');
 
-        // ensure a space after certain keywords before '('
-        code = code.replace(/\b(NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (');
+        code = code.replace(/\s*(<>|<=|>=)\s*/g, ' $1 '); // |  <>  |becomes | <> |
 
-        // brackets/calls
-        code = code.replace(/\b([A-Za-z][A-Za-z0-9_]*)\s+\(/g, '$1(')
-                   .replace(/\(\s+/g, '(')
-                   .replace(/\s+\)/g, ')')
-                   .replace(/\b([A-Za-z][A-Za-z0-9_]*)\s+\[/g, '$1[')
-                   .replace(/\[\s+/g, '[')
-                   .replace(/\s+\]/g, ']');
+        code = code.replace(/\b(NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 ('); // |NOT( <...>| or |NOT   (<...>| becomes |NOT (<...>|
 
-        // normalize array bounds "1 : 5" -> "1:5"
+        // brackets/calls 
+        code = code.replace(/\b(FUNCTION|PROCEDURE)\s+([A-Za-z][A-Za-z0-9_]*)\s+\(/gi, '$1 $2(') // |FUNCTION <name>  ()| becomes |FUNCTION <name>()|
+                   .replace(/\(\s+/g, '(') // (  <...> becomes (<...>
+                   .replace(/\s+\)/g, ')') // <...>  ) becomes <...>)
+                   .replace(/\s+\[\s+/g, '[') //ARRAY <...>  [  1:3 becomes ARRAY <...>[1:3
+                   .replace(/\s+\]/g, ']'); // <...>  ] becomes <...>]
+
+        code = code.replace(/\bSTEP\s*-\s+(?=[0-9.])/gi, 'STEP -') // STEP - 0.5 -> STEP -0.5
+                   .replace(/\bTO\s*-\s+(?=[0-9.])/gi, 'TO -')
+
+        // |[1 : 5]| becomes |[1:5]|
         code = code.replace(/\[([^\[\]]+)\]/g, (_, inner) => {
             const t = inner.replace(/\s*,\s*/g, ', ')
                            .replace(/\s*:\s*/g, ':')
@@ -395,14 +395,14 @@ function formatOnce(src) {
             return '[' + t + ']';
         });
 
-        // restore arrows, enforce one space around
-        code = code.replace(/\uE100/g, '<-')
-                   .replace(/\s*(?:←|<\s*-\s*)\s*/g, ' <- ');
+        // unprotect arrows
+        code = code.replace(/\uE100/g, ' <- ') // one space around <-
 
-        // collapse stray multi-spaces
-        code = code.replace(/ {2,}/g, ' ');
+        // normalize multiple spaces
+        code = code.replace(/ {2,}/g, ' '); // |     |  becomes | |
+        code = code.replace(/(^|\(|,|=)\s*-\s+(?=[0-9.])/gi, p1 => p1 + '-'); // |(- 3| becomes |(-3|
 
-        // uppercase keywords/types
+        // change keywords/types to uppercase
         code = code.replace(kwRegex, t => t.toUpperCase());
 
         normalized.push({ code, comment: hadComment ? comment : '' });
@@ -453,24 +453,6 @@ function formatOnce(src) {
 
         // restore literals
         let restored = restore(codeProt);
-        let p = protect(restored);
-        p = p.replace(/<\s*=/g, '<=')
-             .replace(/>\s*=/g, '>=')
-             .replace(/<\s*>/g, '<>')
-             .replace(/<=/g, '\uE201')
-             .replace(/>=/g, '\uE202')
-             .replace(/<>/g, '\uE203')
-             .replace(/\s*(=|<|>)\s*/g, ' $1 ')
-             .replace(/\uE201/g, '<=')
-             .replace(/\uE202/g, '>=')
-             .replace(/\uE203/g, '<>')
-             .replace(/\s*(<>|<=|>=)\s*/g, ' $1 ')
-             .replace(/\s*(?:←|<\s*-\s*)\s*/g, ' <- ')
-             .replace(/ {2,}/g, ' ')
-             .replace(/\b(NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (')
-             .replace(/\bSTEP\s*-\s+(?=[0-9.])/gi, 'STEP -')
-             .replace(/(^|\(|,|=|\bTO\b)\s*-\s+(?=[0-9.])/gi, (m, p1) => p1 + '-');
-        restored = restore(p);
 
         let lineOut;
         const halfUnit = ' '.repeat(Math.floor(tabSize / 2)); // half the tab size
@@ -528,24 +510,6 @@ function setEditorCode(val) {
     }
     const ta = document.getElementById('code');
     if (ta) ta.value = val;
-}
-
-function wireFormatterButton() {
-    const btn = document.getElementById('btn-format') || document.querySelector('[data-action="format"]');
-    if (!btn) return;
-    if (btn.__formatterBound) return; // avoid double-binding
-
-    btn.__formatterBound = true;
-    btn.addEventListener('click', () => {
-        try {
-            const before = getEditorCode();
-            const after = format(before);
-            setEditorCode(after);
-        } catch (e) {
-            console.error('Format error:', e);
-            alert('Format error: ' + (e.message || e));
-        }
-    });
 }
 
 export { format };
