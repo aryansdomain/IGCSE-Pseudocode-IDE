@@ -114,7 +114,7 @@ async function interpret(code) {
 
     // track declared identifiers
     function ensureDeclSet(scope) {
-        if (!scope.__decl) {
+        if (!Object.prototype.hasOwnProperty.call(scope, '__decl')) {
             Object.defineProperty(scope, '__decl', { value: new Set(), enumerable: false });
         }
     }
@@ -132,7 +132,7 @@ async function interpret(code) {
 
     // ------------------------ Type Tracking ------------------------
     function ensureTypeMap(scope) {
-        if (!scope.__types) {
+        if (!Object.prototype.hasOwnProperty.call(scope, '__types')) {
             Object.defineProperty(scope, '__types', { value: Object.create(null), enumerable: false });
         }
     }
@@ -385,7 +385,6 @@ async function interpret(code) {
         },
         
         ROUND: (x, places) => {
-            console.log("ROUND called with: ", x, places);
             assertNumber(x, 'ROUND() parameter');
             assertInteger(places, 'ROUND(places)');
             const p = Math.max(0, places | 0);
@@ -402,7 +401,8 @@ async function interpret(code) {
             const str = toString(s);
             assertInteger(start, 'SUBSTRING start');
             assertInteger(len, 'SUBSTRING length');
-            if (start <= 0 || len <= 0) throwErr('ValueError: ', 'SUBSTRING start and length must be positive', __LINE_NUMBER)
+            if (start <= 0) throwErr('ValueError: ', 'SUBSTRING start must be positive', __LINE_NUMBER)
+            if (len <= 0)   throwErr('ValueError: ', 'SUBSTRING length must be positive', __LINE_NUMBER)
             const st = start;
             const ln = len;
 
@@ -636,7 +636,7 @@ async function interpret(code) {
         s = replaceBinarySymbolOperator(s, '-', '__NUM.SUB');
 
         // comparison
-        s = s.replace(/(?<![<>])=/g,'===');
+        s = s.replace(/(?<![<>!=])=/g,'==='); // replace = with ===, save >=, <=, and !==
 
         function replaceBinarySymbolOperator(src, symbol, callee) {
 
@@ -737,7 +737,7 @@ async function interpret(code) {
             }
             return out;
         }
-          
+
         s = replaceBinarySymbolOperator(s, '!==', '__CMP.NE');
         s = replaceBinarySymbolOperator(s, '===', '__CMP.EQ');
         s = replaceBinarySymbolOperator(s, '<=',  '__CMP.LE');
@@ -768,10 +768,10 @@ async function interpret(code) {
             /\b([A-Za-z][A-Za-z0-9]*)\b/g,
             (match, name, off, str) => {
 
-                // Skip member/property names like __NUM.DIV → do not scope 'DIV'
+                // skip member/property names (__NUM.DIV)
                 if (off > 0 && str[off - 1] === '.') return match;
-                // Skip internal placeholders starting with '__' (e.g., __CALL, __NUM)
-                if (off >= 2 && str[off - 2] === '_' && str[off - 1] === '_') return match;
+                // skip things starting with '__' (__CALL, __NUM)
+                if (off >= 2 && str[off - 2] + str[off - 1] === '__') return match;
 
                 const JS_KEYWORDS = ['VAR', 'LET', 'CONST', 'SWITCH', 'DEFAULT', 'BREAK', 'CONTINUE', 'TRY', 'CATCH', 'FINALLY', 'THROW', 'NEW', 'DELETE', 'IN', 'INSTANCEOF', 'TYPEOF', 'VOID', 'CLASS', 'SUPER', 'THIS', 'YIELD', 'IMPORT', 'EXPORT', 'ENUM'];
 
@@ -1033,7 +1033,7 @@ async function interpret(code) {
                 endMessage = 'UNTIL';
             }
             const lineNumber = originalLine || startIndex;
-            const e = new Error(`Missing ${endMessage} for block starting at line ${lineNumber}`);
+            const e = new Error(`Missing ${endMessage}`);
             e.line = lineNumber;
             throw e;
         }
@@ -1111,7 +1111,7 @@ async function interpret(code) {
 
                     (inElse ? elseBlock : thenBlock).push(rawK);
                 }
-                if (k >= blockLines.length) { const e = new Error(`Missing ENDIF for IF starting at line ${currentLine}`); e.line=currentLine; throw e; }
+                if (k >= blockLines.length) { const e = new Error(`Missing ENDIF for IF`); e.line=currentLine; throw e; }
                 i = k;
                 if (assertBoolean(await evalExpr(condExpr, scope), 'IF condition')) await runBlock(thenBlock, scope, undefined, allowReturn);
                 else await runBlock(elseBlock, scope, undefined, allowReturn);
@@ -1131,12 +1131,12 @@ async function interpret(code) {
                     t++;
                 }
                 if (t >= blockLines.length) {
-                    const e = new Error(`Missing THEN after IF starting at line ${currentLine}`);
+                    const e = new Error(`Missing THEN after IF`);
                     e.line = currentLine; throw e;
                 }
                 const thenToken = cleanLine(typeof blockLines[t] === 'object' ? blockLines[t].content : blockLines[t]);
                 if (!/^THEN$/i.test(thenToken)) {
-                    const e = new Error(`Expected THEN after IF at line ${currentLine}`);
+                    const e = new Error(`Expected THEN after IF`);
                     e.line = currentLine; throw e;
                 }
 
@@ -1178,7 +1178,7 @@ async function interpret(code) {
                 }
 
                 if (k >= blockLines.length) {
-                    const e = new Error(`Missing ENDIF for IF starting at line ${currentLine}`);
+                    const e = new Error(`Missing ENDIF for IF`);
                     e.line = currentLine; throw e;
                 }
 
@@ -1197,7 +1197,7 @@ async function interpret(code) {
                 const switchExpr = m[1].trim();
                 const { block, next } = collectUntil(blockLines, i + 1, /^(ENDCASE)\b/i);
                 if (next >= blockLines.length) {
-                    const e = new Error(`Missing ENDCASE for CASE starting at line ${currentLine}`);
+                    const e = new Error(`Missing ENDCASE for CASE`);
                     e.line = currentLine; throw e;
                 }
                 i = next;
@@ -1309,15 +1309,45 @@ async function interpret(code) {
                 continue;
             }
 
-            // WHILE cond DO ... ENDWHILE
+            // WHILE cond DO ... ENDWHILE (with nesting support)
             if ((m = s.match(/^WHILE\s+(.+)\s+DO\s*$/i))) {
                 const cond = m[1];
-                const { block, next } = collectUntil(blockLines, i + 1, /^(ENDWHILE)\b/i);
-                if (next >= blockLines.length) {
-                    throwErr('SyntaxError: ', 'expected ' + '"ENDWHILE"', currentLine)
+
+                // Collect body with proper nesting of inner WHILE...ENDWHILE
+                const block = [];
+                let depth = 0;
+                let k;
+                for (k = i + 1; k < blockLines.length; k++) {
+                    const rawK = blockLines[k];
+                    const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
+                    const c    = cleanLine(txt);
+                    if (c) {
+                        // new inner WHILE ... DO
+                        if (/^WHILE\b/i.test(c) && /\bDO\b/i.test(c)) {
+                            depth++;
+                            block.push(rawK);
+                            continue;
+                        }
+                        // ENDWHILE — close inner if depth>0, else this closes current loop
+                        if (/^ENDWHILE\b/i.test(c)) {
+                            if (depth > 0) {
+                                depth--;
+                                block.push(rawK);
+                                continue;
+                            }
+                            break; // matching ENDWHILE for the current WHILE
+                        }
+                    }
+
+                    block.push(rawK);
                 }
-                i = next;
-                
+                if (k >= blockLines.length) {
+                    const e = new Error('Missing ENDWHILE');
+                    e.line = currentLine;
+                    throw e;
+                }
+                i = k; // position after matching ENDWHILE
+
                 let count = 0;
                 while (assertBoolean(await evalExpr(cond, scope), 'WHILE condition')) {
                     if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
