@@ -604,7 +604,7 @@ async function interpret(code) {
 
         // ------------------------ REPLACE PSEUDOCODE THINGS WITH JS TOKENS ------------------------
 
-        console.log("s before everything: ", s);
+        //console.log("s before everything: ", s);
 
         // string and char literals
         const lit = [];
@@ -796,7 +796,7 @@ async function interpret(code) {
         // unprotect literals
         s = s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
 
-        console.log("s after everything: ", s);
+        //console.log("s after everything: ", s);
 
         const IDENT = /^[A-Za-z][A-Za-z0-9]*$/;
 
