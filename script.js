@@ -44,7 +44,8 @@ OUTPUT greet("World")`,
         min: 6,
         max: 38,
         step: 1,
-        defaultSize: 14
+        defaultSize: 14,
+        defaultFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace"
     });
 
     // set font size
