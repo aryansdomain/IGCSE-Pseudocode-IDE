@@ -5,6 +5,7 @@
 /* TODO: No button should have a curved background */
 
 :root {
+    --solid: #000000;
     --bg: #0f1117;
     --panel: #1a1a1a;
     --elev: #151a22;
@@ -28,6 +29,7 @@
 }
 
 .light {
+    --solid: #ffffff;
     --bg: #f6f8fa;
     --panel: #ffffff;
     --elev: #f6f8fa;
@@ -368,7 +370,7 @@ body.dragging {
 /* loading bar above terminal that turns red while loading */
 .console-loadingbar {
     height: 3px;
-    background: transparent;
+    background: var(--solid);
     width: 100%;
     flex: 0 0 auto;
     display: block;
