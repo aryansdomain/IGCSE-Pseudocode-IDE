@@ -21,8 +21,6 @@ async function interpret(code) {
         'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
     ]);
 
-    const JS_KEYWORDS = ['var', 'let', 'const', 'switch', 'default', 'break', 'continue', 'try', 'catch', 'finally', 'throw', 'new', 'delete', 'in', 'instanceof', 'typeof', 'void', 'class', 'super', 'this', 'yield', 'await', 'import', 'export', 'enum'];
-
     const NAME_KEYWORD_SEEN = new Set();
     function assertNotKeyword(id) {
         const key = String(id).toUpperCase();
@@ -366,7 +364,7 @@ async function interpret(code) {
         if (typeof n !== 'number' || !Number.isFinite(n)) {
             throwErr('TypeError: ', String(name) + ' must be a REAL', __LINE_NUMBER)
         }
-      }
+    }
     function assertInteger(n, name) {
         assertNumber(n, name);
         if (!Number.isInteger(n)) {
@@ -382,21 +380,20 @@ async function interpret(code) {
       
     const builtins = {
         RANDOM: () => {
-            const K = 1_000_000;
-            return Math.floor(Math.random() * (K + 1)) / K; // allows 0 and 1
+            const M = Number.MAX_SAFE_INTEGER
+            return Math.floor(Math.random() * (M + 1)) / M; // allows 0 and 1
         },
         
         ROUND: (x, places) => {
-            assertNumber(x, 'ROUND(x)');
+            console.log("ROUND called with: ", x, places);
+            assertNumber(x, 'ROUND() parameter');
             assertInteger(places, 'ROUND(places)');
             const p = Math.max(0, places | 0);
             const f = Math.pow(10, p);
             return Math.round(x * f) / f;
         },
         
-        LENGTH: (s) => {
-            return toString(s).length;
-        },
+        LENGTH: (s) => toString(s).length,
         
         LCASE: (x) => toString(x).toLowerCase(),
         UCASE: (x) => toString(x).toUpperCase(),
@@ -412,7 +409,7 @@ async function interpret(code) {
             return str.substring(st - 1, st - 1 + ln);
         },
         
-        DIV: (a, b) => {
+        INTDIV: (a, b) => {
             assertInteger(a, 'DIV first argument');
             assertInteger(b, 'DIV second argument');
             if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
@@ -542,7 +539,7 @@ async function interpret(code) {
         ADD: (a,b) => num(a,'+ operation') + num(b,'+ operation'),
         SUB: (a,b) => num(a,'- operation') - num(b,'- operation'),
         MUL: (a,b) => num(a,'* operation') * num(b,'* operation'),
-        DIVIDE: (a,b) => {
+        DIV: (a,b) => {
             a = num(a,'/ operation');
             b = num(b,'/ operation');
             if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
@@ -607,6 +604,8 @@ async function interpret(code) {
 
         // ------------------------ REPLACE PSEUDOCODE THINGS WITH JS TOKENS ------------------------
 
+        console.log("s before everything: ", s);
+
         // string and char literals
         const lit = [];
         s = s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, m => { lit.push(m); return `\uE000${lit.length-1}\uE001`; });
@@ -632,7 +631,7 @@ async function interpret(code) {
 
         // arithmetic operations
         s = replaceBinarySymbolOperator(s, '*', '__NUM.MUL');
-        s = replaceBinarySymbolOperator(s, '/', '__NUM.DIVIDE');
+        s = replaceBinarySymbolOperator(s, '/', '__NUM.DIV');
         s = replaceBinarySymbolOperator(s, '+', '__NUM.ADD');
         s = replaceBinarySymbolOperator(s, '-', '__NUM.SUB');
 
@@ -640,6 +639,7 @@ async function interpret(code) {
         s = s.replace(/(?<![<>])=/g,'===');
 
         function replaceBinarySymbolOperator(src, symbol, callee) {
+
             const isIdChar = (c) => /[A-Za-z0-9_.]/.test(c);
           
             function prevNonSpace(str, i) {
@@ -736,9 +736,8 @@ async function interpret(code) {
                 idx = out.indexOf(symbol, left.start + callee.length + 1); // continue after the replacement
             }
             return out;
-          }
+        }
           
-
         s = replaceBinarySymbolOperator(s, '!==', '__CMP.NE');
         s = replaceBinarySymbolOperator(s, '===', '__CMP.EQ');
         s = replaceBinarySymbolOperator(s, '<=',  '__CMP.LE');
@@ -754,26 +753,34 @@ async function interpret(code) {
         s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\(/g, (m, name, off, str) => {
             if (off > 0 && str.slice(off - 4, off) === 'Math') return m;
             if (off > 0 && str[off-1] === '.') return m;
-            const U = name.toUpperCase();
+
+            let U = name.toUpperCase();
             if (U === 'TRUE' || U === 'FALSE') return m;
+            if (U === 'DIV') U = 'INTDIV';
 
             if (builtins[U]) return `__BUILTIN_${U}(`;
 
-            return `__CALL('${name}',`;
+            return `await __CALL('${name}',`;
         });
 
         // replace var names that conflict with keywords
         s = s.replace(
             /\b([A-Za-z][A-Za-z0-9]*)\b/g,
-            (match, name) => {
-                if (JS_KEYWORDS.includes(name.toLowerCase())) {
-                    return `__SCOPE["${name}"]`;
-                }
+            (match, name, off, str) => {
 
-                const low = name.toLowerCase();
-                if (low === 'true' || low === 'false') return match; // already boolean
+                // Skip member/property names like __NUM.DIV → do not scope 'DIV'
+                if (off > 0 && str[off - 1] === '.') return match;
+                // Skip internal placeholders starting with '__' (e.g., __CALL, __NUM)
+                if (off >= 2 && str[off - 2] === '_' && str[off - 1] === '_') return match;
 
-                if ([...PSC_KEYWORDS].some(k => k.toLowerCase() === low)) {
+                const JS_KEYWORDS = ['VAR', 'LET', 'CONST', 'SWITCH', 'DEFAULT', 'BREAK', 'CONTINUE', 'TRY', 'CATCH', 'FINALLY', 'THROW', 'NEW', 'DELETE', 'IN', 'INSTANCEOF', 'TYPEOF', 'VOID', 'CLASS', 'SUPER', 'THIS', 'YIELD', 'IMPORT', 'EXPORT', 'ENUM'];
+
+                if (JS_KEYWORDS.includes(name.toUpperCase())) return `__SCOPE["${name}"]`;
+
+                const up = name.toUpperCase();
+                if (up === 'TRUE' || up === 'FALSE') return match; // already boolean
+
+                if ([...PSC_KEYWORDS].some(k => k.toUpperCase() === up)) {
                     const key = name.toUpperCase();
                     if (!NAME_KEYWORD_SEEN.has(key)) {
                         throwWarning(`Warning: Variable "${name}" is the same as a keyword; please rename it.`);
@@ -813,16 +820,16 @@ async function interpret(code) {
         });
 
         const fn = Function(
-            '__SCOPE', '__DIV', '__MOD', '__CALL', '__AG', '__NUM', '__CMP',
+            '__SCOPE', '__INTDIV', '__MOD', '__CALL', '__AG', '__NUM', '__CMP',
             ...Object.keys(builtins).map(k => `__BUILTIN_${k}`),
-            `with (__SCOPE) { return (${s}); }`
+            `return (async function(){ with (__SCOPE) { return (${s}); } }).call(this);`
         );
 
         try {
             const builtinFns = Object.keys(builtins).map(k => builtins[k]);
-            return fn(
+            return await fn(
                 scopeProxy,
-                builtins.DIV,
+                builtins.INTDIV,
                 builtins.MOD,
                 async (name, ...args) => {
                     const def = funcs[name];
@@ -1186,15 +1193,15 @@ async function interpret(code) {
             }
 
             // CASE OF X ... ENDCASE
-            if ((m = s.match(/^CASE\s+OF\s+([A-Za-z][A-Za-z0-9]*)$/i))) {
-                const idName = m[1];
+            if ((m = s.match(/^CASE\s+OF\s+(.+)$/i))) {
+                const switchExpr = m[1].trim();
                 const { block, next } = collectUntil(blockLines, i + 1, /^(ENDCASE)\b/i);
                 if (next >= blockLines.length) {
                     const e = new Error(`Missing ENDCASE for CASE starting at line ${currentLine}`);
                     e.line = currentLine; throw e;
                 }
                 i = next;
-                const val = await evalExpr(idName, scope);
+                const val = await evalExpr(switchExpr, scope);
                 let chosen = null, otherwise = null;
                 for (let k = 0; k < block.length; k++) {
                     const rawk = block[k];
@@ -1239,7 +1246,7 @@ async function interpret(code) {
 
                 const varType = getType(scope, varName);
                 if (varType !== 'INTEGER') {
-                    throwErr('TypeError: ', 'variable must be int', currentLine)
+                    throwErr('TypeError: ', 'variable must be an INTEGER', currentLine)
                 }
 
                 // detect wrong NEXT variable
