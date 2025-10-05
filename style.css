@@ -209,8 +209,8 @@ body.dragging {
     align-items: center;
 }
 
-/* Bug report button */
-.btn.bug-report {
+/* Issue report button */
+.btn.issue-report {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -222,7 +222,7 @@ body.dragging {
     border-radius: var(--radius-xs);
 }
 
-.btn.bug-report i {
+.btn.issue-report i {
     font-size: 12px;
 }
 

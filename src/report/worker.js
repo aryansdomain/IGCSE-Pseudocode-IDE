@@ -65,7 +65,7 @@ export default {
                 payload = {
                     title: form.get("title"),
                     body: form.get("body"),
-                    labels: (form.getAll("labels") || ["bug"]).flat()
+                    labels: (form.getAll("labels") || ["issue"]).flat()
                 };
                 
             } else {
@@ -74,7 +74,7 @@ export default {
                 });
             }
 
-            const { title, body, labels = ["bug"] } = payload || {};
+            const { title, body, labels = ["issue"] } = payload || {};
             if (!title || !body) {
                 return new Response(JSON.stringify({ error: "title and body required" }), {
                     status: 400, headers: { ...cors, "Content-Type": "application/json" }

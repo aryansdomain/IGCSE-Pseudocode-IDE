@@ -127,9 +127,9 @@ const GH_REPO  = "IGCSE-Pseudocode-IDE";
 function buildIssueURL() {
     const base = `https://github.com/${GH_OWNER}/${GH_REPO}/issues/new`;
     const params = new URLSearchParams({
-        //template: "bug_report.yml",
-        labels: "bug",
-        title: "[Bug] ",
+        //template: "issue_report.yml",
+        labels: "issue",
+        title: "[Issue] ",
     });
 
     // context
@@ -142,7 +142,7 @@ function buildIssueURL() {
 
     // base template
     const body = [
-        `Type (UI bug, runtime error, etc.): `,
+        `Type (UI issue, runtime error, formatting bug, etc.): `,
         `Page: ${page}`,
         `UA: ${ua}${ver}`,
         "",
@@ -167,9 +167,9 @@ function buildIssueURL() {
     return `${base}?${params.toString()}`;
 }
 
-// listen for bug button click
-function wireBugButton() {
-    const el = document.getElementById("bug-report-btn");
+// listen for issue button click
+function wireIssueButton() {
+    const el = document.getElementById("issue-report-btn");
     if (!el) return;
 
     el.addEventListener("click", (e) => {
@@ -177,10 +177,13 @@ function wireBugButton() {
         
         // build report.html URL and fill data
         const sp = new URL(buildIssueURL()).searchParams;
+        let reportPath = "";
 
         // if running on localhost
         const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        const reportPath = isLocal ? "src/report/report.html" : `${GH_REPO}/src/report/report.html`;
+        if (!isLocal) reportPath = `${GH_REPO}`;
+        reportPath += "/src/report/report.html";
+        
         const url = new URL(reportPath, location.origin);
 
         url.searchParams.set("title", sp.get("title"));
@@ -196,7 +199,7 @@ function wireBugButton() {
 }
 
 if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", wireBugButton);
+    document.addEventListener("DOMContentLoaded", wireIssueButton);
 } else {
-    wireBugButton();
+    wireIssueButton();
 }

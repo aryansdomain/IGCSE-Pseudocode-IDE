@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 function boldLabelsOnly(text) {
 
     const LABELS_TO_BOLD = [
-        "Type (UI bug, runtime error, etc.)",
+        "Type (UI issue, runtime error, formatting bug, etc.): ",
         "Page",
         "UA",
         "Last JavaScript Error (uncaught)",
@@ -53,7 +53,7 @@ function boldLabelsOnly(text) {
     const modeBtn    = $("mode");
 
     // prefill title and body
-    titleEl.value = qs("title", "[Bug] ");
+    titleEl.value = qs("title", "[Issue] ");
     bodyEl.value  = qs("body");
 
     // ------------------------ Set Mode ------------------------
@@ -86,7 +86,7 @@ function boldLabelsOnly(text) {
 
         // bold labels before sending to GitHub
         gh.searchParams.set("body", boldLabelsOnly(bodyEl.value));
-        gh.searchParams.set("labels", "bug");
+        gh.searchParams.set("labels", "issue");
 
         window.open(gh.toString(), "_blank", "noopener");
     };
@@ -104,7 +104,7 @@ function boldLabelsOnly(text) {
                 body: JSON.stringify({
                     title: titleEl.value.trim(),
                     body: boldLabelsOnly(bodyEl.value),
-                    labels: ["bug"]
+                    labels: ["issue"]
                 })
             });
             const data = await res.json();
