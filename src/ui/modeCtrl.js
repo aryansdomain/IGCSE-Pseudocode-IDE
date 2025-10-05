@@ -1,5 +1,7 @@
 const KEY = 'ui.mode'; // localStorage key
 
+export function isLightMode() { return document.documentElement.classList.contains('light'); }
+
 export function initMode({
     themeCtrl,
     button,
