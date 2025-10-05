@@ -177,7 +177,12 @@ function wireBugButton() {
         
         // build report.html URL and fill data
         const sp = new URL(buildIssueURL()).searchParams;
-        const url = new URL("src/report/report.html", location.origin);
+
+        // if running on localhost
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const reportPath = isLocal ? "src/report/report.html" : `${GH_REPO}/src/report/report.html`;
+        const url = new URL(reportPath, location.origin);
+
         url.searchParams.set("title", sp.get("title"));
         url.searchParams.set("body", sp.get("body"));
         

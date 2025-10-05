@@ -78,8 +78,6 @@ function boldLabelsOnly(text) {
         localStorage.setItem('ui.mode', newMode);
     };
 
-
-
     closeBtn.onclick = () => window.close();
 
     openGh.onclick = () => {
