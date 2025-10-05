@@ -42,7 +42,7 @@
                 <button class="btn settings" type="button" title="Settings" id="settingsBtn">
                     <i class="fas fa-cog settings-icon"></i>
                 </button>
-                <button class="btn layout" type="button" title="Side-by-side layout" id="layoutBtn" aria-pressed="false">
+                <button class="btn layout" type="button" title="Change layout" id="layoutBtn" aria-pressed="false">
                     <i class="fas fa-columns to-horizontal"></i>
                     <i class="fas fa-columns to-vertical fa-rotate-270" hidden></i>
                 </button>
@@ -50,6 +50,13 @@
                     <i class="fas fa-moon moon-icon" hidden></i>
                     <i class="fas fa-sun sun-icon"></i>
                 </button>
+            </div>
+            <div class="utility-right">
+                <a id="bug-report-btn" href="#" rel="noopener" target="_blank" class="btn bug-report" title="Report a bug">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Report a bug</span>
+                </a>
+                <script src="src/ui/bugReport.js" defer></script>
             </div>
         </div>
 

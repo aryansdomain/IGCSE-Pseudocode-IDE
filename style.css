@@ -194,8 +194,36 @@ body.dragging {
 .utilitybar {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
     padding: 4px 12px;
+}
+
+.utilitybar .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.utilitybar .utility-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Bug report button */
+.btn.bug-report {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border-radius: var(--radius-xs);
+}
+
+.btn.bug-report i {
+    font-size: 12px;
 }
 
 /* ==========================================================================
