@@ -29,7 +29,9 @@ export function initFormatter({ editor, getCode, setCode, formatBtn }) {
 
 function format(src) {
     let prev = String(src);
-    for (let i = 0; i < 15; i++) { // repeat formatting 15 times until no changes made
+
+    // repeat formatting 15 times until no changes made
+    for (let i = 0; i < 15; i++) {
         const next = formatOnce(prev);
         if (next === prev) return next;
         prev = next;
