@@ -144,23 +144,24 @@ function buildIssueURL() {
 
     // base template
     const body = [
-        `Page: ${page}`,
-        `UA: ${ua}${ver}`,
+        `**Type _(UI bug, runtime error, etc.)_:** `,
+        `**Page:** ${page}`,
+        `**UA:** ${ua}${ver}`,
         "",
-        `Last JavaScript Error (uncaught): ${lastJSError}`,
-        `Last Console Error: ${lastConsoleError}`,
-        `Last IDE Error: ${lastIDEError}`,
+        `**Last JavaScript Error (uncaught):** ${lastJSError}`,
+        `**Last Console Error:** ${lastConsoleError}`,
+        `**Last IDE Error:** ${lastIDEError}`,
         "",
-        "Steps to reproduce:",
-        "1.",
-        "2.",
-        "3.",
+        "**Steps to reproduce:**",
+        "_1._",
+        "_2._",
+        "_3._",
         "",
-        "Expected result:",
+        "**Expected result:**",
         "",
-        "Actual result:",
+        "**Actual result:**",
         "",
-        "Additional information:",
+        "**Additional information:**",
         ""
     ].join("\n");
 
