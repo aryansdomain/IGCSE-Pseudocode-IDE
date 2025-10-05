@@ -138,10 +138,6 @@ function buildIssueURL() {
     const lastConsoleError = window.__lastConsoleError || "None";
     const lastIDEError = window.__lastIDEError || "None";
 
-    console.log("lastJSError: ", window.__lastError);
-    console.log("lastConsoleError: ", window.__lastConsoleError);
-    console.log("lastIDEError: ", window.__lastIDEError);
-
     // base template
     const body = [
         `**Type _(UI bug, runtime error, etc.)_:** `,
