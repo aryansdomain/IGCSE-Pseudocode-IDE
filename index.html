@@ -7,12 +7,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>IGCSE Pseudocode IDE</title>
     <link rel="stylesheet" href="style.css"/>
+
+    <!-- Listener for JS errors before everything -->
+    <script>
+        (function () {
+            if (window.__errorTapInstalled) return;
+            window.__errorTapInstalled = true;
+            window.__lastError = null;
+        
+            // classic errors
+            window.addEventListener("error", function (e) {
+                if (e instanceof ErrorEvent) {
+                    window.__lastError = {
+                        type: "runtime",
+                        message: e.message,
+                        filename: e.filename,
+                        lineno: e.lineno,
+                        colno: e.colno,
+                        stack: e.error && e.error.stack ? e.error.stack : null
+                    };
+                }
+            }, true);
+      
+          // onerror fallback
+            window.onerror = function (message, source, lineno, colno, error) {
+                window.__lastError = {
+                    type: "onerror",
+                    message, filename: source, lineno, colno,
+                    stack: error && error.stack ? error.stack : null
+                };
+                return false;
+            };
+      
+          // unhandled promise rejection
+            window.addEventListener("unhandledrejection", function (e) {
+                var r = e && e.reason;
+                window.__lastError = {
+                    type: "unhandledrejection",
+                    message: r && r.message ? String(r.message) : String(r),
+                    stack: r && r.stack ? r.stack : null
+                };
+            });
+        })();
+    </script>
     
     <!-- Load font families -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=IBM+Plex+Mono:wght@300..700&family=Inconsolata:wght@300..900&family=JetBrains+Mono:wght@100..800&family=PT+Mono&family=Roboto+Mono:wght@100..700&family=Source+Code+Pro:wght@200..900&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+
+    <!-- Issue Report -->
+    <script type="module" src="src/report/issueReport.js" defer></script>
     
     <!-- xterm.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -31,8 +77,18 @@
     <!-- Interpreter -->
     <script src="interpreter.js"></script>
 </head>
-<body>
 
+<!-- Google analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-V2QHS6XEKF');
+</script>
+
+<body>
     <!-- Editor Theme Button -->
     <input id="editortheme" type="checkbox" hidden />
 
@@ -58,7 +114,6 @@
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     <span>Report an issue</span>
                 </a>
-                <script type="module" src="src/report/issueReport.js" defer></script>
             </div>
         </div>
 
