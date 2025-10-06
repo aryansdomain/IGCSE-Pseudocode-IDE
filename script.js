@@ -1,4 +1,5 @@
 (async function () {
+
     // import modules
     const { initEditor } = await import('./src/editor/editor.js');
     const { initFontControls } = await import('./src/editor/font.js');
@@ -184,7 +185,7 @@ OUTPUT greet("World")`,
         }
     });
     
-    // ---- Layout toggle + splitter ----
+    // layout toggle + splitter
     const LAYOUT_KEY = 'ui.layout:editor-console';
     const layoutBtn  = document.getElementById('layoutBtn');
 
@@ -302,7 +303,6 @@ OUTPUT greet("World")`,
         }
     });
     
-    // Now create the REPL (it needs runCtrl to dispatch commands)
     repl = createRepl({
         terminal,
         consoleOutput,
@@ -315,7 +315,10 @@ OUTPUT greet("World")`,
     // run/stop button
     on(UI.runBtn, 'click', () => {
         if (runCtrl.isRunning()) runCtrl.stop();
-        else repl.execCommand('run');
+        else {
+            repl.clearBuffer(); // clear current console input buffer, line user is typing
+            repl.execCommand('run');
+        }
     });
 
     // Editor download
