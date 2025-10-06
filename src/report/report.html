@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Report an issue — IGCSE IDE</title>
+    <title>IGCSE IDE - Report an issue</title>
     <link rel="stylesheet" href="report.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
@@ -22,10 +22,11 @@
     <div class="report-wrap">
         <section class="dialog-card" role="dialog" aria-labelledby="title">
             <header class="dialog-header">
-                <div class="header-actions">
+                <div class="header-buttons">
                     <button class="btn mode" id="mode" title="Toggle dark/light mode"><i class="fas fa-moon"></i></button>
-                    <button class="btn close" id="closeBtn" title="Close">✕</button>
+                    <button class="btn close" id="closeBtn" title="Close"><i class="fas fa-xmark"></i></button>
                 </div>
+                <div class="error-text" id="errorText"></div>
             </header>
 
             <div class="dialog-content">
@@ -37,7 +38,6 @@
                     <label class="label" for="br-body">Details</label>
                     <textarea id="br-body" class="textarea" spellcheck="true"></textarea>
                 </div>
-                <p id="status" class="status"></p>
             </div>
 
             <div class="actions">
