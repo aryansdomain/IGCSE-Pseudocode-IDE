@@ -17,9 +17,9 @@ export async function saveTextAsFile(filename, text) {
 
 }
 
-export function readTerminalText(terminal, { trim = false } = {}) {
+export function readConsoleText(console, { trim = false } = {}) {
     let out = '';
-    const buf = terminal?.buffer?.active;
+    const buf = console?.buffer?.active;
     if (!buf) return out;
     for (let i = 0; i < buf.length; i++) {
         const line = buf.getLine(i)?.translateToString() ?? '';
@@ -45,13 +45,13 @@ export function initEditorDownloads({ getCode, button, filenamePrefix = 'code' }
 }
 
 // copy OR download the visible console buffer
-export function initConsoleDownloads({ terminal, copyBtn, downloadBtn, consoleOutput }) {
+export function initConsoleDownloads({ console, copyBtn, downloadBtn, consoleOutput }) {
     const handlers = [];
 
     if (copyBtn) {
         const onCopy = async () => {
             try {
-                const text = readTerminalText(terminal, { trim: true });
+                const text = readConsoleText(console, { trim: true });
                 await navigator.clipboard.writeText(text);
 
                 // animate to finished state
@@ -71,7 +71,7 @@ export function initConsoleDownloads({ terminal, copyBtn, downloadBtn, consoleOu
 
     if (downloadBtn) {
         const onDownload = async () => {
-            const text = readTerminalText(terminal);
+            const text = readConsoleText(console);
             const filename = `console_${formatISO(new Date(), { compact: true })}.txt`;
             await saveTextAsFile(filename, text);
         };

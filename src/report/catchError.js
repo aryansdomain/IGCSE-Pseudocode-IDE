@@ -76,7 +76,7 @@ export function formatJSError(err) {
     };
 })();
 
-// record last IDE terminal error (from consoleOutput)
+// record last IDE console error (from consoleOutput)
 (function attachIDEErrorListener() {
     if (window.__ideConsoleListenerInstalled) return;
     const MAX_ERR_LEN = 4000;

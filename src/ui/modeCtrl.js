@@ -47,7 +47,7 @@ export function initMode({
                 currentThemeCtrl.setEditorTheme('monokai');
             }
             
-            currentThemeCtrl.updateTerminalTheme();
+            currentThemeCtrl.updateConsoleTheme();
             currentThemeCtrl.refreshEditorChrome();
         }
         

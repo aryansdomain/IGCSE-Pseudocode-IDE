@@ -1,7 +1,7 @@
 export function initThemeControls({
     editor,
     editorApis,
-    terminal,
+    console,
     modeCtrl,
     editorThemeSelect,
     lightThemes = [
@@ -15,8 +15,6 @@ export function initThemeControls({
         'Tomorrow Night Eighties','Twilight','Vibrant Ink'
     ],
 }) {
-    if (!editor || !editorApis || !terminal) throw new Error('initThemeControls: editor, editorApis, terminal required');
-
     const toBare = (id) => {
         let bare = String(id).replace(/^ace\/theme\//, '');
 
@@ -47,9 +45,9 @@ export function initThemeControls({
     }
 
 
-    function updateTerminalTheme() {
+    function updateConsoleTheme() {
         const light = modeCtrl.isLightMode();
-        terminal.options.theme = light ? {
+        console.options.theme = light ? {
             background: '#ffffff', foreground: '#000000', cursor: '#000000', selection: '#00000030',
             black: '#000000', red: '#d73a49', green: '#179645', yellow: '#ce8600', blue: '#0000ff',
             magenta: '#ff00ff', cyan: '#00ffff', white: '#ffffff',
@@ -105,13 +103,13 @@ export function initThemeControls({
         editor.renderer.on('themeLoaded', refreshEditorChrome);
     }
 
-    updateTerminalTheme();
+    updateConsoleTheme();
 
     return { 
         setEditorTheme, 
         getCurrentEditorTheme,
         refreshEditorChrome, 
-        updateTerminalTheme,
+        updateConsoleTheme,
         hasTheme, 
         listThemes, 
         lightThemes, 

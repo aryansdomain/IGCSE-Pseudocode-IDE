@@ -11,38 +11,38 @@ export const setVars = (el, obj) => {
 };
 
 export function initDom() {
-    // Workbench / panes / terminal
-    const workspace   = byId('workspace');
-    const editorPane  = byId('editor-pane');
-    const consolePane = byId('console-pane');
-    const splitter    = byId('splitter');
-    const terminalEl  = byId('terminal');
-    const terminalLoadingBar = byId('terminalLoadingBar');
-    const codeEl      = byId('code');
+    // Workbench / panes / console
+    const workspace         = byId('workspace');
+    const editorPane        = byId('editor-pane');
+    const consolePane       = byId('console-pane');
+    const splitter          = byId('splitter');
+    const consoleEl         = byId('console-viewport');
+    const consoleLoadingBar = byId('consoleLoadingBar');
+    const codeEl            = byId('code');
 
     // Bars & UI
-    const topbar      = qs('.topbar');
-    const bottombar   = qs('.bottombar');
+    const topbar            = qs('.topbar');
+    const bottombar         = qs('.bottombar');
 
     // Buttons / controls
-    const runBtn      = byId('runBtn');
-    const clearBtn    = qs('.btn.clear');
-    const copyBtn     = qs('.btn.copy');
-    const downloadBtn = qs('.btn.download');
-    const modeBtn     = byId('modeBtn');
+    const runBtn            = byId('runBtn');
+    const clearBtn          = qs('.btn.clear');
+    const copyBtn           = qs('.btn.copy');
+    const downloadBtn       = qs('.btn.download');
+    const modeBtn           = byId('modeBtn');
     const editorThemeSelect = byId('editorThemeSelect');
 
     // Settings
-    const settingsOverlay = byId('settingsOverlay');
-    const settingsBtn     = byId('settingsBtn');
-    const closeSettings   = byId('closeSettings');
+    const settingsOverlay   = byId('settingsOverlay');
+    const settingsBtn       = byId('settingsBtn');
+    const closeSettings     = byId('closeSettings');
 
     // Editor controls
-    const fontSizeSlider  = byId('fontSizeSlider');
-    const fontFamilySelect= byId('fontFamilySelect');
-    const tabSpacesSlider = byId('tabSpacesSlider');
-    const tabSpacesValue  = byId('tabSpacesValue');
-    const tabSpacesInfo   = qs('.tab-spaces-info');
+    const fontSizeSlider    = byId('fontSizeSlider');
+    const fontFamilySelect  = byId('fontFamilySelect');
+    const tabSpacesSlider   = byId('tabSpacesSlider');
+    const tabSpacesValue    = byId('tabSpacesValue');
+    const tabSpacesInfo     = qs('.tab-spaces-info');
     const editorDownloadBtn = byId('downloadEditorBtn');
 
     // Info
@@ -54,7 +54,7 @@ export function initDom() {
 
     return {
         // roots
-        workspace, editorPane, consolePane, splitter, terminalEl, terminalLoadingBar, codeEl,
+        workspace, editorPane, consolePane, splitter, consoleEl, consoleLoadingBar, codeEl,
         topbar, bottombar,
 
         // controls

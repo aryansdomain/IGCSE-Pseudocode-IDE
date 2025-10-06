@@ -19,7 +19,7 @@ export function createRunCtrl({
     let hadFlushOutput = false;
 
     // ------------------------------- RUNTIME STATE -------------------------------
-    let terminalLocked = false;
+    let consoleLocked = false;
     let awaitingInput = false;
     let loadingTimer = null;
     const setLoading = (v) => { try { onLoadingChange(!!v); } catch {} };
@@ -65,7 +65,7 @@ export function createRunCtrl({
 
                 // switch to input mode
                 awaitingInput = true;
-                terminalLocked = false;
+                consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
 
@@ -88,7 +88,7 @@ export function createRunCtrl({
 
             } else if (type === 'done') {
                 awaitingInput = false;
-                terminalLocked = false;
+                consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
 
@@ -114,7 +114,7 @@ export function createRunCtrl({
             } else if (type === 'stopped') {
 
                 awaitingInput = false;
-                terminalLocked = false;
+                consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
 
@@ -122,7 +122,7 @@ export function createRunCtrl({
 
             } else if (type === 'error') {
                 awaitingInput = false;
-                terminalLocked = false;
+                consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
                 let msg = String(e.data.error || 'Unknown error');
@@ -137,7 +137,7 @@ export function createRunCtrl({
         };
 
         worker.onerror = (e) => {
-            terminalLocked = false;
+            consoleLocked = false;
             clearLoadingTimer();
             setLoading(false);
             consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
@@ -150,7 +150,7 @@ export function createRunCtrl({
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
-        terminalLocked = true;
+        consoleLocked = true;
 
         const localRunId = ++runId;
 
@@ -192,7 +192,7 @@ export function createRunCtrl({
         try { worker.postMessage({ type: 'stop' }); } catch {}
         try { worker.terminate(); } catch {}
         worker = null;
-        terminalLocked = false;
+        consoleLocked = false;
         clearLoadingTimer();
         setLoading(false);
 
@@ -203,7 +203,7 @@ export function createRunCtrl({
 
         // lock again while program runs
         awaitingInput = false;
-        terminalLocked = true;
+        consoleLocked = true;
         worker.postMessage({ type: 'input_response', data: String(line) });
         
         // Show loading bar after a delay for program input
@@ -216,5 +216,5 @@ export function createRunCtrl({
 
     window.runCtrlProvideInput = provideInput;
 
-    return { run, stop, provideInput, isRunning: () => isRunning, isTerminalLocked: () => terminalLocked };
+    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked };
 }

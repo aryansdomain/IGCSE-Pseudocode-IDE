@@ -7,8 +7,8 @@
     const { initThemeControls } = await import('./src/ui/themeCtrl.js');
     const { initFormatter } = await import('./src/format/format.js');
     const { createRunCtrl } = await import('./src/runtime/runCtrl.js');
-    const { createConsoleOutput } = await import('./src/terminal/consoleOutput.js');
-    const { createRepl } = await import('./src/terminal/repl.js');
+    const { createConsoleOutput } = await import('./src/console/consoleOutput.js');
+    const { createRepl } = await import('./src/console/repl.js');
     const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
     const { initMode } = await import('./src/ui/modeCtrl.js');
     const { initSettings } = await import('./src/ui/settings.js');
@@ -127,12 +127,12 @@ OUTPUT greet("World")`,
     editor.session.on('change', updateCursorPos);
     updateCursorPos();
 
-    // ---------- Terminal wiring ----------
-    const { initTerminal } = await import('./src/terminal/terminal.js');
+    // ---------- Console wiring ----------
+    const { initConsole } = await import('./src/console/console.js');
     
-    // initialize terminal
-    const { terminal, getline, refit } = initTerminal({
-        container: UI.terminalEl,
+    // initialize console
+    const { console, getline, refit } = initConsole({
+        container: UI.consoleEl,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
@@ -140,7 +140,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const consoleOutput = createConsoleOutput(terminal, getline);
+    const consoleOutput = createConsoleOutput(console, getline);
     
     const modeCtrl = initMode({
         themeCtrl: null,
@@ -154,14 +154,14 @@ OUTPUT greet("World")`,
     const themeCtrl = initThemeControls({
         editor,
         editorApis,
-        terminal,
+        console,
         modeCtrl: modeCtrl,
         editorThemeSelect: UI.editorThemeSelect,
     });
     
     // update modeCtrl
     modeCtrl.setThemeCtrl(themeCtrl);
-    themeCtrl.updateTerminalTheme();
+    themeCtrl.updateConsoleTheme();
     
     // Settings panel
     const settings = initSettings({
@@ -297,14 +297,14 @@ OUTPUT greet("World")`,
         },
         onLoadingChange: (loading) => {
             try {
-                UI.terminalLoadingBar?.classList.toggle('loading', !!loading);
-                UI.terminalLoadingBar?.setAttribute('aria-hidden', loading ? 'false' : 'true');
+                UI.consoleLoadingBar?.classList.toggle('loading', !!loading);
+                UI.consoleLoadingBar?.setAttribute('aria-hidden', loading ? 'false' : 'true');
             } catch {}
         }
     });
     
     repl = createRepl({
-        terminal,
+        console,
         consoleOutput,
         runCtrl,
         editorApis,
@@ -330,7 +330,7 @@ OUTPUT greet("World")`,
 
     // Console Copy/Download
     const consoleDownloads = initConsoleDownloads({
-        terminal,
+        console,
         copyBtn: UI.copyBtn,
         downloadBtn: UI.downloadBtn,
         consoleOutput

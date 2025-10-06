@@ -2,8 +2,6 @@
    CSS VARIABLES & THEMES
    ========================================================================== */
 
-/* TODO: No button should have a curved background */
-
 :root {
     --solid: #000000;
     --bg: #0f1117;
@@ -101,7 +99,7 @@ html, body {
     z-index: 0;
 }
 
-/* add gap between splitter and terminal in horizontal layout */
+/* add gap between splitter and console in horizontal layout */
 #workspace.layout-horizontal #console-pane {
     margin-left: var(--gap);
 }
@@ -132,7 +130,7 @@ html, body {
     gap: 2px;
     width: 24px;
     height: 6px;
-    background-image: /* TODO - these are getting cut off */
+    background-image:
         radial-gradient(circle, var(--text) 1px, transparent 1px),
         radial-gradient(circle, var(--text) 1px, transparent 1px),
         radial-gradient(circle, var(--text) 1px, transparent 1px),
@@ -274,7 +272,7 @@ body.dragging {
 }
 
 /* Editor Shell */
-.editor-shell {
+.editor {
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
@@ -379,7 +377,7 @@ body.dragging {
     cursor: not-allowed;
 }
 
-.console-main {
+.console-content {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -387,15 +385,16 @@ body.dragging {
     height: 100%;
 }
 
-.console, .console-main { 
+.console,
+.console-content { 
     min-height: 0; 
 }
 
 /* ==========================================================================
-   TERMINAL
+   CONSOLE/TERMINAL
    ========================================================================== */
 
-/* loading bar above terminal that turns red while loading */
+/* loading bar above console */
 .console-loadingbar {
     height: 3px;
     background: var(--solid);
@@ -404,10 +403,10 @@ body.dragging {
     display: block;
 }
 .console-loadingbar.loading {
-    background: var(--red);
+    background: var(--red); /* turns red while loading */
 }
 
-#terminal {
+#console-viewport {
     width: 100%;
     height: 100%;
     position: relative;
@@ -423,7 +422,7 @@ body.dragging {
     min-height: 0;
 }
 
-.light #terminal {
+.light #console-viewport {
     background-color: #ffffff;
     color: #000000;
 }
@@ -577,7 +576,7 @@ body.dragging {
    FORM CONTROLS
    ========================================================================== */
 
-/* Sliders */
+/* sliders */
 .setting-group input[type="range"] {
     width: 100%;
     height: 8px;
@@ -640,7 +639,7 @@ body.dragging {
     border: none;
 }
 
-/* Slider Container and Tick Marks */
+/* slider container and tick marks */
 .slider-container {
     position: relative;
     margin: 15px 0 5px 0;
@@ -667,7 +666,7 @@ body.dragging {
     transform: translateX(-50%);
 }
 
-/* Position font ticks based on their slider values */
+/* position font ticks based on slider values */
 .slider-ticks.font-ticks .tick:nth-child(1)  { left: 4%;     }  /* 6 */
 .slider-ticks.font-ticks .tick:nth-child(2)  { left: 9.75%;  }  /* 8 */
 .slider-ticks.font-ticks .tick:nth-child(3)  { left: 15.5%;  }  /* 10 */
@@ -694,7 +693,6 @@ body.dragging {
     transition: color 0.2s ease;
 }
 
-/* Only make ticks with content clickable */
 .slider-ticks .tick:not(:empty) {
     cursor: pointer;
 }
@@ -714,7 +712,7 @@ body.dragging {
     background: var(--border);
 }
 
-/* Select Dropdowns */
+/* dropdowns */
 .font-select {
     width: 100%;
     padding: 8px 12px;
@@ -886,7 +884,7 @@ body.dragging {
    LIGHT MODE OVERRIDES
    ========================================================================== */
 
-.light #console-body {
+.light #console-viewport {
     background-color: #ffffff;
     color: #24292f;
 }
@@ -900,7 +898,7 @@ body.dragging {
     color: #24292f;
 }
 
-.light #console-body .line.stdin .command-text {
+.light #console-viewport .line.stdin .command-text {
     color: #24292f;
 }
 
@@ -908,7 +906,7 @@ body.dragging {
     color: #24292f;
 }
 
-.light #console-body .cursor {
+.light #console-viewport .cursor {
     background: #24292f;
 }
 
@@ -929,7 +927,7 @@ html.mode-switching *,
 html.mode-switching *::before,
 html.mode-switching *::after {
     transition: none !important;
-    animation: none !important;
+    animation:  none !important;
 }
 
 /* ==========================================================================
@@ -944,7 +942,6 @@ html.mode-switching *::after {
     color: var(--muted);
     z-index: 0;
 }
-
 .footer i {
     vertical-align: middle;
 }

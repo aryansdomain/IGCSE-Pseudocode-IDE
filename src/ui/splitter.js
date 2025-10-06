@@ -24,7 +24,7 @@ export function initSplitter({
     let dragStartCoord = 0;   // clientY/clientX at pointerdown
     let dragStartSizeA = 0;   // px height/width of paneA at pointerdown
     let raf = 0;
-    let terminalRaf = 0;
+    let consoleRaf = 0;
 
     // --- snap state + thresholds ---
     let snapped = false; // editor collapsed
@@ -111,7 +111,7 @@ export function initSplitter({
         }
 
         saveRatio(storageKey, ratio);
-        onTerminalResizeSafe();
+        onConsoleResizeSafe();
     }
 
     function handleSize() {
@@ -124,10 +124,10 @@ export function initSplitter({
         raf = requestAnimationFrame(() => onResize());
     }
 
-    function onTerminalResizeSafe() {
-        cancelAnimationFrame(terminalRaf);
-        terminalRaf = requestAnimationFrame(() => {
-            // Only resize terminal when not actively dragging to prevent flickering
+    function onConsoleResizeSafe() {
+        cancelAnimationFrame(consoleRaf);
+        consoleRaf = requestAnimationFrame(() => {
+            // Only resize console when not actively dragging to prevent flickering
             if (!dragging) {
                 onResize();
             }
@@ -201,7 +201,7 @@ export function initSplitter({
         document.body.style.userSelect = '';
         document.body.style.cursor = '';
         (ev.target || handle).releasePointerCapture?.(ev.pointerId ?? undefined);
-        // Resize terminal after dragging ends
+        // Resize console after dragging ends
         onResizeSafe();
     }
 
@@ -261,7 +261,7 @@ export function initSplitter({
             window.removeEventListener('pointercancel', endDrag);
             window.removeEventListener('resize', onWin);
             cancelAnimationFrame(raf);
-            cancelAnimationFrame(terminalRaf);
+            cancelAnimationFrame(consoleRaf);
         }
     };
 }
