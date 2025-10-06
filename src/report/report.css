@@ -2,13 +2,14 @@
    CSS VARIABLES & MODES
    ========================================================================== */
 
-   :root {
+:root {
     --solid: #000000;
     --bg: #0f1117;
     --panel: #1a1a1a;
-    --elev: #151a22;
+    --elev: #272823;
     --text: #e6edf3;
     --muted: #8b949e;
+    --intense-muted: #272825;
     --border: #2b313b;
     --green: #00ff00;
     --green-accent: #22c55e;
@@ -31,9 +32,10 @@
     --solid: #ffffff;
     --bg: #f6f8fa;
     --panel: #ffffff;
-    --elev: #f6f8fa;
+    --elev: #ffffff;
     --text: #24292f;
     --muted: #57606a;
+    --intense-muted: #e2e3e8;
     --border: #d0d7de;
     --green: #009d00;
     --green-accent: #1a7f37;
@@ -62,8 +64,16 @@ html, body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* disable transitions during mode switching */
+html.mode-switching *,
+html.mode-switching *::before,
+html.mode-switching *::after {
+    transition: none !important;
+    animation:  none !important;
+}
+
 /* ==========================================================================
-   REPORT FORM LAYOUT
+   FORM LAYOUT
    ========================================================================== */
 
 .report-wrap {
@@ -76,14 +86,26 @@ html, body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: var(--panel);
+    background: var(--bg);
 }
 
 .dialog-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 8px 16px;
+}
+
+.error-text {
+    position: absolute;
+    left: 50%;
+    top: 8%;
+    transform: translate(-50%, -50%);
+    color: var(--red);
+    font-weight: 600;
+    font-size: 14px;
+    justify-content: center;
+    display: block;
 }
 
 .dialog-title {
@@ -92,11 +114,12 @@ html, body {
     font-weight: 600;
 }
 
-.header-actions {
+.header-buttons {
     display: flex;
     gap: 8px;
     align-items: center;
     margin-left: auto;
+    padding: 30px 30px 0px 0px;
 }
 
 .mode-button-left {
@@ -108,7 +131,7 @@ html, body {
 
 .dialog-content {
     flex: 1;
-    padding: 20px;
+    padding: 8px 16px 20px;
     display: flex;
     flex-direction: column;
 }
@@ -132,12 +155,12 @@ html, body {
 
 .input, .textarea {
     width: 100%;
-    border: 1px solid var(--border);
+    border: none;
     background: var(--elev);
     color: var(--text);
-    border-radius: var(--radius-xs);
     padding: 12px 16px;
     font: inherit;
+    font-family: var(--mono);
 }
 
 .textarea {
@@ -150,7 +173,7 @@ html, body {
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-    padding: 20px;
+    padding: 8px 20px 20px;
 }
 
 .status {
@@ -160,7 +183,7 @@ html, body {
 }
 
 /* ==========================================================================
-   BUTTON STYLES
+   BUTTONS
    ========================================================================== */
 
 .btn {
@@ -173,18 +196,7 @@ html, body {
     transition: all 0.2s ease;
 }
 
-/* Ghost button */
-.btn.ghost {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    transition: all 0.2s ease;
-}
-
-.btn.ghost:hover {
-    background: var(--elev);
-}
-
-/* Primary button */
+/* primary button */
 .btn.primary {
     border: 2px solid var(--green-accent);
     background: var(--panel);
@@ -193,45 +205,54 @@ html, body {
     padding: 8px 16px;
     transition: all 0.2s ease;
 }
-
 .btn.primary:hover {
     background: var(--green-accent);
     color: white;
 }
 
-/* Mode toggle button */
+/* secondary button */
+.btn.secondary {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+}
+.btn.secondary:hover {
+    background: var(--intense-muted);
+}
+
+/* mode toggle button */
 .btn.mode {
-    width: 80px;
-    height: 80px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
     position: relative;
-    font-size: 16px;
+    font-size: 18px;
+    padding-right: 40px;
+    cursor: pointer;
 }
 
-.btn.mode-toggle:hover {
-    background: var(--elev);
-}
-
-/* Close button */
+/* close button */
 .btn.close {
     background: none;
     border: none;
+    font-size: 25px;
     color: var(--muted);
-    font-size: 18px;
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     transition: background 0.2s;
+    border-radius: 4px;
 }
 
+.btn.mode:hover i,
 .btn.close:hover {
-    background: var(--elev);
-}
-
-/* Icon scaling */
-.btn:hover i:not(.btn.mode i):not(.btn.layout i) {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }
+
