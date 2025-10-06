@@ -7,6 +7,17 @@
     <link rel="stylesheet" href="report.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 </head>
+
+<!-- Google analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-V2QHS6XEKF');
+</script>
+
 <body>
     <div class="report-wrap">
         <section class="dialog-card" role="dialog" aria-labelledby="title">
@@ -30,7 +41,7 @@
             </div>
 
             <div class="actions">
-                <button id="openGithub" class="btn ghost">Open in GitHub (requires account)</button>
+                <button id="openGithub" class="btn secondary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)</button>
                 <button id="submit" class="btn primary">Submit anonymously</button>
             </div>
         </section>
