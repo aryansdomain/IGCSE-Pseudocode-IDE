@@ -362,7 +362,7 @@ async function interpret(code) {
     // builtin functions
     function assertNumber(n, name) {
         if (typeof n !== 'number' || !Number.isFinite(n)) {
-            throwErr('TypeError: ', String(name) + ' must be a REAL', __LINE_NUMBER)
+            throwErr('TypeError: ', String(name) + ' must be a number', __LINE_NUMBER)
         }
     }
     function assertInteger(n, name) {
@@ -376,6 +376,12 @@ async function interpret(code) {
             throwErr('TypeError: ', String(name) + ' must be a STRING', __LINE_NUMBER)
         }
         return n;
+    }
+    function assertType(type, line) {
+        const validTypes = ['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING'];
+        if (!validTypes.includes(type.toUpperCase())) {
+            throwErr('TypeError: ', 'invalid type ' + String(type), line);
+        }
     }
       
     const builtins = {
@@ -991,6 +997,10 @@ async function interpret(code) {
                 const name = m[1];
                 const params = m[2] && !/RETURNS/i.test(m[2]) ? m[2] : '';
                 const returns = (m[3] || m[2] || '').trim();
+                
+                // validate return type
+                assertType(returns, i + 1);
+                
                 const { block, next } = collectUntil(lines, i + 1, /^(ENDFUNCTION)\b/i);
                 funcs[name] = { params, returns, body: block };
                 i = next; continue;
@@ -1002,7 +1012,7 @@ async function interpret(code) {
         return main;
     }
 
-    // collects a block of lines until the endRegex is found
+    // collects a block of lines until endRegex found
     function collectUntil(lines, startIndex, endRegex, originalLine = null) {
         const block = [];
         let i = startIndex;
@@ -1019,23 +1029,35 @@ async function interpret(code) {
             const lineNum = (typeof raw === 'object') ? raw.line : (i + 1);
             block.push({ line: lineNum, content: (typeof raw === 'object') ? raw.content : raw });
         }
+        
+        // no closing statement found
         if (!found) {
+            let startMessage = 'opening statement';
             let endMessage = 'closing statement';
             if (endRegex.source.includes('ENDIF')) {
+                startMessage = 'IF';
                 endMessage = 'ENDIF';
             } else if (endRegex.source.includes('ENDWHILE')) {
+                startMessage = 'WHILE';
                 endMessage = 'ENDWHILE';
             } else if (endRegex.source.includes('ENDCASE')) {
+                startMessage = 'CASE';
                 endMessage = 'ENDCASE';
             } else if (endRegex.source.includes('NEXT')) {
+                startMessage = 'FOR';
                 endMessage = 'NEXT';
             } else if (endRegex.source.includes('UNTIL')) {
+                startMessage = 'REPEAT';
                 endMessage = 'UNTIL';
+            } else if (endRegex.source.includes('ENDPROCEDURE')) {
+                startMessage = 'PROCEDURE';
+                endMessage = 'ENDPROCEDURE';
+            } else if (endRegex.source.includes('ENDFUNCTION')) {
+                startMessage = 'FUNCTION';
+                endMessage = 'ENDFUNCTION';
             }
             const lineNumber = originalLine || startIndex;
-            const e = new Error(`Missing ${endMessage}`);
-            e.line = lineNumber;
-            throw e;
+            throwErr(`Missing ${endMessage} for ${startMessage} starting at line `, lineNumber);
         }
         return { block, next: i };
     }    
