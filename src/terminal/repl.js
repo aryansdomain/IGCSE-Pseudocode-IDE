@@ -294,7 +294,13 @@ export function createRepl({ terminal, consoleOutput, runCtrl, editorApis, theme
     }
     function isAwaitingInput() { return awaitingProgramInput; }
     function focus() { terminal.focus(); }
+    
+    function clearBuffer() {
+        setCurrentLine('');
+        cursorPos = 0;
+        redrawLine();
+    }
 
-    return { setAwaitingInput, isAwaitingInput, focus, execCommand };
+    return { setAwaitingInput, isAwaitingInput, focus, execCommand, clearBuffer };
 }
   
