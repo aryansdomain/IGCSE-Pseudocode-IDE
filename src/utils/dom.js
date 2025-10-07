@@ -1,9 +1,9 @@
-export const qs  = (sel, root = document) => root.querySelector(sel);
-export const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-export const byId = (id) => document.getElementById(id);
+export const qs      = (sel, root = document) => root.querySelector(sel);
+export const qsa     = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+export const byId    = (id) => document.getElementById(id);
 
-export const on  = (el, ev, fn, opts) => el?.addEventListener?.(ev, fn, opts);
-export const off = (el, ev, fn, opts) => el?.removeEventListener?.(ev, fn, opts);
+export const on      = (element, event, func, options) =>     element?.addEventListener?.(event, func, options);
+export const off     = (element, event, func, options) =>  element?.removeEventListener?.(event, func, options);
 
 export const setVars = (el, obj) => {
     if (!el) return;
@@ -11,65 +11,56 @@ export const setVars = (el, obj) => {
 };
 
 export function initDom() {
-    // Workbench / panes / console
-    const workspace         = byId('workspace');
-    const editorPane        = byId('editor-pane');
-    const consolePane       = byId('console-pane');
-    const splitter          = byId('splitter');
-    const consoleEl         = byId('console-viewport');
-    const consoleLoadingBar = byId('consoleLoadingBar');
-    const codeEl            = byId('code');
-
-    // Bars & UI
-    const topbar            = qs('.topbar');
-    const bottombar         = qs('.bottombar');
-
-    // Buttons / controls
-    const runBtn            = byId('runBtn');
-    const clearBtn          = qs('.btn.clear');
-    const copyBtn           = qs('.btn.copy');
-    const downloadBtn       = qs('.btn.download');
-    const modeBtn           = byId('modeBtn');
-    const editorThemeSelect = byId('editorThemeSelect');
-
-    // Settings
-    const settingsOverlay   = byId('settingsOverlay');
-    const settingsBtn       = byId('settingsBtn');
-    const closeSettings     = byId('closeSettings');
-
-    // Editor controls
-    const fontSizeSlider    = byId('fontSizeSlider');
-    const fontFamilySelect  = byId('fontFamilySelect');
-    const tabSpacesSlider   = byId('tabSpacesSlider');
-    const tabSpacesValue    = byId('tabSpacesValue');
-    const tabSpacesInfo     = qs('.tab-spaces-info');
-    const editorDownloadBtn = byId('downloadEditorBtn');
-
-    // Info
-    const lineColInfo = byId('line-col-info');
-
-    // Icons
-    const moonIcon = qs('#modeBtn .moon-icon');
-    const sunIcon  = qs('#modeBtn .sun-icon');
 
     return {
-        // roots
-        workspace, editorPane, consolePane, splitter, consoleEl, consoleLoadingBar, codeEl,
-        topbar, bottombar,
 
-        // controls
-        runBtn, clearBtn, copyBtn, downloadBtn,
-        modeBtn, moonIcon, sunIcon, editorThemeSelect,
+        // main workspace structure
+        workspace:           byId('workspace'),
+        editorPane:          byId('editor-pane'),
+        topbar:              qs('.topbar'),
+        codeEl:              byId('code'),
+        bottombar:           qs('.bottombar'),
+        splitter:            byId('splitter'),
+        consolePane:         byId('console-pane'),
+        runBtn:              byId('runBtn'),
+        consoleEl:           byId('console-viewport'),
+        consoleLoadingBar:   byId('consoleLoadingBar'),
 
-        // settings
-        settingsOverlay, settingsBtn, closeSettings,
+        // editor buttons
+        formatBtn:           byId('btn-format'),
+        editorCopyBtn:       byId('copyEditorBtn'),
+        editorDownloadBtn:   byId('downloadEditorBtn'),
+        expandConsoleBtn:    byId('expandConsoleBtn'),
+
+        // console buttons
+        expandEditorBtn:     byId('expandEditorBtn'),
+        clearBtn:            qs('.btn.clear'),
+        consoleCopyBtn:      qs('.btn.copy'),
+        consoleDownloadBtn:  qs('.btn.download'),
+
 
         // editor controls
-        fontSizeSlider, fontFamilySelect,
-        tabSpacesSlider, tabSpacesValue, tabSpacesInfo,
-        editorDownloadBtn,
+        fontSizeSlider:      byId('fontSizeSlider'),
+        fontFamilySelect:    byId('fontFamilySelect'),
+        tabSpacesSlider:     byId('tabSpacesSlider'),
+        tabSpacesValue:      byId('tabSpacesValue'),
+        tabSpacesInfo:       qs('.tab-spaces-info'),
+
+        // other controls
+        modeBtn:             byId('modeBtn'),
+        editorThemeSelect:   byId('editorThemeSelect'),
+
+        // settings
+        settingsOverlay:     byId('settingsOverlay'),
+        settingsBtn:         byId('settingsBtn'),
+        closeSettings:       byId('closeSettings'),
 
         // info
-        lineColInfo,
+        lineColInfo:         byId('line-col-info'),
+
+        // icons
+        moonIcon:            qs('#modeBtn .moon-icon'),
+        sunIcon:             qs('#modeBtn .sun-icon'),
+
     };
 }
