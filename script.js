@@ -193,7 +193,7 @@ OUTPUT greet("World")`,
     let splitter;
 
     function initSplitFor(layout) {
-        // Tear down previous
+        // destroy previous splitter
         try { splitter?.destroy?.(); } catch {}
 
         const axis = layout; // 'vertical' or 'horizontal'
@@ -221,6 +221,8 @@ OUTPUT greet("World")`,
             handle: UI.splitter,
             paneA: UI.editorPane,
             paneB: UI.consolePane,
+            btnA: document.getElementById('expandEditorBtn'),
+            btnB: document.getElementById('expandConsoleBtn'),
             axis,
             minA: 0,
             minB: 0,
@@ -260,14 +262,6 @@ OUTPUT greet("World")`,
         try { current = localStorage.getItem(LAYOUT_KEY) || 'vertical'; } catch {}
         const next = current === 'vertical' ? 'horizontal' : 'vertical';
         applyLayout(next);
-    });
-
-    // Expand buttons
-    document.getElementById('expandConsoleBtn')?.addEventListener('click', () => {
-        try { splitter.collapseB(); } catch {}
-    });
-    document.getElementById('expandEditorBtn')?.addEventListener('click', () => {
-        try { splitter.collapseA(); } catch {}
     });
     
     // initial prompt

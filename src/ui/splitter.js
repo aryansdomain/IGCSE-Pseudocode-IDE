@@ -5,6 +5,8 @@ export function initSplitter({
     handle,                // splitter handle
     paneA,                 // editor: top or left
     paneB,                 // console: bottom or right
+    btnA,                  // expand/collapse editor button
+    btnB,                  // expand/collapse console button
     axis,                  // 'vertical' or 'horizontal'
     minA,                  // minimum height/width of A
     minB,                  // minimum height/width of B
@@ -25,6 +27,11 @@ export function initSplitter({
     let dragging = false;                                   // user is dragging the handle?
     let snapped = false;                                    // editor collapsed?
 
+    const iconA = btnA.querySelector('i');
+    const iconB = btnB.querySelector('i');
+    const expandIconClass   = 'fa-up-right-and-down-left-from-center';
+    const collapseIconClass = 'fa-down-left-and-up-right-to-center';
+
     // if user drags very fast, requestAnimationFrame (raf) IDs reduce lag
     let raf = 0;
     let consoleRaf = 0;
@@ -37,6 +44,8 @@ export function initSplitter({
     applySizes(); // initial layout
 
     // ------------------------ Helpers ------------------------
+    function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); } 
+                                         // ensure n stays between lo and hi
     function loadRatio(key, fallback) {  // load ratio from localStorage
         try {
             const v = localStorage.getItem(KEY_PREFIX + key);
@@ -48,14 +57,27 @@ export function initSplitter({
     function saveRatio(key, r) {         // save ratio to localStorage
         try { localStorage.setItem(KEY_PREFIX + key, String(r)); } catch {}
     }
-
-    function totalSize() {   // total size of container
+    function totalSize() {               // total size of container
         if (axis === 'vertical') return container.clientHeight;
         else                     return container.clientWidth;
     }
-    function handleSize() {  // size of splitter handle
+    function handleSize() {              // size of splitter handle
         if (axis === 'vertical') return handle.offsetHeight;
         else                     return handle.offsetWidth;
+    }
+
+    // ------------------------ Resizing ------------------------
+    function collapseA() { 
+        ratio = 0; 
+        applySizes(); 
+    }
+    function collapseB() { 
+        ratio = 1; 
+        applySizes(); 
+    }
+    function reset() {
+        ratio = initialRatio;
+        applySizes();
     }
 
     function applySizes() {
@@ -87,10 +109,8 @@ export function initSplitter({
 
         saveRatio(storageKey, ratio);
         onConsoleResizeSafe();
+        updateButtons(); 
     }
-
-    // ensure n stays between lo and hi
-    function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
     // use requestAnimationFrame to prevent flickering
     function onResizeSafe() {
@@ -102,6 +122,49 @@ export function initSplitter({
         consoleRaf = requestAnimationFrame(() => {
             if (!dragging) onResize(); // resize console when not actively dragging - stop flickering
         });
+    }
+
+    // ------------------------ Expand/Collapse Buttons ------------------------
+    function normalizeIcon(el) {
+        if (!el) return;
+        el.classList.remove(expandIconClass, collapseIconClass, 'fas');
+        el.classList.add('fa-solid');
+    }
+
+    function updateButtons() {
+        normalizeIcon(iconA); normalizeIcon(iconB);
+
+        // default
+        iconA.classList.add(expandIconClass);
+        iconB.classList.add(expandIconClass);
+        btnA.setAttribute('title', 'Expand editor (collapse console)');
+        btnB.setAttribute('title', 'Expand console (collapse editor)');
+
+        // change button appearance and function based on ratio state
+        if (ratio === 1) {
+            
+            // A button becomes collapse
+            iconA.classList.remove(expandIconClass);
+            iconA.classList.add(collapseIconClass);
+            btnA.setAttribute('title', 'Collapse editor (expand console)');
+
+        } else if (ratio === 0) {
+
+            // B button becomes collapse
+            iconB.classList.remove(expandIconClass);
+            iconB.classList.add(collapseIconClass);
+            btnB.setAttribute('title', 'Collapse console (expand editor)');
+
+        }
+    }
+
+    function onClickA() {
+        if (ratio === 1) reset();   // if A takes up all the space, reset ratio
+        else collapseB();           // otherwise expand A fully
+    }
+    function onClickB() {
+        if (ratio === 0) reset();   // if B takes up all the space, reset ratio
+        else collapseA();           // otherwise expand B fully
     }
 
     // ------------------------ Dragging ------------------------
@@ -166,6 +229,9 @@ export function initSplitter({
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('pointercancel', endDrag);
 
+    btnA.addEventListener('click', onClickA);
+    btnB.addEventListener('click', onClickB);
+
     // double-click handle to reset ratio
     handle.addEventListener('dblclick', () => { ratio = initialRatio; applySizes(); });
 
@@ -174,6 +240,7 @@ export function initSplitter({
 
     // initial layout
     applySizes();
+    updateButtons();
 
     return {
         setRatio(r) { 
@@ -183,25 +250,21 @@ export function initSplitter({
             applySizes(); 
         },
         getRatio()  { return ratio; },
-        collapseA() { 
-            const minRatio = minA / Math.max(1, free);
-            ratio = minRatio; 
-            applySizes(); 
-        },
-        collapseB() { 
-            const maxRatio = (free - minB) / Math.max(1, free);
-            ratio = maxRatio; 
-            applySizes(); 
-        },
-        expandA()   { ratio = 0.85; applySizes(); },
-        expandB()   { ratio = 0.15; applySizes(); },
-        reset()     { ratio = initialRatio; applySizes(); },
+        collapseA,
+        collapseB,
+        expandA()   { ratio = 1; applySizes(); },
+        expandB()   { ratio = 0; applySizes(); },
+        reset,
         destroy() {
             handle.removeEventListener('pointerdown', startDrag);
             window.removeEventListener('pointermove', moveDrag);
             window.removeEventListener('pointerup', endDrag);
             window.removeEventListener('pointercancel', endDrag);
             window.removeEventListener('resize', applySizes);
+
+            btnA.removeEventListener('click', onClickA);
+            btnB.removeEventListener('click', onClickB);
+
             cancelAnimationFrame(raf);
             cancelAnimationFrame(consoleRaf);
         }
