@@ -1,19 +1,20 @@
 (async function () {
 
     // import modules
-    const { initEditor } = await import('./src/editor/editor.js');
-    const { initFontControls } = await import('./src/editor/font.js');
-    const { initSpacingControls } = await import('./src/editor/tab.js');
-    const { initThemeControls } = await import('./src/ui/themeCtrl.js');
-    const { initFormatter } = await import('./src/format/format.js');
-    const { createRunCtrl } = await import('./src/runtime/runCtrl.js');
-    const { createConsoleOutput } = await import('./src/console/consoleOutput.js');
-    const { createRepl } = await import('./src/console/repl.js');
-    const { initEditorDownloads, initConsoleDownloads } = await import('./src/ui/downloads.js');
-    const { initMode } = await import('./src/ui/modeCtrl.js');
-    const { initSettings } = await import('./src/ui/settings.js');
-    const { initSplitter } = await import('./src/ui/splitter.js');
-    const { initDom, on } = await import('./src/utils/dom.js');
+    const { initEditor }                                = await import('./src/editor/editor.js');
+    const { initFontControls }                          = await import('./src/editor/font.js');
+    const { initSpacingControls }                       = await import('./src/editor/tab.js');
+    const { initThemeControls }                         = await import('./src/ui/themeCtrl.js');
+    const { initFormatter }                             = await import('./src/format/format.js');
+    const { initRunCtrl }                               = await import('./src/runtime/runCtrl.js');
+    const { initConsoleOutput }                         = await import('./src/console/consoleOutput.js');
+    const { initRepl }                                  = await import('./src/console/repl.js');
+    const { initDownload }                              = await import('./src/utils/download.js');
+    const { initCopy }                                  = await import('./src/utils/copy.js');
+    const { initMode }                                  = await import('./src/ui/modeCtrl.js');
+    const { initSettings }                              = await import('./src/ui/settings.js');
+    const { initSplitter }                              = await import('./src/ui/splitter.js');
+    const { initDom, on }                               = await import('./src/utils/dom.js');
 
     const UI = initDom();
 
@@ -48,17 +49,14 @@ OUTPUT greet("World")`,
         defaultSize: 14,
         defaultFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace"
     });
-
-    // set font size
     editorApis.setFontSize = (n) => fontCtrl.setFontSize(n);
-
     // nudge editor after fonts finish loading
     document.fonts?.ready?.then(() => { 
         try { editor.resize(true); } catch {} 
     });
 
-    // formatter
-    initFormatter({
+    // format functionality
+    const format = initFormatter({
         editor,
         getCode: editorApis.getCode,
         setCode: editorApis.setCode,
@@ -85,9 +83,8 @@ OUTPUT greet("World")`,
         editorApis.setTab = (n) => spacingCtrl.setTabSpaces(n);
     }
 
-    // Configure language tools and autocompletion
+    // language tools, autocompletion
     const langTools = ace.require('ace/ext/language_tools');
-    
     const completers = [];
     try {
         const LangModule = ace.require('ace/mode/lang');
@@ -130,7 +127,7 @@ OUTPUT greet("World")`,
     const { initConsole } = await import('./src/console/console.js');
     
     // initialize console
-    const { console, getline, refit } = initConsole({
+    const { console, getline, getConsoleText, refit } = initConsole({
         container: UI.consoleEl,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
@@ -139,7 +136,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const consoleOutput = createConsoleOutput(console, getline);
+    const consoleOutput = initConsoleOutput(console, getline);
     
     const modeCtrl = initMode({
         themeCtrl: null,
@@ -280,7 +277,7 @@ OUTPUT greet("World")`,
     let repl;
 
     const runBtn = UI.runBtn;
-    const runCtrl = createRunCtrl({
+    const runCtrl = initRunCtrl({
         consoleOutput,
         getline,
         getCode: editorApis.getCode,
@@ -303,7 +300,7 @@ OUTPUT greet("World")`,
         }
     });
     
-    repl = createRepl({
+    repl = initRepl({
         console,
         consoleOutput,
         runCtrl,
@@ -321,18 +318,23 @@ OUTPUT greet("World")`,
         }
     });
 
-    // Editor download
-    const editorDownload = initEditorDownloads({
+    // download
+    const downloads = initDownload({
+        console,
+        consoleDownloadBtn: UI.consoleDownloadBtn,
+        editorDownloadBtn: UI.editorDownloadBtn,
         getCode: editorApis.getCode,
-        button: UI.editorDownloadBtn,
-        filenamePrefix: 'code'
+        getConsoleText,
+        consoleOutput
     });
 
-    // Console Copy/Download
-    const consoleDownloads = initConsoleDownloads({
+    // copy
+    const copies = initCopy({
         console,
-        copyBtn: UI.copyBtn,
-        downloadBtn: UI.downloadBtn,
+        consoleCopyBtn: UI.consoleCopyBtn,
+        editorCopyBtn: UI.editorCopyBtn,
+        getCode: editorApis.getCode,
+        getConsoleText,
         consoleOutput
     });
 
