@@ -3,30 +3,17 @@ let __fmtEditor = null;
 export function initFormatter({ editor, getCode, setCode, formatBtn }) {
     __fmtEditor = editor || __fmtEditor;
 
-    const btn =
-        formatBtn ||
-        document.getElementById('formatBtn') ||
-        document.getElementById('btn-format') ||
-        document.querySelector('[data-action="format"]');
-
-    if (btn && !btn.__formatterBound) {
-        btn.__formatterBound = true;
-        btn.addEventListener('click', () => {
-            const before = getCode ? getCode() : getEditorCode();   // reuse your helpers if needed
-            const after  = format(before);                          // ← your existing formatter
-            if (setCode) setCode(after, true); else setEditorCode(after);
+    if (formatBtn && !formatBtn.__formatterBound) {
+        formatBtn.__formatterBound = true;
+        formatBtn.addEventListener('click', () => {
+            const before = getCode()
+            const after  = format(before);
+            setCode(after, true);
         });
     }
-
-    return {
-        formatNow: () => {
-            const before = getCode ? getCode() : getEditorCode();
-            const after  = format(before);
-            if (setCode) setCode(after, true); else setEditorCode(after);
-        }
-    };
 }
 
+// ------------------------ Formatting ------------------------
 function format(src) {
     let prev = String(src);
 
@@ -39,7 +26,7 @@ function format(src) {
     return prev;
 }
 
-// one formatting pass
+// one formatting pass (done 15 times)
 function formatOnce(src) {
     if (typeof src !== 'string') return '';
 
@@ -68,13 +55,13 @@ function formatOnce(src) {
         'gi'
     );
 
-    const __getTabSize = () => {
-      const h = (__fmtEditor && __fmtEditor.session)
-              ? __fmtEditor
-              : (window.editor && window.editor.session ? window.editor : null);
-      return h ? h.session.getTabSize() : 4;
+    const getTabSize = () => {
+        const h = (__fmtEditor && __fmtEditor.session)
+                       ? __fmtEditor
+                       : (window.editor && window.editor.session ? window.editor : null);
+        return h ? h.session.getTabSize() : 4;
     };
-    const tabSize   = __getTabSize();
+    const tabSize   = getTabSize();
     const indentUnit = ' '.repeat(tabSize);
 
     let lines = src.replace(/\r\n?/g, '\n').split('\n');
@@ -491,27 +478,6 @@ function formatOnce(src) {
     }
 
     return out.join('\n').replace(/\n{3,}/g, '\n\n');
-}
-
-// ----------------------------
-// Editor helpers + wiring
-// ----------------------------
-function getEditorCode() {
-    if (window.editor && typeof window.editor.getValue === 'function') {
-        return window.editor.getValue(); // Ace
-    }
-    const ta = document.getElementById('code');
-    return ta ? ta.value : '';
-}
-
-function setEditorCode(val) {
-    if (window.editor && typeof window.editor.setValue === 'function') {
-        window.editor.setValue(val, -1); // keep viewport, move cursor
-        window.editor.clearSelection();
-        return;
-    }
-    const ta = document.getElementById('code');
-    if (ta) ta.value = val;
 }
 
 export { format };

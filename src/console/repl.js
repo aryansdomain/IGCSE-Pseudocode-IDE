@@ -106,7 +106,7 @@ export function createRepl({ console, consoleOutput, runCtrl, editorApis, themeC
                 break;
     
             case 'format': {
-                try { editorApis.format(); } catch {}
+                editorApis.formatCode();
                 consoleOutput.println('Formatted.');
                 break;
             }

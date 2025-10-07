@@ -1,3 +1,5 @@
+import { format } from '../format/format.js';
+
 export function initEditor({
     container,
     defaultCode = '',
@@ -19,6 +21,17 @@ export function initEditor({
     editor.setReadOnly(!!readOnly);
     editor.setOption('wrap', softWrap ? 'free' : false);
 
+    // TODO: add custom backspace command that uses this logic:
+    // When  there is a code like this ( tab = 4 spaces, cursor shown by | )
+
+    // IF x < 0
+    //   THEN
+    //     OUTPUT x
+    //     |
+
+    // and the user presses backspace, the cursor should move to same level as THEN (2 spaces after IF)
+    // same with CASE
+
     function getCode() { return editor.getValue(); }
     function setCode(src, moveCursorToStart = false) {
         editor.setValue(String(src ?? ''), moveCursorToStart ? -1 : 1);
@@ -30,12 +43,18 @@ export function initEditor({
     }
     function setTheme(name = 'monokai') {
         editor.setTheme(`ace/theme/${name}`);
+    }   
+    function formatCode() {
+        setCode(format(getCode()));
     }
 
     const editorApis = {
+        getCode,
+        setCode,
         setTab,
         setTheme,
+        formatCode,
     };
 
-    return { editor, getCode, setCode, editorApis };
+    return { editor, editorApis };
 }

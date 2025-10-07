@@ -18,7 +18,7 @@
     const UI = initDom();
 
     // ace editor
-    const { editor, getCode, setCode, editorApis } = initEditor({
+    const { editor, editorApis } = initEditor({
         container: UI.codeEl,
         defaultCode: 
 
@@ -58,12 +58,11 @@ OUTPUT greet("World")`,
     });
 
     // formatter
-    const formatBtn = document.getElementById('btn-format');
-    const fmt = initFormatter({
+    initFormatter({
         editor,
-        getCode,
-        setCode,
-        formatBtn
+        getCode: editorApis.getCode,
+        setCode: editorApis.setCode,
+        formatBtn: document.getElementById('btn-format'),
     });
 
     // spacing controls
@@ -228,8 +227,9 @@ OUTPUT greet("World")`,
             axis,
             minA: 0,
             minB: 0,
-            normal_top: 45,
-            normal_bottom: 45,
+            barHeight: 45,
+            snapInPx: 35,
+            snapOutPx: 50,
             initialRatio: editorPercentage,
             storageKey: 'editor-console',
             onResize: () => {
@@ -283,7 +283,7 @@ OUTPUT greet("World")`,
     const runCtrl = createRunCtrl({
         consoleOutput,
         getline,
-        getCode,
+        getCode: editorApis.getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
         onInputRequested: () => {
             repl?.setAwaitingInput(true);
@@ -323,7 +323,7 @@ OUTPUT greet("World")`,
 
     // Editor download
     const editorDownload = initEditorDownloads({
-        getCode,
+        getCode: editorApis.getCode,
         button: UI.editorDownloadBtn,
         filenamePrefix: 'code'
     });
