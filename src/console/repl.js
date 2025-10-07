@@ -1,11 +1,11 @@
-export function createRepl({ console, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl }) {
+export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl }) {
   
-    let hist = []; // history of commands
-    let hIdx = -1; // -1 = live buffer
-    let awaitingProgramInput = false;
-    let inputStartCol = 0; // column where program input begins
-    let currentLine = ''; // current line content
-    let cursorPos = 0; // cursor position in current command
+    let hist = [];                     // history of commands
+    let hIdx = -1;                     // -1 = live buffer
+    let awaitingProgramInput = false;  // user prompted to enter input?
+    let inputStartCol = 0;             // column where program input begins
+    let currentLine = '';              // current line content
+    let cursorPos = 0;                 // cursor position in current command
 
     // ------------------------ Utilities ------------------------
     function setCurrentLine(line) {
