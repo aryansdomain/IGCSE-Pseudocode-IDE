@@ -1,3 +1,28 @@
+function showCopySuccess(button) {
+    const icon = button.querySelector('i');
+    if (!icon) return;
+    
+    const originalClass = icon.className;
+    
+    // scale down, transform into checkmark, scale back ups
+    icon.style.transform = 'scale(0.6)';
+    setTimeout(() => {
+        icon.className = 'fa-solid fa-check';
+        icon.style.transform = 'scale(1)';
+    }, 150);
+    
+    // animate back to original after 2 seconds
+    setTimeout(() => {
+        icon.style.transform = 'scale(0.8)';
+        
+        setTimeout(() => {
+            icon.className = originalClass;
+            icon.style.transform = 'scale(1)';
+        }, 150);
+
+    }, 2000);
+}
+
 export function initCopy({ console, consoleCopyBtn, editorCopyBtn, getCode, getConsoleText, consoleOutput }) {
 
     // copy console content
@@ -6,11 +31,8 @@ export function initCopy({ console, consoleCopyBtn, editorCopyBtn, getCode, getC
             const text = getConsoleText(console, { trim: true });
             await navigator.clipboard.writeText(text);
 
-            // animate to finished state
-            consoleCopyBtn.style.transition = 'background 0.3s, color 0.3s';
-            consoleCopyBtn.style.background = 'var(--green-accent)';
-            consoleCopyBtn.style.color = 'white';
-            setTimeout(() => { consoleCopyBtn.style.background = ''; consoleCopyBtn.style.color = ''; }, 750);
+            // show success checkmark
+            showCopySuccess(consoleCopyBtn);
 
         } catch (err) {
             consoleOutput.errln('Failed to copy console content: ' + err + '. Please reload the page or report this issue.');
@@ -24,11 +46,8 @@ export function initCopy({ console, consoleCopyBtn, editorCopyBtn, getCode, getC
             if (!code.trim()) return; // ignore empty files
             await navigator.clipboard.writeText(code);
 
-            // animate to finished state
-            editorCopyBtn.style.transition = 'background 0.3s, color 0.3s';
-            editorCopyBtn.style.background = 'var(--green-accent)';
-            editorCopyBtn.style.color = 'white';
-            setTimeout(() => { editorCopyBtn.style.background = ''; editorCopyBtn.style.color = ''; }, 750);
+            // show success checkmark
+            showCopySuccess(editorCopyBtn);
 
         } catch (err) {
             consoleOutput.errln('Failed to copy editor content: ' + err + '. Please reload the page or report this issue.');

@@ -490,6 +490,13 @@ body.dragging {
     transition: opacity 0.2s ease;
 }
 
+/* topbar */
+
+/* copy */
+.btn.copy i {
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
 /* close */
 .btn.close {
     background: none;
