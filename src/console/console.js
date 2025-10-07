@@ -45,8 +45,19 @@ export function initConsole({
         }
     };
 
+    const getConsoleText = (console, { trim = false } = {}) => {
+        let out = '';
+        const buf = console?.buffer?.active;
+        if (!buf) return out;
+        for (let i = 0; i < buf.length; i++) {
+            const line = buf.getLine(i)?.translateToString() ?? '';
+            out += line + '\n';
+        }
+        return trim ? out.trim() : out;
+    };
+
     function refit() { try { if (fitAddon) fitAddon.fit(); } catch {} }
     function dispose() { try { console.dispose(); } catch {} }
 
-    return { console, getline, refit, dispose };
+    return { console, getline, getConsoleText, refit, dispose };
 }
