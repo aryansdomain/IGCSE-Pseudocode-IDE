@@ -1,5 +1,5 @@
-export function createConsoleOutput(console, getline) {
-    
+export function initConsoleOutput(console, getline) {
+
     const write = (text, color = null) => {
         if (color) console.write(`\x1b[${color}m${text}\x1b[0m`);
               else console.write(text);
