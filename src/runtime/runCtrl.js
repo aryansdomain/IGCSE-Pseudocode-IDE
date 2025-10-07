@@ -1,4 +1,4 @@
-export function createRunCtrl({
+export function initRunCtrl({
     consoleOutput,
     getline,
     getCode,
@@ -146,7 +146,16 @@ export function createRunCtrl({
         };
     }
 
-    function run() {
+    function run(method) {
+
+        // if (!window.gtag) return;
+        // gtag('event', 'code_executed', {
+        //     method,
+        //     runtime_ms: Math.round(runtime_ms || 0),
+        //     code_size: code_size || 0,
+        //     ...(error_snippet ? { error_snippet: String(error_snippet).slice(0, 100) } : {})
+        // });
+
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
