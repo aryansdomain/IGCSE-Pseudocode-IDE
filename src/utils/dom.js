@@ -34,9 +34,9 @@ export function initDom() {
 
         // console buttons
         expandEditorBtn:     byId('expandEditorBtn'),
-        clearBtn:            qs('.btn.clear'),
-        consoleCopyBtn:      qs('.btn.copy'),
-        consoleDownloadBtn:  qs('.btn.download'),
+        clearBtn:            byId('clearConsoleBtn'),
+        consoleCopyBtn:      byId('copyConsoleBtn'),
+        consoleDownloadBtn:  byId('downloadConsoleBtn'),
 
 
         // editor controls
