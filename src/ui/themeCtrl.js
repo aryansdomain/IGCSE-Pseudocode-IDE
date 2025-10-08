@@ -1,11 +1,10 @@
 export function initThemeControls({
     editor,
-    editorApis,
     console,
     modeCtrl,
     editorThemeSelect,
     lightThemes = [
-        'Chrome','Clouds','Dawn','Dreamweaver', 'eclipse','github','gruvbox_light_hard','iplastic',
+        'Chrome','Clouds','Dawn','Dreamweaver', 'Eclipse','GitHub','Gruvbox Light Hard','iPlastic',
         'Katzenmilch','Kuroir','Solarized Light','SQL Server', 'Textmate','Tomorrow','Xcode'
     ],
     darkThemes = [
@@ -16,6 +15,8 @@ export function initThemeControls({
     ],
 }) {
     const toBare = (id) => {
+
+        // remove the ace/theme/
         let bare = String(id).replace(/^ace\/theme\//, '');
 
         // convert to snake_case
@@ -23,7 +24,7 @@ export function initThemeControls({
         return bare;
     };
 
-    function hasTheme(name) {
+    function themeInfo(name) {
         const normalized = name.toLowerCase().replace(/[\s_-]/g, '');
         
         const normalizedLightThemes = lightThemes.map(t => t.toLowerCase().replace(/[\s_-]/g, ''));
@@ -80,18 +81,15 @@ export function initThemeControls({
         });
     }
 
-    function setEditorTheme(name) {
-        editorApis.setTheme(name);
+    function setTheme(name) { 
+        editor.setTheme(`ace/theme/${toBare(name)}`);
     }
-
-    function getCurrentEditorTheme() {
-        return editor.getTheme().replace('ace/theme/', '');
-    }
+    function getTheme() { return editor.getTheme().replace(/^ace\/theme\//, ''); }
 
     // UI event listeners
     editorThemeSelect?.addEventListener('change', (e) => {
         const themeName = String(e.target.value || '').replace('ace/theme/', '');
-        setEditorTheme(themeName);
+        setTheme(themeName);
     });
 
     // Update the dropdown
@@ -106,11 +104,11 @@ export function initThemeControls({
     updateConsoleTheme();
 
     return { 
-        setEditorTheme, 
-        getCurrentEditorTheme,
+        setTheme, 
+        getTheme,
         refreshEditorChrome, 
         updateConsoleTheme,
-        hasTheme, 
+        themeInfo, 
         listThemes, 
         lightThemes, 
         darkThemes 

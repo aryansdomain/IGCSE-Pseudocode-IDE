@@ -18,8 +18,6 @@ export function initSettings({
         mode:       '#modeSelect'
     }
 } = {}) {
-    if (!panelEl || !openBtn) throw new Error('initSettings: panelEl and openBtn are required');
-
     // ----- open/close/toggle + accessibility -----
     const focusables = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
 
@@ -40,83 +38,79 @@ export function initSettings({
     function toggle() { isOpen() ? close() : open(); }
 
     openBtn.addEventListener('click', open);
-    closeBtn?.addEventListener('click', close);
-    overlayEl?.addEventListener('click', (e) => {
+    closeBtn.addEventListener('click', close);
+    overlayEl.addEventListener('click', (e) => {
         // only close if clicking on backdorp
         if (e.target === overlayEl) {
             close();
         }
     });
 
-    // Esc to close; Cmd/Ctrl+, to open
-    window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOpen()) { e.preventDefault(); close(); }
-    });
-
     // ----- controls -----
     const $ = (sel) => sel ? panelEl.querySelector(sel) : null;
-    const fs = $(selectors.fontSize);
-    const ff = $(selectors.fontFamily);
-    const ts = $(selectors.tabSpaces);
-    const sw = $(selectors.softWrap);
-    const ro = $(selectors.readOnly);
-    const th = $(selectors.theme);
-    const md = $(selectors.mode);
+    const font_size    = $(selectors.fontSize);
+    const font_family  = $(selectors.fontFamily);
+    const tab_spaces   = $(selectors.tabSpaces);
+    const soft_wrap    = $(selectors.softWrap);
+    const read_only    = $(selectors.readOnly);
+    const theme        = $(selectors.theme);
+    const mode         = $(selectors.mode);
 
     // font size
-    if (fs) {
+    if (font_size) {
         const apply = (n) => {
             const v = Math.max(6, Math.min(72, parseInt(n, 10) || 14));
             if (fontCtrl?.setFontSize) fontCtrl.setFontSize(v); else editorApis?.setFontSize?.(v);
         };
-        fs.addEventListener('input', () => apply(fs.value));
+        font_size.addEventListener('input', () => apply(font_size.value));
     }
 
     // font family
-    if (ff && fontCtrl?.setFontFamily) {
-        ff.addEventListener('change', () => fontCtrl.setFontFamily(ff.value));
+    if (font_family && fontCtrl?.setFontFamily) {
+        font_family.addEventListener('change', () => fontCtrl.setFontFamily(font_family.value));
     }
 
     // tab spaces
-    if (ts && spacingCtrl?.setTabSpaces) {
-        ts.addEventListener('input', () => spacingCtrl.setTabSpaces(parseInt(ts.value, 10)));
+    if (tab_spaces && spacingCtrl?.setTabSpaces) {
+        tab_spaces.addEventListener('input', () => spacingCtrl.setTabSpaces(parseInt(tab_spaces.value, 10)));
     }
 
     // soft wrap / read-only
-    sw?.addEventListener('change', () => editorApis?.setSoftWrap?.(!!sw.checked));
-    ro?.addEventListener('change', () => editorApis?.setReadOnly?.(!!ro.checked));
+    soft_wrap?.addEventListener('change', () => editorApis?.setSoftWrap?.(!!soft_wrap.checked));
+    read_only?.addEventListener('change', () => editorApis?.setReadOnly?.(!!read_only.checked));
 
     // editor theme
-    if (th) {
-        // populate if empty and themeCtrl exposes a list
-        if (!th.options.length && themeCtrl?.listThemes) {
-            themeCtrl.listThemes().forEach((name) => {
+    if (theme) {
+        // populate if empty
+        if (!theme.options.length) {
+            const allThemes = themeCtrl.lightThemes + themeCtrl.darkThemes
+            allThemes.array.forEach((name) => {
                 const opt = document.createElement('option');
                 opt.value = name; opt.textContent = name;
-                th.appendChild(opt);
+                theme.appendChild(opt);
             });
         }
         
         if (!themeCtrl) {
-            th.addEventListener('change', () => {
-                const name = th.value;
+            theme.addEventListener('change', () => {
+                const name = theme.value;
                 editorApis?.setTheme?.(name);
             });
         }
     }
 
     // light/dark mode
-    if (md && modeCtrl?.setMode) {
-        md.addEventListener('change', () => modeCtrl.setMode(md.value));
+    if (mode && modeCtrl?.setMode) {
+        mode.addEventListener('change', () => modeCtrl.setMode(mode.value));
     }
 
     // reflect current values (best-effort)
     function refresh() {
         try {
-            if (fs && fontCtrl?.getFont) fs.value = fontCtrl.getFont().size;
+            if (font_size && fontCtrl?.getFont) font_size.value = fontCtrl.getFont().size;
         } catch {}
         try {
-            if (ts && spacingCtrl?.getTabSpaces) ts.value = spacingCtrl.getTabSpaces();
+            if (tab_spaces && spacingCtrl?.getTabSpaces) tab_spaces.value = spacingCtrl.getTabSpaces();
         } catch {}
     }
     refresh();

@@ -91,8 +91,8 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                     'mode <light|dark>    Switch overall UI between light and dark modes\r\n' +
                     'theme <name>         Change the editor color theme\r\n' +
                     'help                 Print this dialog\r\n\r\n';
-                consoleOutput.println('\x1b[1mCommands:\x1b[0m'); // bold
-                consoleOutput.println(output);
+                consoleOutput.println('\x1b[1m\nCommands:\x1b[0m'); // bold
+                consoleOutput.print(output);
                 break;
             }
     
@@ -149,7 +149,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                 } else {
                     
                     consoleOutput.errln('Usage: mode <light|dark>')
-                    if (themeCtrl.hasTheme(t).ok) consoleOutput.errln(`Did you mean 'theme ${t}'?`);
+                    if (themeCtrl.themeInfo(t).ok) consoleOutput.errln(`Did you mean 'theme ${t}'?`);
 
                 }
                 break;
@@ -162,15 +162,15 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                     break;
                 }
 
-                // get name of theme
-                const themeResult = themeCtrl.hasTheme(name);
+                // get theme name
+                const themeResult = themeCtrl.themeInfo(name);
                 if (!themeResult.ok) {
                     consoleOutput.errln('Error: Invalid theme');
                     if (name === 'light' || name === 'dark') consoleOutput.errln(`Did you mean 'mode ${name}'?`);
                     break;
                 }
 
-                themeCtrl.setEditorTheme(themeResult.bare);
+                themeCtrl.setTheme(themeResult.bare);
                 consoleOutput.println(`Theme: ${themeResult.name}`);
 
                 break;
@@ -179,6 +179,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
             case '':
                 // no output
                 break;
+                
             default:
                 consoleOutput.errln(`Unknown command: ${cmd}`);
                 break;

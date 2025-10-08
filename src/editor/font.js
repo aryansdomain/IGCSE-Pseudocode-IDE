@@ -1,5 +1,3 @@
-const KEY = 'editor.font';
-
 export function initFontControls({
     editor,
     sizeInput,
@@ -9,7 +7,7 @@ export function initFontControls({
     step = 1,
     defaultSize = 14,
     defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
-    storageKey = KEY,
+    storageKey = 'editor.font',
 } = {}) {
 
     // current values

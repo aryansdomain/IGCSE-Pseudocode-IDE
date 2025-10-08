@@ -138,9 +138,10 @@ OUTPUT greet("World")`,
     // console output
     const consoleOutput = initConsoleOutput(console, getline);
     
+    // mode controls
     const modeCtrl = initMode({
         themeCtrl: null,
-        button: UI.modeBtn,
+        modeBtn: UI.modeBtn,
         moonIcon: UI.moonIcon,
         sunIcon: UI.sunIcon,
         defaultMode: 'dark'
@@ -149,17 +150,16 @@ OUTPUT greet("World")`,
     // theme controls
     const themeCtrl = initThemeControls({
         editor,
-        editorApis,
         console,
         modeCtrl: modeCtrl,
         editorThemeSelect: UI.editorThemeSelect,
     });
-    
-    // update modeCtrl
-    modeCtrl.setThemeCtrl(themeCtrl);
     themeCtrl.updateConsoleTheme();
     
-    // Settings panel
+    // update modeCtrl with themeCtrl
+    modeCtrl.setThemeCtrl(themeCtrl);
+    
+    // settings panel
     const settings = initSettings({
         panelEl: UI.settingsOverlay,
         openBtn: UI.settingsBtn,

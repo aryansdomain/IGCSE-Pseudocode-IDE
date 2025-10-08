@@ -32,6 +32,7 @@ export function initEditor({
     // and the user presses backspace, the cursor should move to same level as THEN (2 spaces after IF)
     // same with CASE
 
+    // ------------------------ Helpers ------------------------
     function getCode() { return editor.getValue(); }
     function setCode(src, moveCursorToStart = false) {
         editor.setValue(String(src ?? ''), moveCursorToStart ? -1 : 1);
@@ -41,9 +42,6 @@ export function initEditor({
         const size = Math.max(0, parseInt(n, 10) || 4);
         editor.session.setTabSize(size);
     }
-    function setTheme(name = 'monokai') {
-        editor.setTheme(`ace/theme/${name}`);
-    }   
     function formatCode() {
         setCode(format(getCode()));
     }
@@ -52,7 +50,6 @@ export function initEditor({
         getCode,
         setCode,
         setTab,
-        setTheme,
         formatCode,
     };
 
