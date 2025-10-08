@@ -34,8 +34,10 @@ export function initMode({
         if (mode === 'light') document.documentElement.classList.add('light');
         else                  document.documentElement.classList.remove('light');
 
-        currentThemeCtrl.updateConsoleTheme();
-        currentThemeCtrl.refreshEditorChrome();
+        if (currentThemeCtrl) {
+            currentThemeCtrl.updateConsoleTheme();
+            currentThemeCtrl.refreshEditorChrome();
+        }
         
         // enable transitions
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
