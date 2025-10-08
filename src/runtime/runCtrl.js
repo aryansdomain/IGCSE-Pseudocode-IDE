@@ -18,7 +18,15 @@ export function initRunCtrl({
     let warningStorage = [];
     let hadFlushOutput = false;
 
-    // ------------------------------- RUNTIME STATE -------------------------------
+    // ------------------------------- Analytics Vars -------------------------------
+    let startTime = 0;
+    let runtime_ms = 0;
+    let success = false;
+    let error_msg = '';
+    let method = 'run_button';
+    let code_size = 0;
+
+    // ------------------------------- Runtime State -------------------------------
     let consoleLocked = false;
     let awaitingInput = false;
     let loadingTimer = null;
@@ -41,14 +49,25 @@ export function initRunCtrl({
 
         consoleOutput.newline();
         consoleOutput.writePrompt();
+
+        // record analytics
+        try {
+            window.code_executed && window.code_executed({
+                method,
+                runtime_ms,
+                code_size,
+                success,
+                error_msg
+            });
+        } catch {}
     }
 
     // process execution results
     function attachWorkerHandlers(localRunId) {
         worker.onmessage = (e) => {
-            const { type } = e.data || {};
+            const { type } = e.data;
 
-                   if (type === 'flush') {
+            if (type === 'flush') {
 
                 // flush all output
                 const s = String(e.data.output || '');
@@ -109,6 +128,11 @@ export function initRunCtrl({
                     parts.forEach(line => consoleOutput.println(line));
                 }
 
+                // set analytics vars
+                runtime_ms = performance.now() - startTime;
+                success = true;
+                error_msg = '';
+
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
@@ -118,6 +142,11 @@ export function initRunCtrl({
                 clearLoadingTimer();
                 setLoading(false);
 
+                // set analytics vars
+                runtime_ms = performance.now() - startTime;
+                success = false;
+                error_msg = 'Execution stopped by user';
+
                 finishRun(localRunId);
 
             } else if (type === 'error') {
@@ -125,12 +154,16 @@ export function initRunCtrl({
                 consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
-                let msg = String(e.data.error || 'Unknown error');
 
-                // output the error
+                // set analytics vars
+                runtime_ms = performance.now() - startTime;
+                success = false;
+                error_msg = String(e.data.error || 'Unknown error');
+
+                // output error
                 let line = getline().replace(/\s+$/, '');
                 if (line.length > 0) consoleOutput.newline();
-                consoleOutput.errln(msg);
+                consoleOutput.errln(error_msg);
 
                 finishRun(localRunId);
             }
@@ -140,26 +173,32 @@ export function initRunCtrl({
             consoleLocked = false;
             clearLoadingTimer();
             setLoading(false);
-            consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
+            
+            // set analytics vars
+            runtime_ms = performance.now() - startTime;
+            success = false;
+            error_msg = `Worker error: ${e.message || e.filename || 'unknown'}`;
+            
+            consoleOutput.errln(error_msg);
             consoleOutput.errln(`Please reload the page.`);
             finishRun(localRunId);
         };
     }
 
-    function run(method) {
-
-        // if (!window.gtag) return;
-        // gtag('event', 'code_executed', {
-        //     method,
-        //     runtime_ms: Math.round(runtime_ms || 0),
-        //     code_size: code_size || 0,
-        //     ...(error_snippet ? { error_snippet: String(error_snippet).slice(0, 100) } : {})
-        // });
-
+    function run(source = 'run_button') {
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
         consoleLocked = true;
+
+        // set analytics vars
+        startTime = performance.now();
+
+        method = source;
+        runtime_ms = 0;
+        code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
+        success = false;
+        error_msg = '';
 
         const localRunId = ++runId;
 
@@ -215,11 +254,9 @@ export function initRunCtrl({
         consoleLocked = true;
         worker.postMessage({ type: 'input_response', data: String(line) });
         
-        // Show loading bar after a delay for program input
+        // show loading bar after a delay after input
         loadingTimer = setTimeout(() => {
-            if (isRunning) {
-                setLoading(true);
-            }
+            if (isRunning) setLoading(true);
         }, 75);
     }
 

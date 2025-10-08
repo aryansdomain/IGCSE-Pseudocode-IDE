@@ -81,13 +81,7 @@
 
 <!-- Google analytics -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
-<script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-V2QHS6XEKF');
-</script>
+<script src="src/analytics/analytics.js"></script>
 
 <body>
     <!-- Editor Theme Button -->
@@ -123,6 +117,8 @@
             <div id="editor-pane">
                 <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
                     <div class="controls">
+                        <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="expandEditorBtn">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
                         <button class="btn format"  type="button"  title="Format code" id="btn-format">
                             <span>Format</span>
                         </button>
@@ -132,8 +128,6 @@
                         <button class="btn download"  type="button"  title="Download code" id="downloadEditorBtn">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="expandEditorBtn">
-                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
                         </button>
                     </div>
                 </div>
@@ -258,7 +252,7 @@
                     <div class="setting-group">
                         <label for="editorThemeSelect">Editor Theme:</label>
                         <select id="editorThemeSelect" class="font-select">
-                            <optgroup label="LIGHT">
+                            <optgroup label="Light">
                                 <option value="ace/theme/chrome">Chrome</option>
                                 <option value="ace/theme/clouds">Clouds</option>
                                 <option value="ace/theme/dawn">Dawn</option>
@@ -275,7 +269,7 @@
                                 <option value="ace/theme/tomorrow">Tomorrow</option>
                                 <option value="ace/theme/xcode">Xcode</option>
                             </optgroup>
-                            <optgroup label="DARK">
+                            <optgroup label="Dark">
                                 <option value="ace/theme/ambiance">Ambiance</option>
                                 <option value="ace/theme/chaos">Chaos</option>
                                 <option value="ace/theme/clouds_midnight">Clouds Midnight</option>

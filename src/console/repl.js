@@ -98,7 +98,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
     
             case 'run':
                 consoleOutput.newline();
-                runCtrl.run();
+                runCtrl.run('console');
                 return;
     
             case 'clear':
