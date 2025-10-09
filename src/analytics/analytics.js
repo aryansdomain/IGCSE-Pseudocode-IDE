@@ -1,4 +1,6 @@
 function initAnalytics() {
+    if (window.gtag) return;
+
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
 
@@ -9,7 +11,7 @@ function initAnalytics() {
 }
 
 function code_executed({
-    method = 'run_button',
+    run_method = 'button',
     runtime_ms = 0,
     code_size = 0,
     success = true,
@@ -18,13 +20,14 @@ function code_executed({
     if (!window.gtag) return;
 
     window.gtag('event', 'code_executed', {
-        method,                              // 'button' or 'console'
-        runtime_ms: Math.round(runtime_ms),  // time taken to execute code
-        code_size,                           // size of code executed
-        success: success ? 1 : 0,            // 1 if code executed successfully, 0 if not
-        ...(error_msg ? { error_msg: String(error_msg).slice(0, 100) } : {})  // console error
+        run_method,                                     // 'button' or 'console'
+        runtime_ms: Math.round(runtime_ms),         // time taken to execute code
+        code_size,                                  // size of code (in chars)
+        success,                                    // true if code executed successfully, false if not
+        error_msg: String(error_msg).slice(0, 100)  // console error
     });
 }
 
 initAnalytics();
 
+window.code_executed = window.code_executed || code_executed;

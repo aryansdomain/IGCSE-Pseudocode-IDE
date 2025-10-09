@@ -312,7 +312,7 @@ OUTPUT greet("World")`,
             consoleOutput.println('run', '32');
             consoleOutput.newline();
 
-            runCtrl.run('run_button');
+            runCtrl.run('button');
         }
     });
 

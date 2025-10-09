@@ -20,11 +20,11 @@ export function initRunCtrl({
 
     // ------------------------------- Analytics Vars -------------------------------
     let startTime = 0;
-    let runtime_ms = 0;
-    let success = false;
-    let error_msg = '';
-    let method = 'run_button';
-    let code_size = 0;
+    let run_time = 0;
+    let run_success = false;
+    let run_error = '';
+    let run_method = 'button';
+    let run_code_size = 0;
 
     // ------------------------------- Runtime State -------------------------------
     let consoleLocked = false;
@@ -53,11 +53,11 @@ export function initRunCtrl({
         // record analytics
         try {
             window.code_executed && window.code_executed({
-                method,
-                runtime_ms,
-                code_size,
-                success,
-                error_msg
+                run_method,
+                run_time,
+                run_code_size,
+                run_success,
+                run_error,
             });
         } catch {}
     }
@@ -185,7 +185,7 @@ export function initRunCtrl({
         };
     }
 
-    function run(source = 'run_button') {
+    function run(source = 'button') {
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
@@ -194,11 +194,11 @@ export function initRunCtrl({
         // set analytics vars
         startTime = performance.now();
 
-        method = source;
-        runtime_ms = 0;
-        code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
-        success = false;
-        error_msg = '';
+        run_method = source;
+        run_time = 0;
+        run_code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
+        run_success = false;
+        run_error = '';
 
         const localRunId = ++runId;
 
