@@ -12,19 +12,19 @@ function initAnalytics() {
 
 function code_executed({
     run_method = 'button',
-    runtime_ms = 0,
-    code_size = 0,
-    success = true,
-    error_msg = ''
+    run_time = 0,
+    run_code_size = 0,
+    run_success = true,
+    run_error = ''
 } = {}) {
     if (!window.gtag) return;
 
     window.gtag('event', 'code_executed', {
-        run_method,                                     // 'button' or 'console'
-        runtime_ms: Math.round(runtime_ms),         // time taken to execute code
-        code_size,                                  // size of code (in chars)
-        success,                                    // true if code executed successfully, false if not
-        error_msg: String(error_msg).slice(0, 100)  // console error
+        run_method,                                 // 'button' or 'console'
+        run_time: Math.round(run_time),             // time taken to execute code
+        run_code_size,                              // size of code (in chars)
+        run_success,                                // true if code executed successfully, false if not
+        run_error: String(run_error).slice(0, 100)  // console error
     });
 }
 

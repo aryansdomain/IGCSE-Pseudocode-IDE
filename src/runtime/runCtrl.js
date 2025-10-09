@@ -129,9 +129,9 @@ export function initRunCtrl({
                 }
 
                 // set analytics vars
-                runtime_ms = performance.now() - startTime;
-                success = true;
-                error_msg = '';
+                run_time = performance.now() - startTime;
+                run_success = true;
+                run_error = '';
 
                 finishRun(localRunId);
 
@@ -143,9 +143,9 @@ export function initRunCtrl({
                 setLoading(false);
 
                 // set analytics vars
-                runtime_ms = performance.now() - startTime;
-                success = false;
-                error_msg = 'Execution stopped by user';
+                run_time = performance.now() - startTime;
+                run_success = false;
+                run_error = 'Execution stopped by user';
 
                 finishRun(localRunId);
 
@@ -156,14 +156,14 @@ export function initRunCtrl({
                 setLoading(false);
 
                 // set analytics vars
-                runtime_ms = performance.now() - startTime;
-                success = false;
-                error_msg = String(e.data.error || 'Unknown error');
+                run_time = performance.now() - startTime;
+                run_success = false;
+                run_error = String(e.data.error || 'Unknown error');
 
                 // output error
                 let line = getline().replace(/\s+$/, '');
                 if (line.length > 0) consoleOutput.newline();
-                consoleOutput.errln(error_msg);
+                consoleOutput.errln(run_error);
 
                 finishRun(localRunId);
             }
@@ -175,11 +175,11 @@ export function initRunCtrl({
             setLoading(false);
             
             // set analytics vars
-            runtime_ms = performance.now() - startTime;
-            success = false;
-            error_msg = `Worker error: ${e.message || e.filename || 'unknown'}`;
+            run_time = performance.now() - startTime;
+            run_success = false;
+            run_error = `Worker error: ${e.message || e.filename || 'unknown'}`;
             
-            consoleOutput.errln(error_msg);
+            consoleOutput.errln(run_error);
             consoleOutput.errln(`Please reload the page.`);
             finishRun(localRunId);
         };
