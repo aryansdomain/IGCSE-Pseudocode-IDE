@@ -19,7 +19,8 @@ function code_executed({
 } = {}) {
     if (!window.gtag) return;
 
-    window.gtag('event', 'code_executed', {
+    window.dataLayer.push({
+        event: 'code_executed',
         run_method,                                 // 'button' or 'console'
         run_time: Math.round(run_time),             // time taken to execute code
         run_code_size,                              // size of code (in chars)
