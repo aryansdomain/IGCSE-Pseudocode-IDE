@@ -15,6 +15,11 @@ Icon
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Cursor files
+.cursorignore
+.cursorindexingignore
+.cursorrules
+
 # Logs, temporary files
 *.log
 npm-debug.log*
