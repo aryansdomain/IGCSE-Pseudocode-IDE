@@ -101,7 +101,11 @@ function formatOnce(src) {
                 
                 // Preserve the condition after UNTIL
                 const mUntil = token.match(/^until\b([\s\S]*)$/i);
-                if (mUntil) tokenOut = 'UNTIL' + mUntil[1];
+                if (mUntil) {
+                    // apply capitalization to condition part
+                    const condition = mUntil[1].replace(kwRegex, t => t.toUpperCase());
+                    tokenOut = 'UNTIL' + condition;
+                }
                 
                 outArr.push({ code: tokenOut, comment: '' });
 
