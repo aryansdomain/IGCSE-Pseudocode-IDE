@@ -127,8 +127,8 @@ export function initSplitter({
     // ------------------------ Expand/Collapse Buttons ------------------------
     function normalizeIcon(el) {
         if (!el) return;
-        el.classList.remove(expandIconClass, collapseIconClass, 'fas');
-        el.classList.add('fa-solid');
+        el.classList.remove(expandIconClass, collapseIconClass);
+        el.classList.add('fas');
     }
 
     function updateButtons() {
