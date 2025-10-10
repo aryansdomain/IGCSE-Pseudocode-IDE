@@ -1,24 +1,17 @@
-function initAnalytics() { window.dataLayer = window.dataLayer || []; }
-
-function code_executed({
-    run_method = 'button',
-    run_time = 0,
-    run_code_size = 0,
-    run_success = true,
+// when user code is ran
+export function code_executed({
+    run_method,
+    run_time,
+    run_code_size,
+    run_success,
     run_error = ''
 } = {}) {
-    initAnalytics();
-
-    window.dataLayer.push({
-        event: 'code_executed',
-        run_method,                                  // 'button' or 'console'
-        run_time: Math.round(run_time),              // time taken to execute code
-        run_code_size,                               // size of code (in chars)
-        run_success,                                 // true if code executed successfully, false if not
-        run_error: String(run_error).slice(0, 100),  // console error
+    gtag('event', 'code_executed', {
+        run_method,
+        run_time: Math.round(run_time),
+        run_code_size,
+        run_success,
+        run_error: String(run_error).slice(0, 100),
+        debug_mode: true
     });
-
-    window.code_executed = code_executed;
 }
-
-window.code_executed = window.code_executed || code_executed;

@@ -1,3 +1,5 @@
+import { code_executed } from '../analytics/analytics.js';
+
 export function initRunCtrl({
     consoleOutput,
     getline,
@@ -52,7 +54,7 @@ export function initRunCtrl({
 
         // record analytics
         try {
-            window.code_executed && window.code_executed({
+            code_executed({
                 run_method,
                 run_time,
                 run_code_size,
@@ -185,7 +187,7 @@ export function initRunCtrl({
         };
     }
 
-    function run(source = 'button') {
+    function run(method = 'button') {
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
@@ -194,7 +196,7 @@ export function initRunCtrl({
         // set analytics vars
         startTime = performance.now();
 
-        run_method = source;
+        run_method = method;
         run_time = 0;
         run_code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
         run_success = false;

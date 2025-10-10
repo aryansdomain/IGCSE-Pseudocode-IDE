@@ -9,15 +9,14 @@
     <link rel="stylesheet" href="style.css"/>
 
     <!-- Google Analytics -->
-    <script src="src/analytics/analytics.js" defer></script>
-
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer','GTM-N44QGNFC');
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-V2QHS6XEKF', { debug_mode: true }); // TODO: remove debug_mode when deploying
     </script>
+    <script src="../analytics/analytics.js" defer></script>
 
     <!-- Listener for JS errors before everything -->
     <script>
@@ -91,12 +90,6 @@
 </head>
 
 <body>
-
-    <!-- Google Tag Manager -->
-    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N44QGNFC"
-        height="0" width="0" style="display:none;visibility:hidden"></iframe>
-    </noscript>
-
     <!-- Editor Theme Button -->
     <input id="editortheme" type="checkbox" hidden />
 
