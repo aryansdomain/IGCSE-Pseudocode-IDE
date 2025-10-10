@@ -16,7 +16,6 @@ function code_executed({
         run_code_size,                               // size of code (in chars)
         run_success,                                 // true if code executed successfully, false if not
         run_error: String(run_error).slice(0, 100),  // console error
-        debug_mode: true,
     });
 
     window.code_executed = code_executed;
