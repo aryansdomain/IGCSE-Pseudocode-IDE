@@ -23,19 +23,27 @@ function showCopySuccess(button) {
     }, 2000);
 }
 
-export function initCopy({ console, consoleCopyBtn, editorCopyBtn, getCode, getConsoleText, consoleOutput }) {
+export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleText, consoleOutput }) {
 
     // copy console content
     const copyConsole = async () => {
         try {
-            const text = getConsoleText(console, { trim: true });
+            const text = getConsoleText({ trim: true });
             await navigator.clipboard.writeText(text);
+            console.log('text: ');
+            console.log(text);
 
             // show success checkmark
             showCopySuccess(consoleCopyBtn);
 
+            // track copy analytics
+            window.console_copied && window.console_copied({ console_size: text.length });
+
         } catch (err) {
-            consoleOutput.errln('Failed to copy console content: ' + err + '. Please reload the page or report this issue.');
+            consoleOutput.newline();
+            consoleOutput.lnerrln('Failed to copy console content: ' + err + '. Please reload the page or report this issue.');
+            consoleOutput.newline();
+            consoleOutput.writePrompt();
         }
     };
 
@@ -48,6 +56,9 @@ export function initCopy({ console, consoleCopyBtn, editorCopyBtn, getCode, getC
 
             // show success checkmark
             showCopySuccess(editorCopyBtn);
+
+            // track copy analytics
+            window.code_copied && window.code_copied({ code_size: code.length });
 
         } catch (err) {
             consoleOutput.errln('Failed to copy editor content: ' + err + '. Please reload the page or report this issue.');

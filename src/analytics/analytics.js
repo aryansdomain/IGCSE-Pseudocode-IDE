@@ -1,19 +1,17 @@
-// when user code is ran
 function code_executed({
-    run_method,
-    run_time,
-    run_code_size,
-    run_success,
+    method,
+    runtime,
+    code_size,
+    success,
 } = {}) {
     gtag('event', 'code_executed', {
-        run_method,
-        run_time: Math.round(run_time),
-        run_code_size,
-        run_success,
+        method,
+        runtime: Math.round(runtime),
+        code_size,
+        success,
     });
 }
 
-// when mode is toggled
 function mode_toggled({
     to,
     page = 'ide'
@@ -24,7 +22,6 @@ function mode_toggled({
     });
 }
 
-// when theme is changed
 function theme_changed({
     from,
     from_mode,
@@ -39,12 +36,21 @@ function theme_changed({
     });
 }
 
-// when layout orientation is changed
 function layout_changed({ to } = {}) {
     gtag('event', 'layout_changed', { to });
 }
 
-window.code_executed = code_executed;
-window.mode_toggled = mode_toggled;
-window.theme_changed = theme_changed;
-window.layout_changed = layout_changed;
+function code_copied({ code_size } = {}) {
+    gtag('event', 'code_copied', { code_size });
+}
+
+function console_copied({ console_size } = {}) {
+    gtag('event', 'console_copied', { console_size });
+}
+
+window.code_executed   = code_executed;
+window.mode_toggled    = mode_toggled
+window.theme_changed   = theme_changed;
+window.layout_changed  = layout_changed;
+window.code_copied     = code_copied;
+window.console_copied  = console_copied;

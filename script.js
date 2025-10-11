@@ -279,7 +279,6 @@ OUTPUT greet("World")`,
 
     // download
     const downloads = initDownload({
-        console,
         consoleDownloadBtn: UI.consoleDownloadBtn,
         editorDownloadBtn: UI.editorDownloadBtn,
         getCode: editorApis.getCode,
@@ -289,7 +288,6 @@ OUTPUT greet("World")`,
 
     // copy
     const copies = initCopy({
-        console,
         consoleCopyBtn: UI.consoleCopyBtn,
         editorCopyBtn: UI.editorCopyBtn,
         getCode: editorApis.getCode,

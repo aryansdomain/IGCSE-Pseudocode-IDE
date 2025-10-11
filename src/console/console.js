@@ -44,15 +44,22 @@ export function initConsole({
         }
     };
 
-    const getConsoleText = (console, { trim = false } = {}) => {
-        let out = '';
+    const getConsoleText = ({ trim = true } = {}) => {
         const buf = console?.buffer?.active;
-        if (!buf) return out;
+        if (!buf) return '';
+      
+        const lines = [];
         for (let i = 0; i < buf.length; i++) {
-            const line = buf.getLine(i)?.translateToString() ?? '';
-            out += line + '\n';
+            const line = buf.getLine(i);
+            if (!line) continue;
+        
+            // remove right padding
+            const s = line.translateToString(true, 0, console.cols);
+            lines.push(s);
         }
-        return trim ? out.trim() : out;
+      
+        const text = lines.join('\n');
+        return trim ? text.trimEnd() : text;
     };
 
     function refit() { try { if (fitAddon) fitAddon.fit(); } catch {} }
