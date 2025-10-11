@@ -21,14 +21,22 @@ function formatISO(date = new Date(), { compact = false } = {}) {
     return iso.slice(0, 19).replace('T', '_').replaceAll(':', '-');
 }
 
-export function initDownload({ console, consoleDownloadBtn, editorDownloadBtn, getCode, getConsoleText, consoleOutput }) {
+export function initDownload({consoleDownloadBtn, editorDownloadBtn, getCode, getConsoleText, consoleOutput }) {
 
     // download console content
     const downloadConsole = async () => {
         try {
-            const text = getConsoleText(console);
-                const filename = `console_${formatISO(new Date(), { compact: true })}.txt`;
-                await saveTextAsFile(filename, text);
+            const text = getConsoleText();
+            const filename = `console_${formatISO(new Date(), { compact: true })}.txt`;
+            await saveTextAsFile(filename, text);
+            
+            // track console download analytics
+            try {
+                window.console_downloaded && window.console_downloaded({
+                    file_format: 'txt',
+                    console_size: text.length
+                });
+            } catch {}
         } catch (err) {
             consoleOutput.errln('Failed to download console content: ' + err + '. Please reload the page or report this issue.');
         }
@@ -40,6 +48,14 @@ export function initDownload({ console, consoleDownloadBtn, editorDownloadBtn, g
             const code = getCode();
             const filename = `code_${formatISO(new Date(), { compact: true })}.txt`;
             await saveTextAsFile(filename, code);
+            
+            // track code download analytics
+            try {
+                window.code_downloaded && window.code_downloaded({
+                    file_format: 'txt',
+                    code_size: code.length
+                });
+            } catch {}
         } catch (err) {
             consoleOutput.errln('Failed to download editor content: ' + err + '. Please reload the page or report this issue.');
         }
