@@ -1,3 +1,6 @@
+const { initMode } = await import('../ui/modeCtrl.js');
+
+// API vars
 const GH_OWNER   = "aryansdomain";
 const GH_REPO    = "IGCSE-Pseudocode-IDE";
 const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
@@ -47,7 +50,7 @@ function boldLabels(text) {
     const body       = $("br-body");
     const errorText  = $("errorText");
     const submitBtn  = $("submit");
-    const openGhBtn  = $("openGithub");
+    const openGHBtn  = $("openGithub");
     const closeBtn   = $("closeBtn");
     const modeBtn    = $("mode");
 
@@ -55,41 +58,18 @@ function boldLabels(text) {
     title.value = qs("title", "[Issue] ");
     body.value  = qs("body");
 
-    // ------------------------ Set Mode ------------------------
-    function setMode(mode) {
-        // disable transitions during switch
-        document.documentElement.classList.add('mode-switching');
-        
-        if (mode === 'light') {
-            document.documentElement.classList.add('light');
-            modeBtn.querySelector('i').className = 'fas fa-moon';
-        } else {
-            document.documentElement.classList.remove('light');
-            modeBtn.querySelector('i').className = 'fas fa-sun';
-        }
-        
-        // re-enable transitions
-        setTimeout(() => {
-            document.documentElement.classList.remove('mode-switching');
-        }, 10);
-    }
-    setMode(qs("mode"));
-
-    modeBtn.onclick = () => {
-        const isLight = document.documentElement.classList.contains('light');
-        const newMode = isLight ? 'dark' : 'light';
-
-        setMode(newMode);
-    
-        localStorage.setItem('ui.mode', newMode);
-    };
+    // set mode
+    const modeCtrl = initMode({
+        themeCtrl: null,
+        modeBtn: modeBtn,
+        defaultMode: qs("mode") || 'dark'
+    });
 
     // ------------------------ Buttons ------------------------
-
     closeBtn.onclick = () => window.close();
 
     // open github url
-    openGhBtn.onclick = () => {
+    openGHBtn.onclick = () => {
         errorText.textContent = "";
 
         const gh = new URL(`https://github.com/${GH_OWNER}/${GH_REPO}/issues/new`);
@@ -105,7 +85,7 @@ function boldLabels(text) {
     // submit to github
     submitBtn.onclick = async () => {
         submitBtn.disabled = true;
-        openGhBtn.disabled = true;
+        openGHBtn.disabled = true;
         submitBtn.textContent = "Submitting…";
         errorText.textContent = "";
 
@@ -130,7 +110,7 @@ function boldLabels(text) {
             submitBtn.textContent = "Submit anonymously"; // reset button text
             errorText.textContent = `Submit failed: ${e.message}. Try reloading the page or clicking 'Open in GitHub' instead.`;
             submitBtn.disabled = false;
-            openGhBtn.disabled = false;
+            openGHBtn.disabled = false;
             console.error(e);
         }
     };

@@ -3,15 +3,13 @@ const KEY = 'ui.mode'; // localStorage key
 export function isLightMode() { return document.documentElement.classList.contains('light'); }
 
 export function initMode({
-    themeCtrl,
+    themeCtrl = null,
     modeBtn,
-    moonIcon,
-    sunIcon,
     defaultMode = 'dark',
 } = {}) {
 
-    // store initial themeCtrl reference (changed later in script.js)
     let currentThemeCtrl = themeCtrl;
+    let currentMode = null;
 
     function isLightMode() {
         return document.documentElement.classList.contains('light');
@@ -19,14 +17,17 @@ export function initMode({
 
     function setIcons() {
         const light = isLightMode();
-        moonIcon.hidden = !light;  // in light mode, show moon
-        sunIcon.hidden = light;    // in dark mode, show sun
+        
+        const icon = modeBtn.querySelector('i');
+        if (icon) icon.className = light ? 'fas fa-moon' : 'fas fa-sun';
         
         modeBtn.setAttribute('aria-pressed', String(light));
         modeBtn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
     }
 
     function setMode(mode) {
+        const previousMode = currentMode;
+        currentMode = mode;
 
         // disable transitions
         document.documentElement.classList.add('mode-switching');
@@ -34,13 +35,20 @@ export function initMode({
         if (mode === 'light') document.documentElement.classList.add('light');
         else                  document.documentElement.classList.remove('light');
 
-        if (currentThemeCtrl) {
-            currentThemeCtrl.updateConsoleTheme();
-            currentThemeCtrl.refreshEditorChrome();
-        }
+        if (currentThemeCtrl) currentThemeCtrl.updateConsoleTheme();
         
         // enable transitions
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
+
+        // track mode change analytics
+        if (previousMode && previousMode !== mode) {
+            try {
+                window.mode_toggle && window.mode_toggle({
+                    from: previousMode,
+                    to: mode,
+                });
+            } catch {}
+        }
     }
 
     // init mode and apply

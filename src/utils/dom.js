@@ -38,8 +38,7 @@ export function initDom() {
         consoleCopyBtn:      byId('copyConsoleBtn'),
         consoleDownloadBtn:  byId('downloadConsoleBtn'),
 
-
-        // editor controls
+        // editor settings
         fontSizeSlider:      byId('fontSizeSlider'),
         fontFamilySelect:    byId('fontFamilySelect'),
         tabSpacesSlider:     byId('tabSpacesSlider'),
@@ -57,10 +56,5 @@ export function initDom() {
 
         // info
         lineColInfo:         byId('line-col-info'),
-
-        // icons
-        moonIcon:            qs('#modeBtn .moon-icon'),
-        sunIcon:             qs('#modeBtn .sun-icon'),
-
     };
 }

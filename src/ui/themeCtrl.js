@@ -50,16 +50,10 @@ export function initThemeControls({
         const light = modeCtrl.isLightMode();
         console.options.theme = light ? {
             background: '#ffffff', foreground: '#000000', cursor: '#000000', selection: '#00000030',
-            black: '#000000', red: '#d73a49', green: '#179645', yellow: '#ce8600', blue: '#0000ff',
-            magenta: '#ff00ff', cyan: '#00ffff', white: '#ffffff',
-            brightBlack: '#8b949e', brightRed: '#ff7b72', brightGreen: '#179645', brightYellow: '#ce8600',
-            brightBlue: '#0000ff', brightMagenta: '#ff00ff', brightCyan: '#00ffff', brightWhite: '#ffffff'
+            red: '#d73a49', green: '#179645', yellow: '#ce8600', brightGreen: '#179645', brightYellow: '#ce8600'
         } : {
-            background: '#000000', foreground: '#e6edf3', cursor: '#e6edf3', selection: '#2b313b30',
-            black: '#000000', red: '#ff7b72', green: '#22c55e', yellow: '#ffd700', blue: '#0000ff',
-            magenta: '#ff00ff', cyan: '#00ffff', white: '#e6edf3',
-            brightBlack: '#8b949e', brightRed: '#ff7b72', brightGreen: '#22c55e', brightYellow: '#ffd700',
-            brightBlue: '#0000ff', brightMagenta: '#ff00ff', brightCyan: '#00ffff', brightWhite: '#e6edf3'
+            background: '#000000', foreground: '#ffffff', cursor: '#ffffff', selection: '#2b313b30',
+            red: '#ff7b72', green: '#22c55e', yellow: '#ffd700', brightGreen: '#22c55e', brightYellow: '#ffd700'
         };
     }
 

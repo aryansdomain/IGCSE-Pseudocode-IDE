@@ -142,8 +142,6 @@ OUTPUT greet("World")`,
     const modeCtrl = initMode({
         themeCtrl: null,
         modeBtn: UI.modeBtn,
-        moonIcon: UI.moonIcon,
-        sunIcon: UI.sunIcon,
         defaultMode: 'dark'
     });
     
