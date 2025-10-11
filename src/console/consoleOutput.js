@@ -4,6 +4,9 @@ export function initConsoleOutput(console, getline) {
         if (color) console.write(`\x1b[${color}m${text}\x1b[0m`);
               else console.write(text);
     };
+    const writePrompt = () => {
+        write('% ', document.documentElement.classList.contains('light') ? '90' : '38;5;248');
+    };
 
     // on event - notify catchError.js
     const notify = (type, text) => {
@@ -24,10 +27,10 @@ export function initConsoleOutput(console, getline) {
         newline: () => write('\r\n'),
 
         // print
-        print:     (t = '', c = null) => write(t, c),
-        println:   (t = '', c = null) => write(`${t}\r\n`, c),
-        lnprint:   (t = '', c = null) => write(`\r\n${t}`, c),
-        lnprintln: (t = '', c = null) => write(`\r\n${t}\r\n`, c),
+        print:     (t = '', color = null) => write(t, color),
+        println:   (t = '', color = null) => write(`${t}\r\n`, color),
+        lnprint:   (t = '', color = null) => write(`\r\n${t}`, color),
+        lnprintln: (t = '', color = null) => write(`\r\n${t}\r\n`, color),
 
         // error (red)
         err:     (t = '') => { setLastIdeError(t); notify('error', t); write(t, '31'); },
@@ -58,20 +61,19 @@ export function initConsoleOutput(console, getline) {
                 const hadPrompt = getline().startsWith('%');
 
                 write('\x1b[2K\r'); // clear line
-                if (hadPrompt) write('% ', '90'); // if line had prompt, restore it
+                if (hadPrompt) writePrompt();
             } catch {
                 write('\x1b[2K\r');
             }
         },
 
-        // cursor utilities
+        // cursor
         hideCursor:      ()      => write('\x1b[?25l'),
         showCursor:      ()      => write('\x1b[?25h'),
         moveCursorRight: (n = 1) => write('\x1b[' + n + 'C'),
         moveCursorLeft:  (n = 1) => write('\x1b[' + n + 'D'),
         moveCursorTo:    (n) =>     write('\x1b[' + n + 'G'),
 
-        writePrompt: () => write('% ', '90')
-
+        writePrompt,
     };
 }
