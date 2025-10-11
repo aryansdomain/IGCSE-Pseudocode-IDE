@@ -7,7 +7,6 @@ export function initEditor({
     theme = 'monokai',
     softWrap = false,
     readOnly = false,
-
 } = {}) {
     const editor = ace.edit(container);
 

@@ -1,7 +1,7 @@
 self.window = self;
 self.__ide_stop_flag = false;
 
-const INTERPRETER_URL = '../../interpreter.js';
+const INTERPRETER_URL = './interpreter.js';
 
 // get input from main thread
 self.readInput = function () {
