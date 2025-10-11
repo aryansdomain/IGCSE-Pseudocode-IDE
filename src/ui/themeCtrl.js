@@ -14,28 +14,27 @@ export function initThemeControls({
         'Tomorrow Night Eighties','Twilight','Vibrant Ink'
     ],
 }) {
-    const toBare = (id) => {
+    const toBare = (name) => {
+        let bare = String(name).replace(/^ace\/theme\//, '');  // remove the ace/theme/
+        bare = bare.toLowerCase().replace(/[\s-]/g, '_');      // convert to snake_case
 
-        // remove the ace/theme/
-        let bare = String(id).replace(/^ace\/theme\//, '');
-
-        // convert to snake_case
-        bare = bare.toLowerCase().replace(/[\s-]/g, '_');
+        if (bare === 'sql_server') bare = 'sqlserver';         // proper name for this theme
         return bare;
     };
 
+    // theme lists
+    const bareLightThemes = lightThemes.map(t => toBare(t));
+    const bareDarkThemes  =  darkThemes.map(t => toBare(t));
+
     function themeInfo(name) {
-        const normalized = name.toLowerCase().replace(/[\s_-]/g, '');
+        name = toBare(name);
         
-        const normalizedLightThemes = lightThemes.map(t => t.toLowerCase().replace(/[\s_-]/g, ''));
-        const normalizedDarkThemes = darkThemes.map(t => t.toLowerCase().replace(/[\s_-]/g, ''));
-        
-        if (normalizedLightThemes.includes(normalized)) {
-            const originalTheme = lightThemes[normalizedLightThemes.indexOf(normalized)];
+        if (bareLightThemes.includes(name)) {
+            const originalTheme = lightThemes[bareLightThemes.indexOf(name)];
             return { ok: true, kind: 'light', name: originalTheme, bare: toBare(originalTheme) };
         }
-        if (normalizedDarkThemes.includes(normalized)) {
-            const originalTheme = darkThemes[normalizedDarkThemes.indexOf(normalized)];
+        if (bareDarkThemes.includes(name)) {
+            const originalTheme = darkThemes[bareDarkThemes.indexOf(name)];
             return { ok: true, kind: 'dark', name: originalTheme, bare: toBare(originalTheme) };
         }
         return { ok: false };
@@ -44,7 +43,6 @@ export function initThemeControls({
     function listThemes() {
         return [...lightThemes, ...darkThemes].map(toBare);
     }
-
 
     function updateConsoleTheme() {
         const light = modeCtrl.isLightMode();
@@ -57,7 +55,7 @@ export function initThemeControls({
         };
     }
 
-    function refreshEditorChrome() {
+    function updateBars() {
         const bottomBar = document.querySelector('.bottombar');
         const topBar = document.querySelector('.topbar');
         const hostEl = document.getElementById('code') || editor.container;
@@ -75,32 +73,55 @@ export function initThemeControls({
         });
     }
 
-    function setTheme(name) { 
-        editor.setTheme(`ace/theme/${toBare(name)}`);
+    function setTheme(name) {
+        name = toBare(name);
+        const previousTheme = getTheme();
+        const previousInfo = themeInfo(previousTheme);
+        const newInfo = themeInfo(name);
+        
+        editor.setTheme(`ace/theme/${name}`);
+        
+        // track theme change analytics
+        if (previousInfo.ok && newInfo.ok && previousTheme !== name) {
+            try {
+                window.theme_changed && window.theme_changed({
+                    from: previousTheme,
+                    from_mode: previousInfo.kind,
+                    to: getTheme(),
+                    to_mode: newInfo.kind,
+                });
+            } catch {}
+        }
+
+        // update dropdown
+        editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
+
+        // recolor bars
+        if (editor.renderer && editor.renderer.on) {
+            if (editor.renderer.$theme) updateBars();
+            editor.renderer.on('themeLoaded', updateBars);
+        }
     }
-    function getTheme() { return editor.getTheme().replace(/^ace\/theme\//, ''); }
+    function getTheme() {
+        const bareTheme = toBare(editor.getTheme());
+        const themeIndex = [...bareLightThemes, ...bareDarkThemes].indexOf(bareTheme); // index in combined list
+        return [...lightThemes, ...darkThemes][themeIndex]; // convert to proper/formatted name
+    }
 
     // UI event listeners
     editorThemeSelect?.addEventListener('change', (e) => {
-        const themeName = String(e.target.value || '').replace('ace/theme/', '');
-        setTheme(themeName);
+        setTheme(String(e.target.value));
     });
 
-    // Update the dropdown
-    if (editorThemeSelect) editorThemeSelect.value = editor.getTheme();
-
-    // Recolor topbar, bottombar when theme changes
-    if (editor.renderer && editor.renderer.on) {
-        if (editor.renderer.$theme) refreshEditorChrome();
-        editor.renderer.on('themeLoaded', refreshEditorChrome);
-    }
-
+    // init
     updateConsoleTheme();
+    updateBars();
+    editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 
     return { 
         setTheme, 
         getTheme,
-        refreshEditorChrome, 
+        updateBars, 
         updateConsoleTheme,
         themeInfo, 
         listThemes, 

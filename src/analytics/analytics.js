@@ -24,5 +24,21 @@ function mode_toggled({
     });
 }
 
+// when theme is changed
+function theme_changed({
+    from,
+    from_mode,
+    to,
+    to_mode,
+} = {}) {
+    gtag('event', 'theme_changed', {
+        from,
+        from_mode,
+        to,
+        to_mode,
+    });
+}
+
 window.code_executed = code_executed;
 window.mode_toggled = mode_toggled;
+window.theme_changed = theme_changed;
