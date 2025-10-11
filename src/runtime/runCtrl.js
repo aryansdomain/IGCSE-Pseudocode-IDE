@@ -1,5 +1,3 @@
-import { code_executed } from '../analytics/analytics.js';
-
 export function initRunCtrl({
     consoleOutput,
     getline,
@@ -24,7 +22,6 @@ export function initRunCtrl({
     let startTime = 0;
     let run_time = 0;
     let run_success = false;
-    let run_error = '';
     let run_method = 'button';
     let run_code_size = 0;
 
@@ -54,12 +51,11 @@ export function initRunCtrl({
 
         // record analytics
         try {
-            code_executed({
+            window.code_executed && window.code_executed({
                 run_method,
                 run_time,
                 run_code_size,
                 run_success,
-                run_error,
             });
         } catch {}
     }
@@ -133,7 +129,6 @@ export function initRunCtrl({
                 // set analytics vars
                 run_time = performance.now() - startTime;
                 run_success = true;
-                run_error = '';
 
                 finishRun(localRunId);
 
@@ -147,7 +142,6 @@ export function initRunCtrl({
                 // set analytics vars
                 run_time = performance.now() - startTime;
                 run_success = false;
-                run_error = 'Execution stopped by user';
 
                 finishRun(localRunId);
 
@@ -160,12 +154,11 @@ export function initRunCtrl({
                 // set analytics vars
                 run_time = performance.now() - startTime;
                 run_success = false;
-                run_error = String(e.data.error || 'Unknown error');
 
                 // output error
                 let line = getline().replace(/\s+$/, '');
                 if (line.length > 0) consoleOutput.newline();
-                consoleOutput.errln(run_error);
+                consoleOutput.errln(String(e.data.error || 'Unknown error'));
 
                 finishRun(localRunId);
             }
@@ -179,9 +172,8 @@ export function initRunCtrl({
             // set analytics vars
             run_time = performance.now() - startTime;
             run_success = false;
-            run_error = `Worker error: ${e.message || e.filename || 'unknown'}`;
             
-            consoleOutput.errln(run_error);
+            consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
             consoleOutput.errln(`Please reload the page.`);
             finishRun(localRunId);
         };
@@ -200,7 +192,6 @@ export function initRunCtrl({
         run_time = 0;
         run_code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
         run_success = false;
-        run_error = '';
 
         const localRunId = ++runId;
 
