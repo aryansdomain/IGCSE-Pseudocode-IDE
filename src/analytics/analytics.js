@@ -39,6 +39,12 @@ function theme_changed({
     });
 }
 
+// when layout orientation is changed
+function layout_changed({ to } = {}) {
+    gtag('event', 'layout_changed', { to });
+}
+
 window.code_executed = code_executed;
 window.mode_toggled = mode_toggled;
 window.theme_changed = theme_changed;
+window.layout_changed = layout_changed;

@@ -441,8 +441,7 @@ body.dragging {
 }
 
 /* icon visibility */
-.btn.mode i[hidden],
-.btn.layout i[hidden] {display: none;}
+.btn.mode i[hidden] {display: none;}
 
 /* run/stop */
 .btn.run {
@@ -509,7 +508,7 @@ body.dragging {
 }
 
 /* icon scaling */
-.btn:hover i:not(.btn.mode i):not(.btn.layout i) {
+.btn:hover i:not(.btn.mode i) {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }
@@ -517,11 +516,7 @@ body.dragging {
     transform: translate(-50%, -50%) scale(1.1);
     transition: transform 0.2s ease;
 }
-.btn.layout:hover i.fa-rotate-270 {
-    transform: rotate(270deg) scale(1.1);
-    transition: transform 0.2s ease;
-}
-.btn.layout:hover i:not(.fa-rotate-270) {
+.btn.layout:hover i {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }

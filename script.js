@@ -14,6 +14,7 @@
     const { initMode }              = await import('./src/ui/modeCtrl.js');
     const { initSettings }          = await import('./src/ui/settings.js');
     const { initSplitter }          = await import('./src/ui/splitter.js');
+    const { initLayoutControls }    = await import('./src/ui/layout.js');
     const { initDom, on }           = await import('./src/utils/dom.js');
 
     const UI = initDom();
@@ -137,6 +138,7 @@ OUTPUT greet("World")`,
     
     // console output
     const consoleOutput = initConsoleOutput(console, getline);
+    consoleOutput.writePrompt();
     
     // mode controls
     const modeCtrl = initMode({
@@ -180,40 +182,22 @@ OUTPUT greet("World")`,
         }
     });
     
-    // layout toggle + splitter
-    const LAYOUT_KEY = 'ui.layout:editor-console';
-    const layoutBtn  = document.getElementById('layoutBtn');
+    // layout controls
+    const layoutControls = initLayoutControls({
+        workspace: UI.workspace,
+        layoutBtn: UI.layoutBtn,
+        initialLayout: 'vertical',
+        storageKey: 'ui.layout:editor-console'
+    });
 
-    function setWorkspaceClass(layout) {
-        UI.workspace.classList.toggle('layout-vertical',   layout === 'vertical');
-        UI.workspace.classList.toggle('layout-horizontal', layout === 'horizontal');
-    }
-
+    // splitter
     let splitter;
-
-    function initSplitFor(layout) {
-        // destroy previous splitter
+    function reInitSplitter(layout) {
         try { splitter?.destroy?.(); } catch {}
-
-        const axis = layout; // 'vertical' or 'horizontal'
         
         // percentage of space editor takes up
-        let editorPercentage = 0.5; // default
-        if (splitter) {
-            editorPercentage = splitter.getRatio();
-        } else {
-            // on first load
-            try {
-                const saved = localStorage.getItem('ui.splitter:editor-percentage');
-                if (saved) {
-                    const parsed = parseFloat(saved);
-                    if (!isNaN(parsed) && parsed > 0 && parsed < 1) {
-                        editorPercentage = parsed;
-                    }
-                }
-            } catch {}
-        }
-        try { localStorage.setItem('ui.splitter:editor-percentage', String(editorPercentage)); } catch {}
+        let initialRatio = 0.5;
+        if (splitter) initialRatio = splitter.getRatio();
 
         splitter = initSplitter({
             container: UI.workspace,
@@ -222,13 +206,13 @@ OUTPUT greet("World")`,
             paneB: UI.consolePane,
             btnA: document.getElementById('expandEditorBtn'),
             btnB: document.getElementById('expandConsoleBtn'),
-            axis,
+            axis: layout,
             minA: 0,
             minB: 0,
             barHeight: 45,
             snapInPx: 35,
             snapOutPx: 50,
-            initialRatio: editorPercentage,
+            initialRatio,
             storageKey: 'editor-console',
             onResize: () => {
                 try { editor.resize(); } catch {}
@@ -236,35 +220,13 @@ OUTPUT greet("World")`,
             }
         });
     }
+    reInitSplitter(layoutControls.getLayout());
 
-    function updateLayoutButton(layout) {
-        if (!layoutBtn) return;
-        layoutBtn.querySelector('.to-horizontal')?.toggleAttribute('hidden', layout !== 'vertical');
-        layoutBtn.querySelector('.to-vertical')?.toggleAttribute('hidden',   layout !== 'horizontal');
-        layoutBtn.setAttribute('aria-pressed', layout === 'horizontal');
-        layoutBtn.title = layout === 'vertical' ? 'Side-by-side layout' : 'Top-bottom layout';
-    }
-
-    function applyLayout(layout) {
-        try { localStorage.setItem(LAYOUT_KEY, layout); } catch {}
-        setWorkspaceClass(layout);
-        initSplitFor(layout);
-        updateLayoutButton(layout);
-    }
-
-    // Initial layout on load
-    applyLayout((() => { try { return localStorage.getItem(LAYOUT_KEY) || 'vertical'; } catch { return 'vertical'; } })());
-
-    // Toggle on click
-    layoutBtn?.addEventListener('click', () => {
-        let current = 'vertical';
-        try { current = localStorage.getItem(LAYOUT_KEY) || 'vertical'; } catch {}
-        const next = current === 'vertical' ? 'horizontal' : 'vertical';
-        applyLayout(next);
-    });
-    
-    // initial prompt
-    consoleOutput.writePrompt();
+    // reinit splitter when layout changes
+    layoutBtn.addEventListener('click', toggleLayout = () => {
+        layoutControls.toggleLayout();
+        reInitSplitter(layoutControls.getLayout());
+    })
 
     // init repl
     let repl;

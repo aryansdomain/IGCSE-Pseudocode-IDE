@@ -48,7 +48,8 @@ export function initDom() {
         // other controls
         modeBtn:             byId('modeBtn'),
         editorThemeSelect:   byId('editorThemeSelect'),
-
+        layoutBtn:           byId('layoutBtn'),
+        
         // settings
         settingsOverlay:     byId('settingsOverlay'),
         settingsBtn:         byId('settingsBtn'),

@@ -32,7 +32,7 @@ export function initSplitter({
     const expandIconClass   = 'fa-up-right-and-down-left-from-center';
     const collapseIconClass = 'fa-down-left-and-up-right-to-center';
 
-    // if user drags very fast, requestAnimationFrame (raf) IDs reduce lag
+    // if user drags very fast, requestAnimationFrame (raf) reduces lag
     let raf = 0;
     let consoleRaf = 0;
 
@@ -44,9 +44,10 @@ export function initSplitter({
     applySizes(); // initial layout
 
     // ------------------------ Helpers ------------------------
-    function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); } 
-                                         // ensure n stays between lo and hi
-    function loadRatio(key, fallback) {  // load ratio from localStorage
+    function clamp(n, lo, hi) {           // ensure n stays between lo and hi
+        return Math.max(lo, Math.min(hi, n));
+    }
+    function loadRatio(key, fallback) {   // load ratio from localStorage
         try {
             const v = localStorage.getItem(KEY_PREFIX + key);
             const n = v == null ? NaN : Number(v);
@@ -54,14 +55,14 @@ export function initSplitter({
             return n;
         } catch { return fallback; }
     }
-    function saveRatio(key, r) {         // save ratio to localStorage
+    function saveRatio(key, r) {          // save ratio to localStorage
         try { localStorage.setItem(KEY_PREFIX + key, String(r)); } catch {}
     }
-    function totalSize() {               // total size of container
+    function totalSize() {                // total size of container
         if (axis === 'vertical') return container.clientHeight;
         else                     return container.clientWidth;
     }
-    function handleSize() {              // size of splitter handle
+    function handleSize() {               // size of splitter handle
         if (axis === 'vertical') return handle.offsetHeight;
         else                     return handle.offsetWidth;
     }
