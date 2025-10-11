@@ -131,22 +131,22 @@ html, body {
     width: 24px;
     height: 6px;
     background-image:
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px),
-        radial-gradient(circle, var(--text) 1px, transparent 1px);
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
+        radial-gradient(circle, var(--text) 0.75px, transparent 0.5px);
     background-size: 3px 3px;
     background-position: 
         0px 0px, 3px 0px, 6px 0px, 9px 0px, 12px 0px, 15px 0px, 18px 0px, 21px 0px,
