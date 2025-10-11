@@ -62,7 +62,8 @@ function boldLabels(text) {
     const modeCtrl = initMode({
         themeCtrl: null,
         modeBtn: modeBtn,
-        defaultMode: qs("mode") || 'dark'
+        defaultMode: qs("mode") || 'dark',
+        page: 'report'
     });
 
     // ------------------------ Buttons ------------------------

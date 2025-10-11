@@ -6,6 +6,7 @@ export function initMode({
     themeCtrl = null,
     modeBtn,
     defaultMode = 'dark',
+    page = 'ide',
 } = {}) {
 
     let currentThemeCtrl = themeCtrl;
@@ -26,7 +27,6 @@ export function initMode({
     }
 
     function setMode(mode) {
-        const previousMode = currentMode;
         currentMode = mode;
 
         // disable transitions
@@ -41,14 +41,12 @@ export function initMode({
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
 
         // track mode change analytics
-        if (previousMode && previousMode !== mode) {
-            try {
-                window.mode_toggle && window.mode_toggle({
-                    from: previousMode,
-                    to: mode,
-                });
-            } catch {}
-        }
+        try {
+            window.mode_toggled && window.mode_toggled({
+                to: mode,
+                page: page
+            });
+        } catch {}
     }
 
     // init mode and apply

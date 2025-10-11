@@ -13,4 +13,16 @@ function code_executed({
     });
 }
 
+// when mode is toggled
+function mode_toggled({
+    to,
+    page = 'ide'
+} = {}) {
+    gtag('event', 'mode_toggled', {
+        to,
+        page
+    });
+}
+
 window.code_executed = code_executed;
+window.mode_toggled = mode_toggled;

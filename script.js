@@ -142,7 +142,8 @@ OUTPUT greet("World")`,
     const modeCtrl = initMode({
         themeCtrl: null,
         modeBtn: UI.modeBtn,
-        defaultMode: 'dark'
+        defaultMode: 'dark',
+        page: 'ide'
     });
     
     // theme controls
