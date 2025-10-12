@@ -64,6 +64,26 @@ function code_formatted({
     });
 }
 
+function font_size_changed({
+    from_size,
+    to_size,
+} = {}) {
+    gtag('event', 'font_size_changed', {
+        from_size,
+        to_size,
+    });
+}
+
+function font_family_changed({
+    from_font,
+    to_font,
+} = {}) {
+    gtag('event', 'font_family_changed', {
+        from_font,
+        to_font,
+    });
+}
+
 window.code_executed       = code_executed;
 window.mode_toggled        = mode_toggled
 window.theme_changed       = theme_changed;
@@ -72,4 +92,6 @@ window.code_copied         = code_copied;
 window.code_downloaded     = code_downloaded;
 window.console_copied      = console_copied;
 window.console_downloaded  = console_downloaded;
-window.code_formatted      = code_formatted; 
+window.code_formatted      = code_formatted;
+window.font_size_changed   = font_size_changed;
+window.font_family_changed = font_family_changed; 

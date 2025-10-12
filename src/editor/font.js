@@ -68,22 +68,57 @@ export function initFontControls({
         }
     });
 
+    let originalSize = size;
+    let sizeChangeTimeout = null;
+
     function setFontSize(n) {
+        const oldSize = size;
+
         size = clamp(Number(n) || defaultSize, min, max);
         applySize(size);
         persist();
-        if (sizeInput) sizeInput.value = String(size);
 
-        // update html display
+        // update slider
+        if (sizeInput) sizeInput.value = String(size);
         const fontSizeValue = document.getElementById('fontSizeValue');
         if (fontSizeValue) fontSizeValue.textContent = String(size);
+        
+        // track font size change analytics
+        if (oldSize !== size) {
+            if (sizeChangeTimeout) clearTimeout(sizeChangeTimeout); // clear existing timeout
+            
+            // set timeout to track after user stops dragging
+            sizeChangeTimeout = setTimeout(() => {
+                window.font_size_changed && window.font_size_changed({
+                    from_size: originalSize,
+                    to_size: size
+                });
+                
+                originalSize = size;
+                sizeChangeTimeout = null;
+            }, 2000); // delay after user stops dragging
+        }
+
         return size;
     }
+
     function setFontFamily(f) {
+        const oldFamily = family;
         family = String(f || defaultFamily);
         applyFamily(family);
         persist();
         if (familySelect) familySelect.value = family;
+        
+        // track font family change analytics
+        if (oldFamily !== family) {
+            try {
+                window.font_family_changed && window.font_family_changed({
+                    from_font: oldFamily,
+                    to_font: family
+                });
+            } catch {}
+        }
+        
         return family;
     }
     function getFont() {
@@ -106,6 +141,7 @@ export function initFontControls({
             localStorage.setItem(storageKey, JSON.stringify({ size, family }));
         } catch {}
     }
+    // ensure n stays between lo and hi
     function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
     return { setFontSize, setFontFamily, getFont };
