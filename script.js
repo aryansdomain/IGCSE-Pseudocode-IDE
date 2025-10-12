@@ -268,7 +268,7 @@ OUTPUT greet("World")`,
     on(UI.runBtn, 'click', () => {
         if (runCtrl.isRunning()) runCtrl.stop();
         else {
-            repl.clearBuffer(); // clear current console input buffer, line user is typing
+            repl.clearBuffer(); // clear current console input buffer
 
             consoleOutput.println('run', '32');
             consoleOutput.newline();

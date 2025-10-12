@@ -1379,21 +1379,51 @@ async function interpret(code) {
                 continue;
             }
 
-            // REPEAT ... UNTIL cond
+            // REPEAT ... UNTIL
             if (/^REPEAT\b/i.test(s)) {
-                const { block, next } = collectUntil(blockLines, i + 1, /^(UNTIL)\b/i);
-                const untilRaw  = blockLines[next];
-                const untilLine = cleanLine(typeof untilRaw === 'object' ? untilRaw.content : untilRaw);
-                const mm = untilLine && untilLine.match(/^UNTIL\s+(.+)$/i);
-                if (!mm) throwErr('SyntaxError: ', 'expected ' + '"UNTIL"', currentLine)
-                i = next;
+                const block = [];
+                let depth = 0;
+                let k;
+                for (k = i + 1; k < blockLines.length; k++) {
+                    const rawK = blockLines[k];
+                    const txt  = (typeof rawK === 'object') ? rawK.content : rawK;
+                    const c    = cleanLine(txt);
+                    if (c) {
+                        // new inner REPEAT
+                        if (/^REPEAT\b/i.test(c)) {
+                            depth++;
+                            block.push(rawK);
+                            continue;
+                        }
+                        // UNTIL — close the inner loop if depth>0, otherwise close the current loop
+                        if (/^UNTIL\b/i.test(c)) {
+                            if (depth > 0) {
+                                depth--;
+                                block.push(rawK);
+                                continue;
+                            }
+                            // found matching UNTIL for the REPEAT
+                            const mm = c.match(/^UNTIL\s+(.+)$/i);
+                            if (!mm) throwErr('SyntaxError: ', 'expected condition after UNTIL', currentLine)
+                            i = k; // position after matching UNTIL
+                            
+                            let count = 0;
+                            do {
+                                if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
+                                await runBlock(block, scope, undefined, allowReturn);
+                                if (++count > LOOP_LIMIT) throwErr('RuntimeError: ', 'maximum iteration limit exceeded', currentLine)
+                            } while (!assertBoolean(await evalExpr(mm[1], scope), 'UNTIL condition'));
+                            break;
+                        }
+                    }
 
-                let count = 0;
-                do {
-                    if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
-                    await runBlock(block, scope, undefined, allowReturn);
-                    if (++count > LOOP_LIMIT) throwErr('RuntimeError: ', 'maximum iteration limit exceeded', currentLine)
-                } while (!assertBoolean(await evalExpr(mm[1], scope), 'UNTIL condition'));
+                    block.push(rawK);
+                }
+                if (k >= blockLines.length) {
+                    const e = new Error('Missing UNTIL for REPEAT');
+                    e.line = currentLine;
+                    throw e;
+                }
                 continue;
             }
 
