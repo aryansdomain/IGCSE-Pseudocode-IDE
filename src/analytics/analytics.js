@@ -21,7 +21,6 @@ function mode_toggled({
         page
     });
 }
-
 function theme_changed({
     from,
     from_mode,
@@ -73,7 +72,6 @@ function font_size_changed({
         to_size,
     });
 }
-
 function font_family_changed({
     from_font,
     to_font,
@@ -84,14 +82,25 @@ function font_family_changed({
     });
 }
 
-window.code_executed       = code_executed;
-window.mode_toggled        = mode_toggled
-window.theme_changed       = theme_changed;
-window.layout_changed      = layout_changed;
-window.code_copied         = code_copied;
-window.code_downloaded     = code_downloaded;
-window.console_copied      = console_copied;
-window.console_downloaded  = console_downloaded;
-window.code_formatted      = code_formatted;
-window.font_size_changed   = font_size_changed;
-window.font_family_changed = font_family_changed; 
+function tab_spaces_changed({
+    from_spaces,
+    to_spaces,
+} = {}) {
+    gtag('event', 'tab_spaces_changed', {
+        from_spaces,
+        to_spaces,
+    });
+}
+
+window.code_executed        = code_executed;
+window.mode_toggled         = mode_toggled
+window.theme_changed        = theme_changed;
+window.layout_changed       = layout_changed;
+window.code_copied          = code_copied;
+window.code_downloaded      = code_downloaded;
+window.console_copied       = console_copied;
+window.console_downloaded   = console_downloaded;
+window.code_formatted       = code_formatted;
+window.font_size_changed    = font_size_changed;
+window.font_family_changed  = font_family_changed;
+window.tab_spaces_changed   = tab_spaces_changed; 

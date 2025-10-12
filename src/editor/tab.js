@@ -46,6 +46,9 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
         else changeSpacing();
     }
 
+    let tabSpacesChangeTimeout = null;
+    let originalSpaces = getTabSpaces();
+
     function setTabSpaces(n) {
         const session = editor.session;
         const newSize = parseInt(n, 10);
@@ -60,6 +63,22 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
         valueEl && (valueEl.textContent = newSize);
         infoEl  && (infoEl.textContent  = `Tab Spaces: ${newSize}`);
         editor.renderer.updateFull();
+
+        // track tab spaces change analytics
+        if (oldSize !== newSize) {
+            if (tabSpacesChangeTimeout) clearTimeout(tabSpacesChangeTimeout); // clear existing timeout
+            
+            // set timeout to track after user stops dragging
+            tabSpacesChangeTimeout = setTimeout(() => {
+                window.tab_spaces_changed && window.tab_spaces_changed({
+                    from_spaces: originalSpaces,
+                    to_spaces: newSize
+                });
+                
+                originalSpaces = newSize;
+                tabSpacesChangeTimeout = null;
+            }, 2000); // delay after user stops dragging
+        }
 
         return newSize;
     }
