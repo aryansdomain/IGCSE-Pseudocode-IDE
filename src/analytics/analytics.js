@@ -54,11 +54,22 @@ function console_downloaded({ console_size } = {}) {
     gtag('event', 'console_downloaded', { console_size });
 }
 
-window.code_executed   = code_executed;
-window.mode_toggled    = mode_toggled
-window.theme_changed   = theme_changed;
-window.layout_changed  = layout_changed;
-window.code_copied     = code_copied;
-window.code_downloaded = code_downloaded;
-window.console_copied  = console_copied;
-window.console_downloaded = console_downloaded;
+function code_formatted({
+    old_code_size,
+    new_code_size,
+} = {}) {
+    gtag('event', 'code_formatted', {
+        old_code_size,
+        new_code_size,
+    });
+}
+
+window.code_executed       = code_executed;
+window.mode_toggled        = mode_toggled
+window.theme_changed       = theme_changed;
+window.layout_changed      = layout_changed;
+window.code_copied         = code_copied;
+window.code_downloaded     = code_downloaded;
+window.console_copied      = console_copied;
+window.console_downloaded  = console_downloaded;
+window.code_formatted      = code_formatted; 
