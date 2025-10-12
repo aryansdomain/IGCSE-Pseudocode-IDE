@@ -90,8 +90,8 @@ export function initFontControls({
             // set timeout to track after user stops dragging
             sizeChangeTimeout = setTimeout(() => {
                 window.font_size_changed && window.font_size_changed({
-                    from_size: originalSize,
-                    to_size: size
+                    font_size_changed_from: originalSize,
+                    font_size_changed_to: size
                 });
                 
                 originalSize = size;
@@ -113,8 +113,8 @@ export function initFontControls({
         if (oldFamily !== family) {
             try {
                 window.font_family_changed && window.font_family_changed({
-                    from_font: oldFamily,
-                    to_font: family
+                    font_family_changed_from: oldFamily,
+                    font_family_changed_to: family
                 });
             } catch {}
         }

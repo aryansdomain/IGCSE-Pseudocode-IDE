@@ -37,7 +37,7 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
             showCopySuccess(consoleCopyBtn);
 
             // track copy analytics
-            window.console_copied && window.console_copied({ console_size: text.length });
+            window.console_copied && window.console_copied({ console_copied_size: text.length });
 
         } catch (err) {
             consoleOutput.newline();
@@ -58,7 +58,7 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
             showCopySuccess(editorCopyBtn);
 
             // track copy analytics
-            window.code_copied && window.code_copied({ code_size: code.length });
+            window.code_copied && window.code_copied({ code_copied_size: code.length });
 
         } catch (err) {
             consoleOutput.errln('Failed to copy editor content: ' + err + '. Please reload the page or report this issue.');

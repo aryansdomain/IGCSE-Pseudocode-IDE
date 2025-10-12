@@ -32,10 +32,7 @@ export function initDownload({consoleDownloadBtn, editorDownloadBtn, getCode, ge
             
             // track console download analytics
             try {
-                window.console_downloaded && window.console_downloaded({
-                    file_format: 'txt',
-                    console_size: text.length
-                });
+                window.console_downloaded && window.console_downloaded({ console_downloaded_size: text.length });
             } catch {}
         } catch (err) {
             consoleOutput.errln('Failed to download console content: ' + err + '. Please reload the page or report this issue.');
@@ -51,10 +48,7 @@ export function initDownload({consoleDownloadBtn, editorDownloadBtn, getCode, ge
             
             // track code download analytics
             try {
-                window.code_downloaded && window.code_downloaded({
-                    file_format: 'txt',
-                    code_size: code.length
-                });
+                window.code_downloaded && window.code_downloaded({ code_downloaded_size: code.length });
             } catch {}
         } catch (err) {
             consoleOutput.errln('Failed to download editor content: ' + err + '. Please reload the page or report this issue.');

@@ -19,10 +19,10 @@ export function initRunCtrl({
     let hadFlushOutput = false;
 
     // ------------------------------- Analytics Vars -------------------------------
-    let method = 'button';
-    let startTime = 0; let runtime = 0;
-    let code_size = 0;
-    let success = false;
+    let code_executed_method = 'button';
+    let startTime = 0; let code_executed_runtime = 0;
+    let code_executed_size = 0;
+    let code_executed_success = false;
 
     // ------------------------------- Runtime State -------------------------------
     let consoleLocked = false;
@@ -51,10 +51,10 @@ export function initRunCtrl({
         // record analytics
         try {
             window.code_executed && window.code_executed({
-                method,
-                runtime,
-                code_size,
-                success,
+                code_executed_method,
+                code_executed_runtime,
+                code_executed_size,
+                code_executed_success,
             });
         } catch {}
     }
@@ -126,8 +126,8 @@ export function initRunCtrl({
                 }
 
                 // set analytics vars
-                runtime = performance.now() - startTime;
-                success = true;
+                code_executed_runtime = performance.now() - startTime;
+                code_executed_success = true;
 
                 finishRun(localRunId);
 
@@ -139,8 +139,8 @@ export function initRunCtrl({
                 setLoading(false);
 
                 // set analytics vars
-                runtime = performance.now() - startTime;
-                success = false;
+                code_executed_runtime = performance.now() - startTime;
+                code_executed_success = false;
 
                 finishRun(localRunId);
 
@@ -151,8 +151,8 @@ export function initRunCtrl({
                 setLoading(false);
 
                 // set analytics vars
-                runtime = performance.now() - startTime;
-                success = false;
+                code_executed_runtime = performance.now() - startTime;
+                code_executed_success = false;
 
                 // output error
                 let line = getline().replace(/\s+$/, '');
@@ -169,8 +169,8 @@ export function initRunCtrl({
             setLoading(false);
             
             // set analytics vars
-            runtime = performance.now() - startTime;
-            success = false;
+            code_executed_runtime = performance.now() - startTime;
+            code_executed_success = false;
             
             consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
             consoleOutput.errln(`Please reload the page.`);
@@ -178,7 +178,7 @@ export function initRunCtrl({
         };
     }
 
-    function run(method = 'button') {
+    function run(code_executed_method = 'button') {
         if (isRunning) return;
         isRunning = true;
         awaitingInput = false;
@@ -187,10 +187,10 @@ export function initRunCtrl({
         // set analytics vars
         startTime = performance.now();
 
-        method = method;
-        runtime = 0;
-        code_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
-        success = false;
+        code_executed_method = code_executed_method;
+        code_executed_runtime = 0;
+        code_executed_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
+        code_executed_success = false;
 
         const localRunId = ++runId;
 

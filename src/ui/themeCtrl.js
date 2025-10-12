@@ -85,10 +85,10 @@ export function initThemeControls({
         if (previousInfo.ok && newInfo.ok && previousTheme !== name) {
             try {
                 window.theme_changed && window.theme_changed({
-                    from: previousTheme,
-                    from_mode: previousInfo.kind,
-                    to: getTheme(),
-                    to_mode: newInfo.kind,
+                    theme_changed_from: previousTheme,
+                    theme_changed_from_mode: previousInfo.kind,
+                    theme_changed_to: getTheme(),
+                    theme_changed_to_mode: newInfo.kind,
                 });
             } catch {}
         }

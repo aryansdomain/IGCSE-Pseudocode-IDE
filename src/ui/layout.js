@@ -36,7 +36,7 @@ export function initLayoutControls({
         
         // track layout change analytics
         try {
-            window.layout_changed && window.layout_changed({ to: layout });
+            window.layout_changed && window.layout_changed({ layout_changed_to: layout });
         } catch {}
     }
 

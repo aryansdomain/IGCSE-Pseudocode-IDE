@@ -43,8 +43,8 @@ export function initMode({
         // track mode change analytics
         try {
             window.mode_toggled && window.mode_toggled({
-                to: mode,
-                page: page
+                mode_toggled_to: mode,
+                mode_toggled_page: page
             });
         } catch {}
     }

@@ -1,94 +1,94 @@
 function code_executed({
-    method,
-    runtime,
-    code_size,
-    success,
+    code_executed_method,
+    code_executed_runtime,
+    code_executed_size,
+    code_executed_success,
 } = {}) {
     gtag('event', 'code_executed', {
-        method,
-        runtime: Math.round(runtime),
-        code_size,
-        success,
+        code_executed_method,
+        code_executed_runtime: Math.round(code_executed_runtime),
+        code_executed_size,
+        code_executed_success,
     });
 }
 
 function mode_toggled({
-    to,
-    page = 'ide'
+    mode_toggled_to,
+    mode_toggled_page = 'ide'
 } = {}) {
     gtag('event', 'mode_toggled', {
-        to,
-        page
+        mode_toggled_to,
+        mode_toggled_page
     });
 }
 function theme_changed({
-    from,
-    from_mode,
-    to,
-    to_mode,
+    theme_changed_from,
+    theme_changed_from_mode,
+    theme_changed_to,
+    theme_changed_to_mode,
 } = {}) {
     gtag('event', 'theme_changed', {
-        from,
-        from_mode,
-        to,
-        to_mode,
+        theme_changed_from,
+        theme_changed_from_mode,
+        theme_changed_to,
+        theme_changed_to_mode,
     });
 }
 
-function layout_changed({ to } = {}) {
-    gtag('event', 'layout_changed', { to });
+function layout_changed({ layout_changed_to } = {}) {
+    gtag('event', 'layout_changed', { layout_changed_to });
 }
 
-function code_copied({ code_size } = {}) {
-    gtag('event', 'code_copied', { code_size });
+function code_copied({ code_copied_size } = {}) {
+    gtag('event', 'code_copied', { code_copied_size });
 }
-function code_downloaded({ code_size } = {}) {
-    gtag('event', 'code_downloaded', { code_size });
+function code_downloaded({ code_downloaded_size } = {}) {
+    gtag('event', 'code_downloaded', { code_downloaded_size });
 }
 
-function console_copied({ console_size } = {}) {
-    gtag('event', 'console_copied', { console_size });
+function console_copied({ console_copied_size } = {}) {
+    gtag('event', 'console_copied', { console_copied_size });
 }
-function console_downloaded({ console_size } = {}) {
-    gtag('event', 'console_downloaded', { console_size });
+function console_downloaded({ console_downloaded_size } = {}) {
+    gtag('event', 'console_downloaded', { console_downloaded_size });
 }
 
 function code_formatted({
-    old_code_size,
-    new_code_size,
+    code_formatted_old_size,
+    code_formatted_new_size,
 } = {}) {
     gtag('event', 'code_formatted', {
-        old_code_size,
-        new_code_size,
+        code_formatted_old_size,
+        code_formatted_new_size,
     });
 }
 
 function font_size_changed({
-    from_size,
-    to_size,
+    font_size_changed_from,
+    font_size_changed_to,
 } = {}) {
     gtag('event', 'font_size_changed', {
-        from_size,
-        to_size,
+        font_size_changed_from,
+        font_size_changed_to,
     });
 }
 function font_family_changed({
-    from_font,
-    to_font,
+    font_family_changed_from,
+    font_family_changed_to,
 } = {}) {
     gtag('event', 'font_family_changed', {
-        from_font,
-        to_font,
+        font_family_changed_from,
+        font_family_changed_to,
     });
 }
 
 function tab_spaces_changed({
-    from_spaces,
-    to_spaces,
+    tab_spaces_changed_from,
+    tab_spaces_changed_to,
 } = {}) {
     gtag('event', 'tab_spaces_changed', {
-        from_spaces,
-        to_spaces,
+        tab_spaces_changed_from,
+        tab_spaces_changed_to,
     });
 }
 

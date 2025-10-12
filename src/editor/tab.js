@@ -71,8 +71,8 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
             // set timeout to track after user stops dragging
             tabSpacesChangeTimeout = setTimeout(() => {
                 window.tab_spaces_changed && window.tab_spaces_changed({
-                    from_spaces: originalSpaces,
-                    to_spaces: newSize
+                    tab_spaces_changed_from: originalSpaces,
+                    tab_spaces_changed_to: newSize
                 });
                 
                 originalSpaces = newSize;

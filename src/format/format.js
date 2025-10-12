@@ -13,8 +13,8 @@ export function initFormatter({ editor, getCode, setCode, formatBtn }) {
             // track code formatting analytics
             try {
                 window.code_formatted && window.code_formatted({
-                    old_code_size: before.length,
-                    new_code_size: after.length
+                    code_formatted_old_size: before.length,
+                    code_formatted_new_size: after.length
                 });
             } catch {}
         });
