@@ -137,7 +137,7 @@ OUTPUT greet("World")`,
     });
     
     // console output
-    const consoleOutput = initConsoleOutput(console, getline);
+    const consoleOutput = initConsoleOutput(console);
     consoleOutput.writePrompt();
     
     // mode controls
@@ -268,7 +268,7 @@ OUTPUT greet("World")`,
     on(UI.runBtn, 'click', () => {
         if (runCtrl.isRunning()) runCtrl.stop();
         else {
-            repl.clearBuffer(); // clear current console input buffer
+            repl.setCurrentLine(''); // clear console line
 
             consoleOutput.println('run', '32');
             consoleOutput.newline();
