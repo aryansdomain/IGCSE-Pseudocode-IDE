@@ -16,6 +16,7 @@
     const { initSplitter }          = await import('./src/ui/splitter.js');
     const { initLayoutControls }    = await import('./src/ui/layout.js');
     const { initDom, on }           = await import('./src/utils/dom.js');
+    const { openReportPage }        = await import('./src/report/buildIssue.js');
 
     const UI = initDom();
 
@@ -261,7 +262,8 @@ OUTPUT greet("World")`,
         runCtrl,
         editorApis,
         themeCtrl,
-        modeCtrl
+        modeCtrl,
+        openReportPage
     });
 
     // run/stop button
