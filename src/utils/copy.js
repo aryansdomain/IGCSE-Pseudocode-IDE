@@ -30,8 +30,6 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
         try {
             const text = getConsoleText({ trim: true });
             await navigator.clipboard.writeText(text);
-            console.log('text: ');
-            console.log(text);
 
             // show success checkmark
             showCopySuccess(consoleCopyBtn);
