@@ -1,5 +1,5 @@
 export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl }) {
-  
+
     let hist = [];                     // history of commands
     let hIdx = -1;                     // -1 = live buffer
     let awaitingProgramInput = false;  // user prompted to enter input?
@@ -8,25 +8,24 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
     let cursorPos = 0;                 // cursor position in current command
 
     // ------------------------ Utilities ------------------------
-    function setCurrentLine(line) {
+    async function setCurrentLine(line) {
         currentLine = line;
-        redrawLine();
 
-        cursorPos = Math.min(cursorPos, line.length);
-    }
-
-    function redrawLine() {
         consoleOutput.hideCursor();
-        
+
         if (awaitingProgramInput) {
             consoleOutput.moveCursorTo(inputStartCol + 1); // jump to the start of the input region
             consoleOutput.clearToLineEnd();
             consoleOutput.print(currentLine);
             consoleOutput.moveCursorTo(inputStartCol + cursorPos + 1);
         } else {
-            consoleOutput.clearLineProtectPrompt();
+            consoleOutput.clearline();
+            consoleOutput.writePrompt();
             consoleOutput.print(currentLine);
+
+            cursorPos = Math.min(cursorPos, line.length);
             const back = currentLine.length - cursorPos;
+
             if (back > 0) consoleOutput.moveCursorLeft(back);
         }
         
@@ -74,7 +73,8 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         const arg = rest.join(' ');
 
         consoleOutput.hideCursor();
-        consoleOutput.clearLineProtectPrompt();
+        consoleOutput.clearline();
+        consoleOutput.writePrompt();
         consoleOutput.print('\x1b[32m');    // green color
         consoleOutput.print(`${c} ${arg}`);
         consoleOutput.println('\x1b[0m');     // reset color
@@ -197,7 +197,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         if (awaitingProgramInput) {
 
             // INPUT mode
-                   if (data === '\r') {                        // enter, submit input to program
+            if (data === '\r') {                        // enter, submit input to program
                 awaitingProgramInput = false;
                 consoleOutput.newline();
                 
@@ -221,7 +221,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         } else {
 
             // shell mode
-                   if (data === '\r') {                         // enter, execute command
+            if (data === '\r') {                         // enter, execute command
                 const line = currentLine
                 if (line.trim()) hist.push(line);
 
@@ -247,7 +247,6 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                 const line = hist[hIdx] || '';
                 setCurrentLine(line);
                 cursorPos = line.length;
-                redrawLine();
 
             } else if (data === '\u001b[B') {                   // down arrow
                 if (!hist.length) return;
@@ -255,7 +254,6 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                 if (hIdx === -1) {
                     setCurrentLine('');
                     cursorPos = 0;
-                    redrawLine();
                     return;
                 }
 
@@ -263,7 +261,6 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
                 const line = (hIdx === hist.length) ? '' : (hist[hIdx] || '');
 
                 setCurrentLine(line);
-                redrawLine();
 
             } else if (data === '\u001b[C') moveCursorRight();  // right arrow
               else if (data === '\u001b[D') moveCursorLeft();   // left arrow
@@ -288,20 +285,11 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
             // start fresh editable buffer
             currentLine = '';
             cursorPos = 0;
-
-            // ensure caret is placed after the inline prompt and buffer area is clean
-            redrawLine();
         }
     }
     function isAwaitingInput() { return awaitingProgramInput; }
     function focus() { console.focus(); }
-    
-    function clearBuffer() {
-        setCurrentLine('');
-        cursorPos = 0;
-        redrawLine();
-    }
 
-    return { setAwaitingInput, isAwaitingInput, focus, execCommand, clearBuffer };
+    return { setAwaitingInput, isAwaitingInput, setCurrentLine, focus, execCommand };
 }
   
