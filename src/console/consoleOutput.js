@@ -30,16 +30,16 @@ export function initConsoleOutput(console) {
         lnprintln: (t = '', color = null) => write(`\r\n${t}\r\n`, color),
 
         // error (red)
-        err:     (t = '') => { setLastIdeError(t); write(t, '31'); },
-        errln:   (t = '') => { setLastIdeError(t); write(`${t}\r\n`, '31'); },
-        lnerr:   (t = '') => { setLastIdeError(t); write(`\r\n${t}`, '31'); },
-        lnerrln: (t = '') => { setLastIdeError(t); write(`\r\n${t}\r\n`, '31'); },
+        err:       (t = '') => { setLastIdeError(t); write(t, '31'); },
+        errln:     (t = '') => { setLastIdeError(t); write(`${t}\r\n`, '31'); },
+        lnerr:     (t = '') => { setLastIdeError(t); write(`\r\n${t}`, '31'); },
+        lnerrln:   (t = '') => { setLastIdeError(t); write(`\r\n${t}\r\n`, '31'); },
 
         // warning (italics + yellow)
-        warn:     (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m`); },
-        warnln:   (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
-        lnwarn:   (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`); },
-        lnwarnln: (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
+        warn:      (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m`); },
+        warnln:    (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
+        lnwarn:    (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`); },
+        lnwarnln:  (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
 
         // clear line
         clear:          () => console.clear(),
@@ -51,7 +51,12 @@ export function initConsoleOutput(console) {
         showCursor:      ()      => write('\x1b[?25h'),
         moveCursorRight: (n = 1) => write('\x1b[' + n + 'C'),
         moveCursorLeft:  (n = 1) => write('\x1b[' + n + 'D'),
-        moveCursorTo:    (n) =>     write('\x1b[' + n + 'G'),
+        moveCursorTo:    (n)     => {
+            const cursorPos = console?.buffer?.active.cursorX;
+
+                 if (cursorPos < n) write('\x1b[' + (n - cursorPos) + 'C');
+            else if (cursorPos > n) write('\x1b[' + (cursorPos - n) + 'D');
+        },
 
         writePrompt,
     };
