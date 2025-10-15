@@ -234,6 +234,7 @@ OUTPUT greet("World")`,
 
     const runBtn = UI.runBtn;
     const runCtrl = initRunCtrl({
+        repl,
         consoleOutput,
         getline,
         getCode: editorApis.getCode,
@@ -266,11 +267,13 @@ OUTPUT greet("World")`,
         openReportPage
     });
 
+    runCtrl.setRepl(repl);
+
     // run/stop button
-    on(UI.runBtn, 'click', () => {
+    on(UI.runBtn, 'click', async () => {
         if (runCtrl.isRunning()) runCtrl.stop();
         else {
-            repl.setCurrentLine(''); // clear console line
+            await repl.setLine(''); // clear console line
 
             consoleOutput.println('run', '32');
             consoleOutput.newline();
