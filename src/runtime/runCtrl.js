@@ -1,4 +1,5 @@
 export function initRunCtrl({
+    repl,
     consoleOutput,
     getline,
     getCode,
@@ -8,7 +9,13 @@ export function initRunCtrl({
     onLoadingChange = () => {},
 } = {}) {
 
-    // states
+    // ------------------------------- Analytics Vars -------------------------------
+    let code_executed_method = 'button';
+    let startTime = 0; let code_executed_runtime = 0;
+    let code_executed_size = 0;
+    let code_executed_success = false;
+
+    // ------------------------------- Runtime State -------------------------------
     let worker = null;
     let runId = 0;
     let isRunning = false;
@@ -18,13 +25,6 @@ export function initRunCtrl({
     let warningStorage = [];
     let hadFlushOutput = false;
 
-    // ------------------------------- Analytics Vars -------------------------------
-    let code_executed_method = 'button';
-    let startTime = 0; let code_executed_runtime = 0;
-    let code_executed_size = 0;
-    let code_executed_success = false;
-
-    // ------------------------------- Runtime State -------------------------------
     let consoleLocked = false;
     let awaitingInput = false;
     let loadingTimer = null;
@@ -47,6 +47,8 @@ export function initRunCtrl({
 
         consoleOutput.newline();
         consoleOutput.writePrompt();
+        repl?.setLine?.('');
+        repl?.setAwaitingInput?.(false);
 
         // record analytics
         try {
@@ -181,14 +183,11 @@ export function initRunCtrl({
     function run(code_executed_method = 'button') {
         if (isRunning) return;
         isRunning = true;
-        awaitingInput = false;
         consoleLocked = true;
+        try { repl.reset && repl.reset(); } catch {}
 
         // set analytics vars
-        startTime = performance.now();
-
-        code_executed_method = code_executed_method;
-        code_executed_runtime = 0;
+        startTime = performance.now(); code_executed_runtime = 0;
         code_executed_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
         code_executed_success = false;
 
@@ -236,6 +235,8 @@ export function initRunCtrl({
         clearLoadingTimer();
         setLoading(false);
 
+        repl.reset();
+
         finishRun(runId);
     }
 
@@ -254,5 +255,9 @@ export function initRunCtrl({
 
     window.runCtrlProvideInput = provideInput;
 
-    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked };
+    function setRepl(newRepl) {
+        repl = newRepl;
+    }
+
+    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked, setRepl };
 }
