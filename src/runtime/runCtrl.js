@@ -26,7 +26,6 @@ export function initRunCtrl({
     let hadFlushOutput = false;
 
     let consoleLocked = false;
-    let awaitingInput = false;
     let loadingTimer = null;
     const setLoading = (v) => { try { onLoadingChange(!!v); } catch {} };
 
@@ -47,8 +46,6 @@ export function initRunCtrl({
 
         consoleOutput.newline();
         consoleOutput.writePrompt();
-        repl?.setLine?.('');
-        repl?.setAwaitingInput?.(false);
 
         // record analytics
         try {
@@ -82,7 +79,6 @@ export function initRunCtrl({
             } else if (type === 'input_request') {
 
                 // switch to input mode
-                awaitingInput = true;
                 consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
@@ -105,7 +101,6 @@ export function initRunCtrl({
                 onInputRequested();
 
             } else if (type === 'done') {
-                awaitingInput = false;
                 consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
@@ -134,8 +129,6 @@ export function initRunCtrl({
                 finishRun(localRunId);
 
             } else if (type === 'stopped') {
-
-                awaitingInput = false;
                 consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
@@ -147,7 +140,6 @@ export function initRunCtrl({
                 finishRun(localRunId);
 
             } else if (type === 'error') {
-                awaitingInput = false;
                 consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
@@ -180,13 +172,13 @@ export function initRunCtrl({
         };
     }
 
-    function run(code_executed_method = 'button') {
+    function run(method = 'button') {
         if (isRunning) return;
         isRunning = true;
         consoleLocked = true;
-        try { repl.reset && repl.reset(); } catch {}
 
         // set analytics vars
+        code_executed_method = method
         startTime = performance.now(); code_executed_runtime = 0;
         code_executed_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
         code_executed_success = false;
@@ -234,17 +226,14 @@ export function initRunCtrl({
         consoleLocked = false;
         clearLoadingTimer();
         setLoading(false);
-
         repl.reset();
 
         finishRun(runId);
     }
 
     function provideInput(line) {
+        consoleLocked = true; // lock while program runs
 
-        // lock again while program runs
-        awaitingInput = false;
-        consoleLocked = true;
         worker.postMessage({ type: 'input_response', data: String(line) });
         
         // show loading bar after a delay after input
@@ -254,10 +243,7 @@ export function initRunCtrl({
     }
 
     window.runCtrlProvideInput = provideInput;
-
-    function setRepl(newRepl) {
-        repl = newRepl;
-    }
+    function setRepl(newRepl) { repl = newRepl; }
 
     return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked, setRepl };
 }
