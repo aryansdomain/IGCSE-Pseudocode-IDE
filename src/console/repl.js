@@ -1,10 +1,11 @@
-export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl, openReportPage }) {
-    let hist = [];               // history of commands
-    let hIdx = -1;               // -1 = live buffer
-    let awaitingInput = false;   // user prompted to enter input?
-    let inputStartCol = 0;       // column where program input begins
-    let line = '';               // current line content
-    let cursorPos = 0;           // cursor position in line. DOES NOT ACCOUNT FOR PROMPT
+export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl }) {
+
+    let hist = [];                     // history of commands
+    let hIdx = -1;                     // -1 = live buffer
+    let awaitingProgramInput = false;  // user prompted to enter input?
+    let inputStartCol = 0;             // column where program input begins
+    let line = '';              // current line content
+    let cursorPos = 0;                 // cursor position in line, does not account for propmt
 
     // ------------------------ Utilities ------------------------
     async function setLine(newLine) {
@@ -12,19 +13,20 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
 
         consoleOutput.hideCursor();
 
-        if (awaitingInput) {
-            const origPos = cursorPos;
-            
-            moveCursorTo(0);
-            consoleOutput.clearToLineEnd(); consoleOutput.print(line);
-
+        if (awaitingProgramInput) {
+            consoleOutput.moveCursorTo(inputStartCol); // go to start of input region
+            consoleOutput.clearToLineEnd();
+            consoleOutput.print(line);
             await new Promise(resolve => setTimeout(resolve, 5)); // delay for printing
-
-            moveCursorTo(origPos);
+            consoleOutput.moveCursorTo(inputStartCol + cursorPos);
         } else {
             consoleOutput.clearline();
             consoleOutput.writePrompt();
             consoleOutput.print(line);
+
+            cursorPos = Math.min(cursorPos, line.length);
+            const back = line.length - cursorPos;
+            if (back > 0) consoleOutput.moveCursorLeft(back);
         }
         
         consoleOutput.showCursor();
@@ -35,13 +37,7 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         const after  = line.slice(cursorPos);
 
         await setLine(before + char + after);
-
-        // fix cursor pos
-        if (awaitingInput) moveCursorRight();
-        else {
-            cursorPos++;
-            if (after.length > 0) consoleOutput.moveCursorLeft(after.length);
-        }
+        moveCursorRight();
     }
     async function deleteChar() {
         if (cursorPos <= 0) return; // cant delete further
@@ -50,27 +46,21 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         const after  = line.slice(cursorPos);
 
         await setLine(before + after);
-
-        if (awaitingInput) moveCursorLeft();
-        else {
-            cursorPos--;
-            if (after.length > 0) consoleOutput.moveCursorLeft(after.length);
-        }
+        if (after.length > 0) moveCursorLeft();
+        else if (awaitingProgramInput) moveCursorLeft();
     }
 
-    // cursor functions
     function moveCursorLeft(n = 1) {
+        if (cursorPos <= 0 || n === 0) return; // cant move left further
+
         cursorPos -= n;
         consoleOutput.moveCursorLeft(n);
     }
     function moveCursorRight(n = 1) {
+        if (cursorPos >= line.length || n == 0) return; // cant move right further
+
         cursorPos += n;
         consoleOutput.moveCursorRight(n);
-    }
-    function moveCursorTo(n) {
-        cursorPos = n;
-        if (awaitingInput) consoleOutput.moveCursorTo(inputStartCol + n);
-        else               consoleOutput.moveCursorTo(n + 2);
     }
 
     // ------------------------ Command Execution ------------------------
@@ -80,39 +70,41 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
         const c = (cmd || '').toLowerCase();
         const arg = rest.join(' ');
 
+        // add to history
+        if (raw) hist.push(raw);
+
         consoleOutput.hideCursor();
         consoleOutput.clearline();
         consoleOutput.writePrompt();
-        consoleOutput.print('\x1b[32m');    // green color
-        consoleOutput.print(`${c} ${arg}`);
-        consoleOutput.println('\x1b[0m');     // reset color
+        consoleOutput.println(`${c} ${arg}`, 32); // green color
         consoleOutput.showCursor();
     
         switch (c) {
             case 'help': {
                 const output =
-                    'help                 Print this dialog\r\n' +
-                    'run                  Execute the code currently in the editor. If the program needs input, type and press Enter.\r\n' +
+                    'run                  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
                     'clear                Clear console\r\n' +
                     'format               Format the editor code\r\n' +
                     'tab <n>              Set editor tab size (0-8 spaces)\r\n' +
                     'font <px>            Set editor font size (6-38 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes\r\n' +
                     'theme <name>         Change the editor color theme\r\n' +
-                    'report               Open the report page to report an issue\r\n\r\n';
-                consoleOutput.println('\x1b[1m\nCommands:\x1b[0m'); // bold
-                consoleOutput.print(output);
+                    'help                 Print this dialog\r\n';
+                consoleOutput.lnprintln('Commands:', 1); // bold
+                consoleOutput.println(output);
                 break;
             }
     
-            case 'run':
+            case 'run': {
                 consoleOutput.newline();
                 runCtrl.run('console');
                 return;
+            }
     
-            case 'clear':
+            case 'clear': {
                 consoleOutput.clear();
                 break;
+            }
     
             case 'format': {
                 editorApis.formatCode();
@@ -184,66 +176,54 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
 
                 break;
             }
-
-            case 'report': {
-                consoleOutput.println('Page opened.');
-                openReportPage();
+                
+            default: {
+                if (c != '') consoleOutput.errln(`Unknown command: ${cmd}`);
                 break;
             }
-    
-            case '':
-                // no output
-                break;
-                
-            default:
-                consoleOutput.errln(`Unknown command: ${cmd}`);
-                break;
         }
         
         consoleOutput.writePrompt();
     }
     
     // ------------------------ Keyboard Input ------------------------
-    console.onData(async (data) => {
+    console.onData (async (data) => {
 
         // ignore all input except ctrl-c (stops program) when console is locked
         if (runCtrl.isConsoleLocked() && data !== '\u0003') return;
 
-        if (awaitingInput) {
+        if (awaitingProgramInput) {
 
-            // INPUT
-            if (data === '\r') {                                // enter, submit input to program
-                awaitingInput = false;
+            // INPUT mode
+            if (data === '\r') {                        // enter, submit input to program
+                awaitingProgramInput = false;
                 consoleOutput.newline();
                 
                 window.runCtrlProvideInput(line);
 
-                // reset everything
+                // reset
                 line = '';
+                cursorPos = 0;
                 hIdx = -1;
 
-            } else if (data === '\u0003') {                     // ctrl-c, abort program
-                setLine('');
+            } else if (data === '\u0003') {                    // ctrl-c, abort program
+                consoleOutput.newline();
                 runCtrl.stop();
-                awaitingInput = false;
 
-            } else if (data === '\u007F') await deleteChar();         // backspace
-              else if (data === '\u001b[C') {                   // right arrow
-                if (cursorPos < line.length) moveCursorRight();
-            } else if (data === '\u001b[D') {                   // left arrow
-                if (cursorPos > 0) moveCursorLeft(); 
-            } else if (data.length === 1 && data >= ' ') {      // printable characters
-                await insertChar(data);      // data >= ' ' ensures the ASCII value is >= 32
+            } else if (data === '\u007F') deleteChar();        // backspace
+              else if (data === '\u001b[C') moveCursorRight(); // right arrow
+              else if (data === '\u001b[D') moveCursorLeft();  // left arrow
+              else if (data.length === 1 && data >= ' ') {     // printable characters
+                insertChar(data);      // data >= ' ' ensures the ASCII value is >= 32
             }
         } else {
 
-            // regular console
-            if (data === '\r') {                                // enter, execute command
+            // shell mode
+            if (data === '\r') {                         // enter, execute command
                 const origLine = line;
-                if (origLine.trim()) hist.push(origLine);
 
                 hIdx = -1;
-                setLine('');
+                await setLine('');
 
                 execCommand(origLine);
 
@@ -260,65 +240,62 @@ export function initRepl({ console, consoleOutput, runCtrl, editorApis, themeCtr
             } else if (data === '\u007F') deleteChar();         // backspace
               else if (data === '\u001b[A') {                   // up arrow
                 if (!hist.length) return;
+                if (hIdx === -1) hIdx = hist.length - 1; else hIdx = Math.max(0, hIdx - 1);
+                const line = hist[hIdx] || '';
 
-                if (hIdx === -1) hIdx = hist.length - 1;
-                else hIdx = Math.max(0, hIdx - 1);
-                const prevCmd = hist[hIdx] || '';
-
-                setLine(prevCmd);
-                moveCursorTo(prevCmd.length + 3); // account for prompt length
-                cursorPos = prevCmd.length; // cursorPos doesn't account for prompt
+                await setLine(line);
+                moveCursorRight(line.length - cursorPos);
 
             } else if (data === '\u001b[B') {                   // down arrow
                 if (!hist.length) return;
-                if (hIdx === -1) { // reset everything
-                    setLine('');
+
+                if (hIdx === -1) {
+                    await setLine('');
                     cursorPos = 0;
                     return;
                 }
 
                 hIdx = Math.min(hist.length, hIdx + 1);
-                const nextCmd = (hIdx === hist.length) ? '' : (hist[hIdx] || '');
+                const line = (hIdx === hist.length) ? '' : (hist[hIdx] || '');
 
-                setLine(nextCmd);
-            } else if (data === '\u001b[C') {                   // right arrow
-                if (cursorPos < line.length) moveCursorRight();
-            } else if (data === '\u001b[D') {                   // left arrow
-                if (cursorPos > 0) moveCursorLeft(); 
-            } else if (data.length === 1 && data >= ' ') {      // printable characters
+                await setLine(line);
+                moveCursorRight(line.length - cursorPos);
+
+            } else if (data === '\u001b[C') moveCursorRight();  // right arrow
+              else if (data === '\u001b[D') moveCursorLeft();   // left arrow
+              else if (data.length === 1 && data >= ' ') {      // printable characters
                 insertChar(data);        // data >= ' ' ensures the ASCII value is >= 32
             }
         }
-
     });
 
     // ------------------------ Getters & Setters ------------------------
     async function setAwaitingInput(v) {
-        awaitingInput = !!v;
+        awaitingProgramInput = !!v;
 
-        if (awaitingInput) {
+        if (awaitingProgramInput) {
+
             // record start of input region
             const buf = console?.buffer?.active;
-            await new Promise(resolve => setTimeout(resolve, 5)); // delay to get buffer
+            await new Promise(resolve => setTimeout(resolve, 5)); // delay since printing takes time
             inputStartCol = (buf && typeof buf.cursorX === 'number') ? buf.cursorX : 0;
 
-            // start fresh buffer
+            // start fresh editable buffer
             line = '';
-            moveCursorTo(0);
             cursorPos = 0;
         }
     }
-    function isAwaitingInput() { return awaitingInput; }
+    function isAwaitingInput() { return awaitingProgramInput; }
     function focus() { console.focus(); }
 
-    // reset state
+    // reset everything
     function reset() {
-        awaitingInput = false;
+        awaitingProgramInput = false;
         inputStartCol = 0;
         cursorPos = 0;
         line = '';
+        hIdx = -1;
     }
 
     return { setAwaitingInput, isAwaitingInput, setLine, focus, execCommand, reset };
 }
-  
