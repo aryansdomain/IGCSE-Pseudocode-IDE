@@ -16,9 +16,9 @@
     const { initSettings }          = await import('./src/ui/settings.js');
     const { initSplitter }          = await import('./src/ui/splitter.js');
     const { initLayoutControls }    = await import('./src/ui/layout.js');
-    const { initDom, on }           = await import('./src/utils/dom.js');
+    const { initUI, on }           = await import('./src/utils/ui.js');
 
-    const UI = initDom();
+    const UI = initUI();
 
     // ace editor
     const { editor, editorApis } = initEditor({

@@ -1,16 +1,16 @@
-export const qs      = (sel, root = document) => root.querySelector(sel);
-export const qsa     = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-export const byId    = (id) => document.getElementById(id);
+export const qs    = (sel, root = document) => root.querySelector(sel);
+export const qsa   = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+export const byId  = (id) => document.getElementById(id);
 
-export const on      = (element, event, func, options) =>     element?.addEventListener?.(event, func, options);
-export const off     = (element, event, func, options) =>  element?.removeEventListener?.(event, func, options);
+export const on    = (element, event, func, options) =>  element?.addEventListener?.(event, func, options);
+export const off   = (element, event, func, options) =>  element?.removeEventListener?.(event, func, options);
 
 export const setVars = (el, obj) => {
     if (!el) return;
     for (const [k, v] of Object.entries(obj)) el.style.setProperty(k, String(v));
 };
 
-export function initDom() {
+export function initUI() {
 
     return {
 
