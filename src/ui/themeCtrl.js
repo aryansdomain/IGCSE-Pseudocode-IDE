@@ -108,14 +108,12 @@ export function initThemeControls({
         return [...lightThemes, ...darkThemes][themeIndex]; // convert to proper/formatted name
     }
 
-    // UI event listeners
-    editorThemeSelect?.addEventListener('change', (e) => {
-        setTheme(String(e.target.value));
-    });
+    // theme change event listener
+    editorThemeSelect?.addEventListener('change', (e) => setTheme(String(e.target.value)));
 
     // init
+    setTheme(getTheme()); // update bars
     updateConsoleTheme();
-    updateBars();
     editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 
     return { 
