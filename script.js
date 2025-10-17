@@ -7,8 +7,9 @@
     const { initThemeControls }     = await import('./src/ui/themeCtrl.js');
     const { initFormatter }         = await import('./src/format/format.js');
     const { initRunCtrl }           = await import('./src/runtime/runCtrl.js');
+    const { initConsole }           = await import('./src/console/console.js');
     const { initConsoleOutput }     = await import('./src/console/consoleOutput.js');
-    const { initRepl }              = await import('./src/console/repl.js');
+    const { initCursor }            = await import('./src/console/cursor.js');
     const { initDownload }          = await import('./src/utils/download.js');
     const { initCopy }              = await import('./src/utils/copy.js');
     const { initMode }              = await import('./src/ui/modeCtrl.js');
@@ -16,7 +17,6 @@
     const { initSplitter }          = await import('./src/ui/splitter.js');
     const { initLayoutControls }    = await import('./src/ui/layout.js');
     const { initDom, on }           = await import('./src/utils/dom.js');
-    const { openReportPage }        = await import('./src/report/buildIssue.js');
 
     const UI = initDom();
 
@@ -125,21 +125,31 @@ OUTPUT greet("World")`,
     editor.session.on('change', updateCursorPos);
     updateCursorPos();
 
-    // ---------- Console wiring ----------
-    const { initConsole } = await import('./src/console/console.js');
-    
+    // ------------------------ Console ------------------------
+
     // initialize console
-    const { console, getline, getConsoleText, refit } = initConsole({
+    const {
+        console,
+        getline,
+        getConsoleText,
+        refit,
+        execCommand,
+        setDeps,
+        setAwaitingInput,
+        isAwaitingInput
+    } = initConsole({
         container: UI.consoleEl,
         fontSize: 14,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
         cursorStyle: 'block',
     });
-    
+
     // console output
     const consoleOutput = initConsoleOutput(console);
     consoleOutput.writePrompt();
+
+    //------------------------ UI Elements ------------------------
     
     // mode controls
     const modeCtrl = initMode({
@@ -229,19 +239,21 @@ OUTPUT greet("World")`,
         reInitSplitter(layoutControls.getLayout());
     })
 
-    // init repl
-    let repl;
+    //------------------------ Runtime ------------------------
+
+    // init cursor
+    let cursor;
 
     const runBtn = UI.runBtn;
     const runCtrl = initRunCtrl({
-        repl,
+        cursor,
         consoleOutput,
         getline,
         getCode: editorApis.getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
         onInputRequested: () => {
-            repl?.setAwaitingInput(true);
-            repl?.focus();
+            setAwaitingInput(true);
+            cursor?.focus();
         },
         onStateChange: (running) => {
             if (!runBtn) return;
@@ -257,30 +269,19 @@ OUTPUT greet("World")`,
         }
     });
     
-    repl = initRepl({
-        console,
-        consoleOutput,
-        runCtrl,
-        editorApis,
-        themeCtrl,
-        modeCtrl,
-        openReportPage
-    });
+    cursor = initCursor({ console, consoleOutput, setAwaitingInput, isAwaitingInput });
+    runCtrl.setCursor(cursor);
 
-    runCtrl.setRepl(repl);
+    // set dependencies for console
+    setDeps({ consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl, cursor });
 
     // run/stop button
-    on(UI.runBtn, 'click', async () => {
+    on(UI.runBtn, 'click', () => {
         if (runCtrl.isRunning()) runCtrl.stop();
-        else {
-            await repl.setLine(''); // clear console line
-
-            consoleOutput.println('run', '32');
-            consoleOutput.newline();
-
-            runCtrl.run('button');
-        }
+        else execCommand('run');
     });
+
+    // ------------------------ Editor/Console Utilities ------------------------
 
     // download
     const downloads = initDownload({

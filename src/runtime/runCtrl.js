@@ -1,5 +1,5 @@
 export function initRunCtrl({
-    repl,
+    cursor,
     consoleOutput,
     getline,
     getCode,
@@ -226,7 +226,7 @@ export function initRunCtrl({
         consoleLocked = false;
         clearLoadingTimer();
         setLoading(false);
-        repl.reset();
+        cursor.reset();
 
         finishRun(runId);
     }
@@ -243,7 +243,7 @@ export function initRunCtrl({
     }
 
     window.runCtrlProvideInput = provideInput;
-    function setRepl(newRepl) { repl = newRepl; }
+    function setCursor(newCursor) { cursor = newCursor; }
 
-    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked, setRepl };
+    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked, setCursor };
 }
