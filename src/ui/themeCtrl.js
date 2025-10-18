@@ -73,7 +73,7 @@ export function initThemeControls({
         });
     }
 
-    function setTheme(name) {
+    function setTheme(name, skipAnalytics = false) {
         name = toBare(name);
         const previousTheme = getTheme();
         const previousInfo = themeInfo(previousTheme);
@@ -82,7 +82,7 @@ export function initThemeControls({
         editor.setTheme(`ace/theme/${name}`);
         
         // track theme change analytics
-        if (previousInfo.ok && newInfo.ok && previousTheme !== name) {
+        if (!skipAnalytics && previousInfo.ok && newInfo.ok && previousTheme !== name) {
             try {
                 window.theme_changed && window.theme_changed({
                     theme_changed_from: previousTheme,
@@ -112,7 +112,7 @@ export function initThemeControls({
     editorThemeSelect?.addEventListener('change', (e) => setTheme(String(e.target.value)));
 
     // init
-    setTheme(getTheme()); // update bars
+    setTheme(getTheme(), true); // update bars
     updateConsoleTheme();
     editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 

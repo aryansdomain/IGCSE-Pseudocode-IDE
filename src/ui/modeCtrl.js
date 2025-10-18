@@ -26,7 +26,7 @@ export function initMode({
         modeBtn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
     }
 
-    function setMode(mode) {
+    function setMode(mode, skipAnalytics = false) {
         currentMode = mode;
 
         // disable transitions
@@ -41,12 +41,14 @@ export function initMode({
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
 
         // track mode change analytics
-        try {
-            window.mode_toggled && window.mode_toggled({
-                mode_toggled_to: mode,
-                mode_toggled_page: page
-            });
-        } catch {}
+        if (!skipAnalytics) {
+            try {
+                window.mode_toggled && window.mode_toggled({
+                    mode_toggled_to: mode,
+                    mode_toggled_page: page
+                });
+            } catch {}
+        }
     }
 
     // init mode and apply
@@ -57,7 +59,7 @@ export function initMode({
         initial = prefersLight ? 'light' : defaultMode;
     }
 
-    setMode(initial);
+    setMode(initial, true); // skip analytics during initialization
     setIcons();
 
     // click button to toggle mode
