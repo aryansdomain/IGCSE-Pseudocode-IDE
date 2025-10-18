@@ -62,7 +62,7 @@ OUTPUT greet("World")`,
         editor,
         getCode: editorApis.getCode,
         setCode: editorApis.setCode,
-        formatBtn: document.getElementById('btn-format'),
+        formatBtn: UI.formatBtn
     });
 
     // spacing controls

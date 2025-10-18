@@ -13,7 +13,6 @@ export const setVars = (el, obj) => {
 export function initUI() {
 
     return {
-
         // main workspace structure
         workspace:           byId('workspace'),
         editorPane:          byId('editor-pane'),
@@ -27,7 +26,7 @@ export function initUI() {
         consoleLoadingBar:   byId('consoleLoadingBar'),
 
         // editor buttons
-        formatBtn:           byId('btn-format'),
+        formatBtn:           byId('formatBtn'),
         editorCopyBtn:       byId('copyEditorBtn'),
         editorDownloadBtn:   byId('downloadEditorBtn'),
         expandConsoleBtn:    byId('expandConsoleBtn'),
