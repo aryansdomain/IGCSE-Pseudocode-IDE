@@ -72,7 +72,7 @@ export function initConsole({
                     'font <px>            Set editor font size (6-38 px)\r\n' +
                     'mode <light|dark>    Switch overall UI between light and dark modes\r\n' +
                     'theme <name>         Change the editor color theme\r\n' +
-                    'help                 Print this dialog\r\n';
+                    'help                 Print a list of commands dialog\r\n';
                 consoleOutput.lnprintln('Commands:', 1); // bold
                 consoleOutput.println(output);
                 break;
