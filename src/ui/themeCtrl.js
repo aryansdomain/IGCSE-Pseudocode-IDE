@@ -56,12 +56,12 @@ export function initThemeControls({
     }
 
     function updateBars() {
-        const bottomBar = document.querySelector('.bottombar');
-        const topBar = document.querySelector('.topbar');
         const hostEl = document.getElementById('code') || editor.container;
-        const cs = (el) => window.getComputedStyle(el);
-        const editorBg = cs(hostEl).backgroundColor;
-        const editorFg = cs(hostEl).color;
+        const editorBg = window.getComputedStyle(hostEl).backgroundColor;
+        const editorFg = window.getComputedStyle(hostEl).color;
+
+        const topBar    = document.querySelector('.topbar');
+        const bottomBar = document.querySelector('.bottombar');
 
         [bottomBar, topBar].filter(Boolean).forEach(bar => {
             bar.style.backgroundColor = editorBg;
@@ -70,6 +70,53 @@ export function initThemeControls({
         document.querySelectorAll('.topbar .btn').forEach(btn => {
             btn.style.color = editorFg;
             btn.querySelectorAll('i').forEach(icon => (icon.style.color = editorFg));
+        });
+    }
+
+    function updateSliders() {
+
+        // get color of keyword for current theme
+        const editorEl = document.getElementById('code');
+        const tempEl = document.createElement('span');
+        editorEl.appendChild(tempEl);
+        tempEl.className = 'ace_keyword';
+        const keywordColor = window.getComputedStyle(tempEl).color;
+        editorEl.removeChild(tempEl); // clean up
+
+        // apply color to settings panel elements
+        document.querySelectorAll('.setting-group input[type="range"]').forEach(slider => {
+            const styleId = 'slider-accent-style';
+            let styleEl = document.getElementById(styleId);
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = styleId;
+                document.head.appendChild(styleEl);
+            }
+            styleEl.textContent = `
+                .setting-group input[type="range"]::-webkit-slider-thumb { background: ${keywordColor} !important; }
+                .setting-group input[type="range"]::-webkit-slider-thumb:hover { background: ${keywordColor} !important; opacity: 0.8; }
+                .setting-group input[type="range"]::-webkit-slider-track { background: linear-gradient(to right, ${keywordColor} 0%, ${keywordColor} 50%, var(--border) 50%, var(--border) 100%) !important; }
+                .setting-group input[type="range"]::-moz-range-thumb { background: ${keywordColor} !important; }
+                .setting-group input[type="range"]::-moz-range-thumb:hover { background: ${keywordColor} !important; opacity: 0.8; }
+                .setting-group input[type="range"]::-moz-range-track { background: linear-gradient(to right, ${keywordColor} 0%, ${keywordColor} 50%, var(--border) 50%, var(--border) 100%) !important; }
+            `;
+        });
+        document.querySelectorAll('.font-select').forEach(el => {
+            el.style.setProperty('--hover-border-color', keywordColor);
+        });
+        document.querySelectorAll('.btn.editortheme-changer').forEach(el => {
+            el.style.color = keywordColor;
+        });
+        document.querySelectorAll('.editortheme-button').forEach(el => {
+            el.style.setProperty('--hover-border-color', keywordColor);
+            el.style.setProperty('--hover-color', keywordColor);
+        });
+        document.querySelectorAll('.editortheme-item').forEach(el => {
+            el.style.setProperty('--hover-border-color', keywordColor);
+            el.style.setProperty('--hover-color', keywordColor);
+        });
+        document.querySelectorAll('.slider-ticks .tick').forEach(el => {
+            el.style.setProperty('--hover-color', keywordColor);
         });
     }
 
@@ -96,10 +143,16 @@ export function initThemeControls({
         // update dropdown
         editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 
-        // recolor bars
+        // recolor bars and update accent color
         if (editor.renderer && editor.renderer.on) {
-            if (editor.renderer.$theme) updateBars();
-            editor.renderer.on('themeLoaded', updateBars);
+            if (editor.renderer.$theme) {
+                updateBars();
+                updateSliders();
+            }
+            editor.renderer.on('themeLoaded', () => {
+                updateBars();
+                updateSliders();
+            });
         }
     }
     function getTheme() {
@@ -112,7 +165,7 @@ export function initThemeControls({
     editorThemeSelect?.addEventListener('change', (e) => setTheme(String(e.target.value)));
 
     // init
-    setTheme(getTheme(), true); // update bars
+    setTheme(getTheme(), true);
     updateConsoleTheme();
     editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 
