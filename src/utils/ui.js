@@ -26,13 +26,15 @@ export function initUI() {
         consoleLoadingBar:   byId('consoleLoadingBar'),
 
         // editor buttons
+        editorExpandBtn:     byId('editorExpandBtn'),
         formatBtn:           byId('formatBtn'),
-        editorCopyBtn:       byId('copyEditorBtn'),
+        fileInput:           byId('fileInput'),
+        editorCopyBtn:       byId('editorCopyBtn'),
         editorDownloadBtn:   byId('downloadEditorBtn'),
-        expandConsoleBtn:    byId('expandConsoleBtn'),
+        uploadBtn:           byId('uploadBtn'),
 
         // console buttons
-        expandEditorBtn:     byId('expandEditorBtn'),
+        expandConsoleBtn:    byId('expandConsoleBtn'),
         clearBtn:            byId('clearConsoleBtn'),
         consoleCopyBtn:      byId('copyConsoleBtn'),
         consoleDownloadBtn:  byId('downloadConsoleBtn'),

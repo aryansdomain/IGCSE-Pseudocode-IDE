@@ -18,7 +18,7 @@
     </script>
     <script src="src/analytics/analytics.js" defer></script>
 
-    <!-- Listener for JS errors before everything -->
+    <!-- Listener for JS errors -->
     <script>
         (function () {
             if (window.__errorTapInstalled) return;
@@ -60,6 +60,12 @@
             });
         })();
     </script>
+
+    <!-- Tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js/minified/introjs.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
+    <script src="src/tour/tour.js" defer></script>
+    <link rel="stylesheet" href="src/tour/tour.css">
     
     <!-- Load font families -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -121,18 +127,22 @@
             <div id="editor-pane">
                 <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
                     <div class="controls">
-                        <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="expandEditorBtn">
+                        <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
                             <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                        <button class="btn format"  type="button"  title="Format code" id="btn-format">
+                        </button>
+                        <button class="btn format"  type="button"  title="Format code" id="formatBtn">
                             <span>Format</span>
                         </button>
-                        <button class="btn copy"  type="button"  title="Copy code" id="copyEditorBtn">
+                        <button class="btn copy"  type="button"  title="Copy code" id="editorCopyBtn">
                             <i class="fas fa-clone"></i>
                         </button>
                         <button class="btn download"  type="button"  title="Download code" id="downloadEditorBtn">
                             <i class="fas fa-download"></i>
                         </button>
+                        <button class="btn upload"  type="button"  title="Upload text file" id="uploadBtn">
+                            <i class="fas fa-upload"></i>
                         </button>
+                        <input type="file" id="fileInput" accept=".txt,.js,.py,.java,.cpp,.c,.h,.css,.html,.json,.xml,.md" style="display: none;">
                     </div>
                 </div>
 

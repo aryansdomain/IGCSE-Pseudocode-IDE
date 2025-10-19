@@ -12,11 +12,12 @@
     const { initCursor }            = await import('./src/console/cursor.js');
     const { initDownload }          = await import('./src/utils/download.js');
     const { initCopy }              = await import('./src/utils/copy.js');
+    const { initUpload }            = await import('./src/utils/upload.js');
     const { initMode }              = await import('./src/ui/modeCtrl.js');
     const { initSettings }          = await import('./src/ui/settings.js');
     const { initSplitter }          = await import('./src/ui/splitter.js');
     const { initLayoutControls }    = await import('./src/ui/layout.js');
-    const { initUI, on }           = await import('./src/utils/ui.js');
+    const { initUI, on }            = await import('./src/utils/ui.js');
 
     const UI = initUI();
 
@@ -215,7 +216,7 @@ OUTPUT greet("World")`,
             handle: UI.splitter,
             paneA: UI.editorPane,
             paneB: UI.consolePane,
-            btnA: document.getElementById('expandEditorBtn'),
+            btnA: document.getElementById('editorExpandBtn'),
             btnB: document.getElementById('expandConsoleBtn'),
             axis: layout,
             minA: 0,
@@ -283,6 +284,15 @@ OUTPUT greet("World")`,
 
     // ------------------------ Editor/Console Utilities ------------------------
 
+    // copy
+    const copies = initCopy({
+        consoleCopyBtn: UI.consoleCopyBtn,
+        editorCopyBtn: UI.editorCopyBtn,
+        getCode: editorApis.getCode,
+        getConsoleText,
+        consoleOutput
+    });
+
     // download
     const downloads = initDownload({
         consoleDownloadBtn: UI.consoleDownloadBtn,
@@ -292,12 +302,11 @@ OUTPUT greet("World")`,
         consoleOutput
     });
 
-    // copy
-    const copies = initCopy({
-        consoleCopyBtn: UI.consoleCopyBtn,
-        editorCopyBtn: UI.editorCopyBtn,
-        getCode: editorApis.getCode,
-        getConsoleText,
+    // upload
+    const uploads = initUpload({
+        uploadBtn: UI.uploadBtn,
+        fileInput: UI.fileInput,
+        setCode: editorApis.setCode,
         consoleOutput
     });
 
