@@ -83,41 +83,8 @@ export function initThemeControls({
         const keywordColor = window.getComputedStyle(tempEl).color;
         editorEl.removeChild(tempEl); // clean up
 
-        // apply color to settings panel elements
-        document.querySelectorAll('.setting-group input[type="range"]').forEach(slider => {
-            const styleId = 'slider-accent-style';
-            let styleEl = document.getElementById(styleId);
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = styleId;
-                document.head.appendChild(styleEl);
-            }
-            styleEl.textContent = `
-                .setting-group input[type="range"]::-webkit-slider-thumb { background: ${keywordColor} !important; }
-                .setting-group input[type="range"]::-webkit-slider-thumb:hover { background: ${keywordColor} !important; opacity: 0.8; }
-                .setting-group input[type="range"]::-webkit-slider-track { background: linear-gradient(to right, ${keywordColor} 0%, ${keywordColor} 50%, var(--border) 50%, var(--border) 100%) !important; }
-                .setting-group input[type="range"]::-moz-range-thumb { background: ${keywordColor} !important; }
-                .setting-group input[type="range"]::-moz-range-thumb:hover { background: ${keywordColor} !important; opacity: 0.8; }
-                .setting-group input[type="range"]::-moz-range-track { background: linear-gradient(to right, ${keywordColor} 0%, ${keywordColor} 50%, var(--border) 50%, var(--border) 100%) !important; }
-            `;
-        });
-        document.querySelectorAll('.font-select').forEach(el => {
-            el.style.setProperty('--hover-border-color', keywordColor);
-        });
-        document.querySelectorAll('.btn.editortheme-changer').forEach(el => {
-            el.style.color = keywordColor;
-        });
-        document.querySelectorAll('.editortheme-button').forEach(el => {
-            el.style.setProperty('--hover-border-color', keywordColor);
-            el.style.setProperty('--hover-color', keywordColor);
-        });
-        document.querySelectorAll('.editortheme-item').forEach(el => {
-            el.style.setProperty('--hover-border-color', keywordColor);
-            el.style.setProperty('--hover-color', keywordColor);
-        });
-        document.querySelectorAll('.slider-ticks .tick').forEach(el => {
-            el.style.setProperty('--hover-color', keywordColor);
-        });
+        // apply color
+        try { document.documentElement.style.setProperty('--keyword-color', keywordColor); } catch {}
     }
 
     function setTheme(name, skipAnalytics = false) {

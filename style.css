@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CSS VARIABLES & THEMES
+   CSS Variables & Themes
    ========================================================================== */
 
 :root {
@@ -10,9 +10,8 @@
     --text: #e6edf3;
     --muted: #8b949e;
     --border: #2b313b;
-    --green: #00ff00;
-    --green-accent: #22c55e;
-    --green-dark: #16a34a;
+    --green: #22c55e;
+    --keyword-color: #ffffff; /* updated from editor theme */
     --red: #ff7b72;
     --warning: #ffd700;
     
@@ -35,14 +34,14 @@
     --muted: #57606a;
     --border: #d0d7de;
     --green: #009d00;
-    --green-accent: #1a7f37;
-    --green-dark: #0d5a1f;
+    --green: #1a7f37;
+    --keyword-color: #000000; /* updated from editor theme */
     --red: #d73a49;
     --warning: #ce8600;
 }
 
 /* ==========================================================================
-   GLOBAL RESET & BASE STYLES
+   Global Reset & Base Styles
    ========================================================================== */
 
 * {
@@ -62,7 +61,7 @@ html, body {
 }
 
 /* ==========================================================================
-   MAIN APP LAYOUT
+   Main Layout
    ========================================================================== */
 
 .app {
@@ -73,7 +72,7 @@ html, body {
 }
 
 /* ==========================================================================
-   WORKSPACE & LAYOUT SYSTEM
+   Workspace & Layout System
    ========================================================================== */
 
 #workspace {
@@ -105,7 +104,7 @@ html, body {
 }
 
 /* ==========================================================================
-   SPLITTER
+   Splitter
    ========================================================================== */
 
 #splitter { 
@@ -186,7 +185,7 @@ body.dragging {
 }
 
 /* ==========================================================================
-   UTILITY BAR
+   Utility Bar
    ========================================================================== */
 
 .utilitybar {
@@ -225,7 +224,7 @@ body.dragging {
 }
 
 /* ==========================================================================
-   EDITOR PANE
+   Editor Pane
    ========================================================================== */
 
 #editor-pane {
@@ -236,33 +235,20 @@ body.dragging {
     min-height: 0;
 }
 
-/* Editor Top Bar */
+/* topbar */
 .topbar {
     flex: 0 1 var(--topbar-h);
     min-height: var(--bar-min);
     padding: 0;
-    display: grid;
+    display: flex;
     grid-template-columns: 1fr 1fr;
     align-items: center;
-    gap: 10px;
-    padding-left: 14px;
-    padding-right: 14px;
+    gap: 8px;
+    padding-top: 4px;
+    padding-left: 12px;
+    padding-right: 12px;
     overflow: hidden;
     container-type: size;
-}
-
-.topbar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 4px 12px;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
 }
 
 .controls {
@@ -271,7 +257,7 @@ body.dragging {
     align-items: center;
 }
 
-/* Editor Shell */
+/* editor shell */
 .editor {
     position: relative;
     flex: 1 1 auto;
@@ -285,7 +271,7 @@ body.dragging {
     overflow: hidden;
 }
 
-/* Editor Bottom Bar */
+/* bottombar */
 .bottombar {
     flex: 0 1 var(--bottombar-h);
     min-height: var(--bar-min);
@@ -298,7 +284,6 @@ body.dragging {
     overflow: hidden;
     container-type: size;
 }
-
 .bottombar .info {
     display: flex;
     align-items: center;
@@ -311,7 +296,7 @@ body.dragging {
 }
 
 /* ==========================================================================
-   CONSOLE
+   Console
    ========================================================================== */
 
 #console-pane {
@@ -368,10 +353,6 @@ body.dragging {
     transition: all 0.2s ease;
 }
 
-.console-controls .btn:hover:not(:disabled) {
-    background-color: var(--panel);
-}
-
 .console-controls .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -389,10 +370,6 @@ body.dragging {
 .console-content { 
     min-height: 0; 
 }
-
-/* ==========================================================================
-   CONSOLE/TERMINAL
-   ========================================================================== */
 
 /* loading bar above console */
 .console-loadingbar {
@@ -428,7 +405,7 @@ body.dragging {
 }
 
 /* ==========================================================================
-   BUTTONS
+   Buttons
    ========================================================================== */
 
 .btn {
@@ -445,15 +422,15 @@ body.dragging {
 
 /* run/stop */
 .btn.run {
-    border: 2px solid var(--green-accent);
+    border: 2px solid var(--green);
     background: var(--panel);
-    color: var(--green-accent);
+    color: var(--green);
     font-weight: 600;
     padding: 8px 16px;
     transition: all 0.2s ease;
 }
 .btn.run:hover {
-    background: var(--green-accent);
+    background: var(--green);
     color: white;
 }
 .btn.stop {
@@ -508,7 +485,7 @@ body.dragging {
 }
 
 /* icon scaling */
-.btn:hover i:not(.btn.mode i) {
+.btn:hover i:not(.btn.mode i):not(.btn.layout i) {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }
@@ -516,13 +493,19 @@ body.dragging {
     transform: translate(-50%, -50%) scale(1.1);
     transition: transform 0.2s ease;
 }
-.btn.layout:hover i {
+
+/* layout button */
+.btn.layout:hover i.fa-rotate-90 {
+    transform: scale(1.1) rotate(90deg);
+    transition: transform 0.2s ease;
+}
+.btn.layout:hover i:not(.fa-rotate-90) {
     transform: scale(1.1);
     transition: transform 0.2s ease;
 }
 
 /* ==========================================================================
-   SETTINGS PANEL
+   Settings Panel
    ========================================================================== */
 
 .settings-overlay {
@@ -564,6 +547,7 @@ body.dragging {
 .settings-content { padding: 20px; }
 
 .setting-group { margin-bottom: 30px; }
+.settings-content > .setting-group:last-child { margin-bottom: 0; } /* remove extra space */
 
 .setting-group label {
     display: block;
@@ -572,10 +556,6 @@ body.dragging {
     font-size: 14px;
     font-weight: 500;
 }
-
-/* ==========================================================================
-   FORM CONTROLS
-   ========================================================================== */
 
 /* sliders */
 .setting-group input[type="range"] {
@@ -595,23 +575,23 @@ body.dragging {
     appearance: none;
     width: 22px;
     height: 22px;
-    background: var(--green-accent);
+    background: var(--keyword-color);
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid var(--panel);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     transition: all 0.2s ease;
-    margin-top: -7px;
 }
 
 .setting-group input[type="range"]::-webkit-slider-thumb:hover {
-    background: var(--green-dark);
+    background: var(--keyword-color);
+    opacity: 0.8;
     transform: scale(1.1);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .setting-group input[type="range"]::-webkit-slider-track {
-    background: linear-gradient(to right, var(--green-accent) 0%, var(--green-accent) 50%, var(--border) 50%, var(--border) 100%);
+    background: linear-gradient(to right, var(--keyword-color) 0%, var(--keyword-color) 50%, var(--border) 50%, var(--border) 100%);
     border-radius: 4px;
     height: 8px;
 }
@@ -619,22 +599,24 @@ body.dragging {
 .setting-group input[type="range"]::-moz-range-thumb {
     width: 22px;
     height: 22px;
-    background: var(--green-accent);
+    background: var(--keyword-color);
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid var(--panel);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     transition: all 0.2s ease;
+    transform: translateY(-2px); /* nudge to visual center in Firefox */
 }
 
 .setting-group input[type="range"]::-moz-range-thumb:hover {
-    background: var(--green-dark);
-    transform: scale(1.1);
+    background: var(--keyword-color);
+    opacity: 0.8;
+    transform: translateY(-2px) scale(1.1);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .setting-group input[type="range"]::-moz-range-track {
-    background: linear-gradient(to right, var(--green-accent) 0%, var(--green-accent) 50%, var(--border) 50%, var(--border) 100%);
+    background: linear-gradient(to right, var(--keyword-color) 0%, var(--keyword-color) 50%, var(--border) 50%, var(--border) 100%);
     border-radius: 4px;
     height: 8px;
     border: none;
@@ -699,7 +681,7 @@ body.dragging {
 }
 
 .slider-ticks .tick:not(:empty):hover {
-    color: var(--green-accent);
+    color: var(--keyword-color);
 }
 
 .slider-ticks .tick::before {
@@ -727,12 +709,12 @@ body.dragging {
 }
 
 .font-select:hover {
-    border-color: var(--green-accent);
+    border-color: var(--keyword-color);
 }
 
 .font-select:focus {
     outline: none;
-    border-color: var(--green-accent);
+    border-color: var(--keyword-color);
     box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
@@ -744,14 +726,10 @@ body.dragging {
     padding: 4px 8px;
 }
 
-/* ==========================================================================
-   EDITOR THEME SELECTOR
-   ========================================================================== */
-
 .btn.editortheme-changer {
     width: 100%;
     padding: 12px 16px;
-    color: var(--green-accent);
+    color: var(--keyword-color);
     background: var(--panel);
     font-size: 14px;
     font-weight: 600;
@@ -760,7 +738,7 @@ body.dragging {
 }
 
 .btn.editortheme-changer:hover {
-    background: var(--green-accent);
+    background: var(--keyword-color);
     color: white;
 }
 
@@ -801,14 +779,14 @@ body.dragging {
 
 .editortheme-button:hover {
     background: var(--panel);
-    border-color: var(--green-accent);
-    color: var(--green-accent);
+    border-color: var(--keyword-color);
+    color: var(--keyword-color);
 }
 
 .editortheme-button.active {
-    background: var(--green-accent);
+    background: var(--keyword-color);
     color: white;
-    border-color: var(--green-accent);
+    border-color: var(--keyword-color);
 }
 
 .editortheme-list-container {
@@ -859,14 +837,14 @@ body.dragging {
 
 .editortheme-item:hover {
     background: var(--elev);
-    border-color: var(--green-accent);
-    color: var(--green-accent);
+    border-color: var(--keyword-color);
+    color: var(--keyword-color);
 }
 
 .editortheme-item.selected {
-    background: var(--green-accent);
+    background: var(--keyword-color);
     color: white;
-    border-color: var(--green-accent);
+    border-color: var(--keyword-color);
 }
 
 .editortheme-item.selected::before {
@@ -881,8 +859,38 @@ body.dragging {
     padding-left: 28px;
 }
 
+/* tour restart button */
+.btn.tour-restart {
+    width: 100%;
+    padding: 8px 12px; 
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn.tour-restart:hover {
+    background: var(--elev);
+    border-color: var(--keyword-color);
+    color: var(--keyword-color);
+}
+.btn.tour-restart:focus {
+    outline: none;
+    border-color: var(--keyword-color);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+.btn.tour-restart i {
+    font-size: 16px;
+}
+
 /* ==========================================================================
-   LIGHT MODE OVERRIDES
+   Light Mode Overrides
    ========================================================================== */
 
 .light #console-viewport {
@@ -911,12 +919,8 @@ body.dragging {
     background: #24292f;
 }
 
-.light .prompt-text {
-    color: var(--green);
-}
-
 /* ==========================================================================
-   UTILITY CLASSES & STATES
+   Utility Classes & States
    ========================================================================== */
 
 #workspace { 
@@ -932,7 +936,7 @@ html.mode-switching *::after {
 }
 
 /* ==========================================================================
-   FOOTER
+   Footer
    ========================================================================== */
 
 .footer {
