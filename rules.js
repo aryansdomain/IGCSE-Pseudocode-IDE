@@ -5,7 +5,7 @@ function(require, exports, module) {
 
     const KEYWORDS = (
         [
-            // selection
+            // conditionals
             'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
 
             // iteration
@@ -25,21 +25,15 @@ function(require, exports, module) {
 
             // logical operators
             'AND','OR','NOT'
-
         ].join('|')
     );
 
     const TYPES = (
-        [
-            'INTEGER','REAL','BOOLEAN','CHAR','STRING','ARRAY'
-        ].join('|')
+        ['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING', 'ARRAY'].join('|')
     );
 
     const BUILTINS = (
-        [
-            // library functions
-            'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
-        ].join('|')
+        ['ROUND', 'RANDOM', 'LENGTH', 'LCASE', 'UCASE', 'SUBSTRING', 'DIV', 'MOD'].join('|')
     );
 
     class LangHighlightRules extends TextHighlightRules {
@@ -62,11 +56,11 @@ function(require, exports, module) {
                     // strings (double quotes)
                     { token: 'string.quoted.double', regex: '"', next: 'string_dq' },
 
-                    // integer, real, or scientific notation
+                    // integer, real, scientific notation
                     { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ },
 
                     // assignment
-                    { token: 'keyword.operator', regex: /<-/ },
+                    { token: 'keyword.operator', regex: /<-|<--|←/ },
 
                     // comparison
                     { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },
@@ -102,7 +96,7 @@ function(require, exports, module) {
                 ]
 
             };
-
+            
             this.normalizeRules();
         }
     }
