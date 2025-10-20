@@ -15,12 +15,12 @@ export function initUI() {
     return {
         // main workspace structure
         workspace:           byId('workspace'),
-        editorPane:          byId('editor-pane'),
-        topbar:              qs('.topbar'),
+        editorPane:          byId('editorPane'),
+        topbar:              byId('topBar'),
         codeEl:              byId('code'),
-        bottombar:           qs('.bottombar'),
+        bottombar:           byId('bottomBar'),
         splitter:            byId('splitter'),
-        consolePane:         byId('console-pane'),
+        consolePane:         byId('consolePane'),
         runBtn:              byId('runBtn'),
         consoleEl:           byId('console-viewport'),
         consoleLoadingBar:   byId('consoleLoadingBar'),
@@ -30,7 +30,7 @@ export function initUI() {
         formatBtn:           byId('formatBtn'),
         fileInput:           byId('fileInput'),
         editorCopyBtn:       byId('editorCopyBtn'),
-        editorDownloadBtn:   byId('downloadEditorBtn'),
+        editorDownloadBtn:   byId('editorDownloadBtn'),
         uploadBtn:           byId('uploadBtn'),
 
         // console buttons
@@ -44,7 +44,6 @@ export function initUI() {
         fontFamilySelect:    byId('fontFamilySelect'),
         tabSpacesSlider:     byId('tabSpacesSlider'),
         tabSpacesValue:      byId('tabSpacesValue'),
-        tabSpacesInfo:       qs('.tab-spaces-info'),
 
         // other controls
         modeBtn:             byId('modeBtn'),
@@ -58,6 +57,7 @@ export function initUI() {
         restartTourBtn:      byId('restartTourBtn'),
 
         // info
-        lineColInfo:         byId('line-col-info'),
+        lineColInfo:         byId('lineColInfo'),
+        tabSpacesInfo:       byId('tabSpacesInfo'),
     };
 }

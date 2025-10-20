@@ -122,8 +122,8 @@
 
         <!-- Workspace -->
         <div class="workspace" id="workspace">
-            <div id="editor-pane">
-                <div class="topbar" role="toolbar" aria-label="IDE Toolbar">
+            <div id="editorPane">
+                <div class="topbar" role="toolbar" id="topBar" aria-label="IDE Toolbar">
                     <div class="controls">
                         <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
                             <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
@@ -134,7 +134,7 @@
                         <button class="btn copy"  type="button"  title="Copy code" id="editorCopyBtn">
                             <i class="fas fa-clone"></i>
                         </button>
-                        <button class="btn download"  type="button"  title="Download code" id="downloadEditorBtn">
+                        <button class="btn download"  type="button"  title="Download code" id="editorDownloadBtn">
                             <i class="fas fa-download"></i>
                         </button>
                         <button class="btn upload"  type="button"  title="Upload text file" id="uploadBtn">
@@ -148,17 +148,17 @@
                     <div id="code"></div>
                 </div>
 
-                <div class="bottombar" role="bottombar" aria-live="polite">
+                <div class="bottombar" role="bottombar" id="bottomBar" aria-live="polite">
                     <div class="info">
-                        <span id="line-col-info">Ln 1, Col 1</span>
-                        <span class="tab-spaces-info">Tab Spaces: 4</span>
+                        <span id="lineColInfo">Ln 1, Col 1</span>
+                        <span id="tabSpacesInfo">Tab Spaces: 4</span>
                     </div>
                 </div>
             </div>
 
             <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
 
-            <div id="console-pane">
+            <div id="consolePane">
 
                 <!-- Run Button -->
                 <div class="run-container">

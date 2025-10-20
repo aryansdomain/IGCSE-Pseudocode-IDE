@@ -88,7 +88,7 @@ html, body {
 #workspace.layout-horizontal { flex-direction: row; }
 
 /* shrink panes */
-#editor-pane, #console-pane { 
+#editorPane, #consolePane { 
     display: flex; 
     flex-direction: column; 
     min-width: 0; 
@@ -99,7 +99,7 @@ html, body {
 }
 
 /* add gap between splitter and console in horizontal layout */
-#workspace.layout-horizontal #console-pane {
+#workspace.layout-horizontal #consolePane {
     margin-left: var(--gap);
 }
 
@@ -227,7 +227,7 @@ body.dragging {
    Editor Pane
    ========================================================================== */
 
-#editor-pane {
+#editorPane {
     position: relative;
     overflow: hidden;
     display: flex;
@@ -288,6 +288,13 @@ body.dragging {
     display: flex;
     align-items: center;
     gap: 20px;
+    min-width: 0;
+}
+.bottombar .info span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 /* collapse bars */
@@ -299,7 +306,7 @@ body.dragging {
    Console
    ========================================================================== */
 
-#console-pane {
+#consolePane {
     padding-top: 0;
     min-height: 0;
     overflow: hidden;
