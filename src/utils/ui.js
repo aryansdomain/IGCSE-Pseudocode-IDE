@@ -55,6 +55,7 @@ export function initUI() {
         settingsOverlay:     byId('settingsOverlay'),
         settingsBtn:         byId('settingsBtn'),
         closeSettings:       byId('closeSettings'),
+        restartTourBtn:      byId('restartTourBtn'),
 
         // info
         lineColInfo:         byId('line-col-info'),
