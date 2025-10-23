@@ -54,9 +54,42 @@ function boldLabels(text) {
     const closeBtn   = $("closeBtn");
     const modeBtn    = $("mode");
 
-    // prefill title and body
-    title.value = qs("title", "[Issue] ");
-    body.value  = qs("body");
+    // generate template
+    const bodyTemplate = [
+        "Type (UI issue, runtime error, formatting bug, etc.): ",
+        "",
+        "Steps to reproduce:",
+        "1. ",
+        "2. ",
+        "3. ",
+        "",
+        "Expected result:",
+        "",
+        "",
+        "",
+        "Actual result:",
+        "",
+        "",
+        "",
+        "Additional information:",
+        "",
+        "",
+        "",
+        "------------------------ PREFILLED INFORMATION ------------------------",
+        "",
+        `UA: ${navigator.userAgent}`,
+        "",
+        "",
+        "Last JavaScript Error:",
+        "",
+        qs("jsError") || "None",
+        "",
+        "Last IDE Error:",
+        "",
+        qs("ideError") || "None",
+    ].join("\n");
+    
+    body.value = bodyTemplate;
 
     // set mode
     const modeCtrl = initMode({

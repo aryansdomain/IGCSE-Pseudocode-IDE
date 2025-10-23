@@ -11,7 +11,7 @@ function buildIssueURL() {
     const params = new URLSearchParams({
         //template: "issue_report.yml",
         labels: "issue",
-        title: "[Issue] ",
+        title: "",
     });
 
     // context
@@ -67,7 +67,6 @@ function wireIssueButton() {
         e.preventDefault();
         
         // build report.html URL and fill data
-        const sp = new URL(buildIssueURL()).searchParams;
         let reportPath = "";
 
         const isLocalHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -75,9 +74,17 @@ function wireIssueButton() {
         reportPath += "/src/report/report.html";
         
         const url = new URL(reportPath, location.origin);
-
-        url.searchParams.set("title", sp.get("title"));
-        url.searchParams.set("body", sp.get("body"));
+        
+        // pass info to url
+        const lastJSError = formatJSError(window.__lastError);
+        const lastIDEError = window.__lastIDEError || "None";
+        
+        if (lastJSError && lastJSError !== "None") {
+            url.searchParams.set("jsError", lastJSError);
+        }
+        if (lastIDEError && lastIDEError !== "None") {
+            url.searchParams.set("ideError", lastIDEError);
+        }
         
         // detect IDE mode
         const ideMode = isLightMode() ? 'light' : 'dark';
