@@ -49,6 +49,7 @@ export function initUI() {
         modeBtn:             byId('modeBtn'),
         editorThemeSelect:   byId('editorThemeSelect'),
         layoutBtn:           byId('layoutBtn'),
+        infoBtn:             byId('info-btn'),
         
         // settings
         settingsOverlay:     byId('settingsOverlay'),

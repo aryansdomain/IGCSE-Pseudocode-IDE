@@ -316,6 +316,11 @@ OUTPUT greet("World")`,
         consoleOutput.clear();
     });
 
+    // info button
+    UI.infoBtn.addEventListener('click', () => {
+        window.open('lang rules.pdf', '_blank', 'noopener');
+    });
+
     // signal that UI is ready
     try { window.setAppReady?.(); } catch {}
 
