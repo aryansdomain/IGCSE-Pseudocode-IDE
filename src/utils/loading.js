@@ -78,8 +78,8 @@
     timer = setTimeout(show, 750); // show if 750 ms have passed
   
     // fallback: hide when window is loaded
-    window.addEventListener('load', () => {
-        console.log('[boot-loader] Window load event fired, appReady:', window.appReady, 'shown:', shown);
-        if (window.appReady || shown) hide('window.load');
-    }, { once: true });
+    // window.addEventListener('load', () => {
+    //     console.log('[boot-loader] Window load event fired, appReady:', window.appReady, 'shown:', shown);
+    //     if (window.appReady || shown) hide('window.load');
+    // }, { once: true });
 })();
