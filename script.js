@@ -316,4 +316,7 @@ OUTPUT greet("World")`,
         consoleOutput.clear();
     });
 
+    // signal that UI is ready
+    try { window.__markAppReady?.(); } catch {}
+
 })();
