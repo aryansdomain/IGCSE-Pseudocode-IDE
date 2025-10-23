@@ -19,11 +19,8 @@
     document.head.appendChild(style);
   
     function show() {
-        if (shown) return;
-        if (document.readyState === 'complete' || window.__appReady) return; // already ready
+        if (shown || window.appReady) return;
         shown = true;
-        
-        console.log('[boot-loader] Showing loading spinner');
         
         const el = document.createElement('div');
         el.id = 'boot-loader';
@@ -39,8 +36,18 @@
             </div>
         `;
         
-        if (document.body) document.body.appendChild(el);
-        else document.addEventListener('DOMContentLoaded', () => document.body.appendChild(el), { once: true });
+        if (document.body) {
+            document.body.appendChild(el);
+        } else {
+            // wait for body through readystatechange
+            const tryAppend = () => {
+                if (document.body) {
+                    document.body.appendChild(el);
+                    document.removeEventListener('readystatechange', tryAppend);
+                }
+            };
+            document.addEventListener('readystatechange', tryAppend);
+        }
     }
   
     function hide() {
@@ -49,13 +56,13 @@
     }
   
     // signal that app is usable
-    window.__markAppReady = () => {
-        window.__appReady = true;
+    window.setAppReady = () => {
+        window.appReady = true;
         hide();
     };
   
     timer = setTimeout(show, 750); // show if 750 ms have passed
   
     // fallback: hide when window is loaded
-    window.addEventListener('load', () => hide(), { once: true });
+    window.addEventListener('load', () => { if (!window.appReady) hide(); }, { once: true });
 })();
