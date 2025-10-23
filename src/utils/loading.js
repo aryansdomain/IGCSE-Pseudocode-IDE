@@ -55,9 +55,9 @@
         }
     }
   
-    function hide() {
-        console.log('[boot-loader] hide() called');
-        clearTimeout(timer);
+    function hide(reason) {
+        console.log('[boot-loader] hide() called', reason);
+        if (shown || window.appReady) clearTimeout(timer);
         const loader = document.getElementById('boot-loader');
         if (loader) {
             console.log('[boot-loader] Removing spinner element');
@@ -78,8 +78,8 @@
     timer = setTimeout(show, 750); // show if 750 ms have passed
   
     // fallback: hide when window is loaded
-    window.addEventListener('load', () => { 
-        console.log('[boot-loader] Window load event fired, appReady:', window.appReady);
-        if (!window.appReady) hide(); 
+    window.addEventListener('load', () => {
+        console.log('[boot-loader] Window load event fired, appReady:', window.appReady, 'shown:', shown);
+        if (window.appReady || shown) hide('window.load');
     }, { once: true });
 })();
