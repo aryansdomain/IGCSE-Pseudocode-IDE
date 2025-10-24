@@ -249,6 +249,7 @@ OUTPUT greet("World")`,
     const runCtrl = initRunCtrl({
         cursor,
         consoleOutput,
+        console,
         getline,
         getCode: editorApis.getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
