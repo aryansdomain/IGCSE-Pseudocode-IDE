@@ -1,6 +1,7 @@
 export function initRunCtrl({
     cursor,
     consoleOutput,
+    console,
     getline,
     getCode,
     workerPath = 'runner.js',
@@ -97,6 +98,14 @@ export function initRunCtrl({
                     });
                     outputStorage = [];
                 }
+
+                // after waiting a frame, set input start column
+                const defer = (fn) =>
+                    (typeof requestAnimationFrame === 'function') ? requestAnimationFrame(fn) : setTimeout(fn, 0);
+                defer(() => {
+                    const col = console?.buffer?.active?.cursorX || 0;
+                    try { cursor?.setInputStartCol(col); } catch {}
+                });
 
                 onInputRequested();
 
