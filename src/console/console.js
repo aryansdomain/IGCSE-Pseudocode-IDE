@@ -67,14 +67,14 @@ export function initConsole({
         switch (c) {
             case 'help': {
                 const output =
-                    'run                  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
-                    'clear                Clear console\r\n' +
-                    'format               Format the editor code\r\n' +
-                    'tab <n>              Set editor tab size (0-8 spaces)\r\n' +
-                    'font <px>            Set editor font size (6-38 px)\r\n' +
-                    'mode <light|dark>    Switch overall UI between light and dark modes\r\n' +
-                    'theme <name>         Change the editor color theme\r\n' +
-                    'help                 Print a list of commands dialog\r\n';
+                    '\x1b[32mrun\x1b[0m                  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
+                    '\x1b[32mclear\x1b[0m                Clear console\r\n' +
+                    '\x1b[32mformat\x1b[0m               Format the editor code\r\n' +
+                    '\x1b[32mtab <n>\x1b[0m              Set editor tab size (0-8 spaces)\r\n' +
+                    '\x1b[32mfont <px>\x1b[0m            Set editor font size (6-38 px)\r\n' +
+                    '\x1b[32mmode <light|dark>\x1b[0m    Switch overall UI between light and dark modes\r\n' +
+                    '\x1b[32mtheme <name>\x1b[0m         Change the editor color theme\r\n' +
+                    '\x1b[32mhelp\x1b[0m                 Print a list of commands dialog\r\n';
                 consoleOutput.lnprintln('Commands:', 1); // bold
                 consoleOutput.println(output);
                 break;
@@ -176,6 +176,7 @@ export function initConsole({
 
         // ignore all input except ctrl-c (stops program) when console is locked
         if (runCtrl.isConsoleLocked() && data !== '\u0003') return;
+
 
         if (awaitingInput) {
             // input mode
