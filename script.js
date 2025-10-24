@@ -59,7 +59,8 @@ OUTPUT greet("World")`;
         max: 38,
         step: 1,
         defaultSize: 14,
-        defaultFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace"
+        defaultFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace",
+        STORAGE_KEY: 'igcse_ide_editor_font'
     });
     editorApis.setFontSize = (n) => fontCtrl.setFontSize(n);
     // nudge editor after fonts finish loading
@@ -166,7 +167,8 @@ OUTPUT greet("World")`;
         themeCtrl: null,
         modeBtn: UI.modeBtn,
         defaultMode: 'dark',
-        page: 'ide'
+        page: 'ide',
+        STORAGE_KEY: 'igcse_ide_mode'
     });
     
     // theme controls
@@ -208,7 +210,7 @@ OUTPUT greet("World")`;
         workspace: UI.workspace,
         layoutBtn: UI.layoutBtn,
         initialLayout: 'vertical',
-        storageKey: 'ui.layout:editor-console'
+        STORAGE_KEY: 'igcse_ide_layout'
     });
 
     // splitter
@@ -234,7 +236,7 @@ OUTPUT greet("World")`;
             snapInPx: 35,
             snapOutPx: 50,
             initialRatio,
-            storageKey: 'editor-console',
+            STORAGE_KEY: 'igcse_ide_splitter_ratio',
             onResize: () => {
                 try { editor.resize(); } catch {}
                 try { refit(); } catch {}

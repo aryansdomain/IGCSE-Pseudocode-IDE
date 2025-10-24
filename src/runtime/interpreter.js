@@ -23,11 +23,11 @@ async function interpret(code) {
 
     const NAME_KEYWORD_SEEN = new Set();
     function assertNotKeyword(id) {
-        const key = String(id).toUpperCase();
-        if (PSC_KEYWORDS.has(key)) {
-            if (!NAME_KEYWORD_SEEN.has(key)) {
+        const keyword = String(id).toUpperCase();
+        if (PSC_KEYWORDS.has(keyword)) {
+            if (!NAME_KEYWORD_SEEN.has(keyword)) {
                 throwWarning(`Warning: "${id}" is a keyword. Do not use keywords as identifiers.`);
-                NAME_KEYWORD_SEEN.add(key);
+                NAME_KEYWORD_SEEN.add(keyword);
             }
         }
     }

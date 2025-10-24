@@ -7,7 +7,7 @@ export function initFontControls({
     step = 1,
     defaultSize = 14,
     defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
-    storageKey = 'editor.font',
+    STORAGE_KEY = 'igcse_ide_editor_font',
 } = {}) {
 
     // current values
@@ -16,7 +16,7 @@ export function initFontControls({
 
     // load preferences
     try {
-        const raw = localStorage.getItem(storageKey);
+        const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
             const saved = JSON.parse(raw);
             if (typeof saved.size === 'number') size = clamp(saved.size, min, max);
@@ -137,9 +137,7 @@ export function initFontControls({
         document.documentElement.style.setProperty('--mono', fam);
     }
     function persist() {
-        try {
-            localStorage.setItem(storageKey, JSON.stringify({ size, family }));
-        } catch {}
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ size, family })); } catch {}
     }
     // ensure n stays between lo and hi
     function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }

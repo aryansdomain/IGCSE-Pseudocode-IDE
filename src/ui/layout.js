@@ -2,7 +2,7 @@ export function initLayoutControls({
     workspace,
     layoutBtn,
     initialLayout = 'vertical',
-    storageKey = 'ui.layout:editor-console',
+    STORAGE_KEY = 'igcse_ide_layout',
 } = {}) {
     
     // update workspace CSS classes
@@ -29,7 +29,7 @@ export function initLayoutControls({
         if (layout === 'vertical') layout = 'horizontal';
         else                       layout = 'vertical';
         
-        try { localStorage.setItem(storageKey, layout); } catch {}
+        try { localStorage.setItem(STORAGE_KEY, layout); } catch {}
         
         updateWorkspace();
         updateLayoutButton();
@@ -41,7 +41,7 @@ export function initLayoutControls({
     }
 
     // init
-    let layout = localStorage.getItem(storageKey) || initialLayout;
+    let layout = localStorage.getItem(STORAGE_KEY) || initialLayout;
     updateWorkspace();
     updateLayoutButton();
     

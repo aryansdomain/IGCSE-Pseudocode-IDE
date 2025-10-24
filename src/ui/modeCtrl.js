@@ -1,5 +1,3 @@
-const KEY = 'ui.mode'; // localStorage key
-
 export function isLightMode() { return document.documentElement.classList.contains('light'); }
 
 export function initMode({
@@ -7,6 +5,7 @@ export function initMode({
     modeBtn,
     defaultMode = 'dark',
     page = 'ide',
+    STORAGE_KEY = 'igcse_ide_mode'
 } = {}) {
 
     let currentThemeCtrl = themeCtrl;
@@ -53,7 +52,7 @@ export function initMode({
 
     // init mode and apply
     let initial = null;
-    try { initial = localStorage.getItem(KEY); } catch {}
+    try { initial = localStorage.getItem(STORAGE_KEY); } catch {}
     if (!initial) {
         const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)')?.matches;
         initial = prefersLight ? 'light' : defaultMode;
@@ -66,7 +65,7 @@ export function initMode({
     const onClick = () => {
         const next = isLightMode() ? 'dark' : 'light';
         setMode(next);
-        try { localStorage.setItem(KEY, next); } catch {}
+        try { localStorage.setItem(STORAGE_KEY, next); } catch {}
         setIcons();
     };
     modeBtn.addEventListener('click', onClick);
@@ -75,7 +74,7 @@ export function initMode({
     const mql = window.matchMedia?.('(prefers-color-scheme: light)');
     const onPref = (e) => {
         let saved = null;
-        try { saved = localStorage.getItem(KEY); } catch {}
+        try { saved = localStorage.getItem(STORAGE_KEY); } catch {}
         if (saved) return;
         setMode(e.matches ? 'light' : 'dark');
         setIcons();
