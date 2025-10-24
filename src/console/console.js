@@ -13,7 +13,9 @@ export function initConsole({
         cursorBlink,
         cursorStyle,
         disableStdin: false,
-        allowTransparency: false
+        allowTransparency: false,
+        scrollback: 1000,
+        wordWrap: true
     });
     xterm.open(container);
     xterm.focus();
@@ -175,9 +177,9 @@ export function initConsole({
         // ignore all input except ctrl-c (stops program) when console is locked
         if (runCtrl.isConsoleLocked() && data !== '\u0003') return;
 
-        if (awaitingInput) {   
-            // INPUT mode
-            if (data === '\r') {                                     // enter, submit input
+        if (awaitingInput) {
+            // input mode
+            if (data === '\r') {                                       // enter, submit input
                 setAwaitingInput(false);
                 consoleOutput.newline();
                 
@@ -187,18 +189,18 @@ export function initConsole({
                 cursor.reset();
                 hIdx = -1;
 
-            } else if (data === '\u0003') {                          // ctrl-c, abort program
+            } else if (data === '\u0003') {                            // ctrl-c, abort program
                 consoleOutput.newline();
                 runCtrl.stop();
             } else if (data === '\u007F') cursor.deleteChar();         // backspace
               else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
               else if (data === '\u001b[D') cursor.moveCursorLeft();   // left arrow
-              else if (data.length === 1 && data >= ' ') {           // printable characters
+              else if (data.length === 1 && data >= ' ') {             // printable characters
                 cursor.insertChar(data);   // data >= ' ' ensures ASCII value is >= 32
             }
         } else {
             // shell mode
-            if (data === '\r') {                                     // enter, execute command
+            if (data === '\r') {                                       // enter, execute command
                 const origLine = cursor.getLine();
 
                 hIdx = -1;
@@ -206,7 +208,7 @@ export function initConsole({
 
                 execCommand(origLine);
 
-            } else if (data === '\u0003') {                          // ctrl-c, abort program
+            } else if (data === '\u0003') {                            // ctrl-c, abort program
                 if (runCtrl.isRunning()) {
                     consoleOutput.newline();
                     runCtrl.stop();
@@ -217,7 +219,7 @@ export function initConsole({
                     consoleOutput.showCursor();
                 }
             } else if (data === '\u007F') cursor.deleteChar();         // backspace
-              else if (data === '\u001b[A') {                        // up arrow
+              else if (data === '\u001b[A') {                          // up arrow
                 if (!hist.length) return;
 
                 if (hIdx === -1) hIdx = hist.length - 1;
@@ -228,7 +230,7 @@ export function initConsole({
                 await cursor.setLine(line);
                 cursor.moveCursorRight(line.length - cursor.getCursorPos());
 
-            } else if (data === '\u001b[B') {                        // down arrow
+            } else if (data === '\u001b[B') {                          // down arrow
                 if (!hist.length) return;
 
                 if (hIdx === -1) { await cursor.setLine(''); return; }
@@ -241,7 +243,7 @@ export function initConsole({
 
             } else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
               else if (data === '\u001b[D') cursor.moveCursorLeft();   // left arrow
-              else if (data.length === 1 && data >= ' ') {           // printable characters
+              else if (data.length === 1 && data >= ' ') {             // printable characters
                 cursor.insertChar(data);        // data >= ' ' ensures the ASCII value is >= 32
             }
         }
@@ -250,7 +252,7 @@ export function initConsole({
     // ------------------------ Helpers/Utilities ------------------------
     const getline = () => {
         try {
-            const buf = console?.buffer?.active;
+            const buf = xterm?.buffer?.active;
             if (!buf) return '';
             
             const line = buf.getLine(buf.cursorY)?.translateToString(false) ?? '';
@@ -261,7 +263,7 @@ export function initConsole({
     };
 
     const getConsoleText = ({ trim = true } = {}) => {
-        const buf = console?.buffer?.active;
+        const buf = xterm?.buffer?.active;
         if (!buf) return '';
       
         const lines = [];
@@ -270,7 +272,7 @@ export function initConsole({
             if (!line) continue;
         
             // remove right padding
-            const s = line.translateToString(true, 0, console.cols);
+            const s = line.translateToString(true, 0, xterm.cols);
             lines.push(s);
         }
       
