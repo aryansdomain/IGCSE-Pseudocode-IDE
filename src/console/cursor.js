@@ -63,6 +63,11 @@ export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitin
     function focus() { console.focus(); }
     function getLine() { return line; }
     function getCursorPos() { return cursorPos; }
+    
+    // set the input start column (where program input begins)
+    function setInputStartCol(col) {
+        inputStartCol = col;
+    }
 
     // reset everything
     function reset() {
@@ -74,6 +79,6 @@ export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitin
     return {
         setLine, insertChar, deleteChar, moveCursorLeft, moveCursorRight,
         getLine, getCursorPos,
-        focus, reset
+        focus, reset, setInputStartCol
     };
 }
