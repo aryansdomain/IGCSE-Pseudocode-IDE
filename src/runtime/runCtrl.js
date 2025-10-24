@@ -61,7 +61,7 @@ export function initRunCtrl({
 
     // process execution results
     function attachWorkerHandlers(localRunId) {
-        worker.onmessage = (e) => {
+        worker.onmessage = async (e) => {
             const { type } = e.data;
 
             if (type === 'flush') {
@@ -100,12 +100,11 @@ export function initRunCtrl({
                 }
 
                 // after waiting a frame, set input start column
-                const defer = (fn) =>
-                    (typeof requestAnimationFrame === 'function') ? requestAnimationFrame(fn) : setTimeout(fn, 0);
-                defer(() => {
-                    const col = console?.buffer?.active?.cursorX || 0;
-                    try { cursor?.setInputStartCol(col); } catch {}
+                await new Promise((resolve) => {
+                    const d = console.onWriteParsed(() => { d.dispose(); resolve(); });
                 });
+                const col = console.buffer.active.cursorX || 0;
+                cursor.setInputStartCol(col);
 
                 onInputRequested();
 
