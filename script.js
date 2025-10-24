@@ -22,24 +22,33 @@
     const UI = initUI();
 
     // ace editor
-    const { editor, editorApis } = initEditor({
-        container: UI.codeEl,
-        defaultCode: 
-
-`// Type your code here!
+    const STORAGE_KEY = 'igcse_ide_editor_code'
+    const defaultCode = `// Type your code here!
 
 FUNCTION greet(name : STRING) RETURNS STRING
     RETURN "Hello, ", name, "!"
 ENDFUNCTION
 
-OUTPUT greet("World")`,
+OUTPUT greet("World")`;
 
+    // load saved code from localStorage 
+    const initialCode = localStorage.getItem(STORAGE_KEY) || defaultCode;
+
+    const { editor, editorApis } = initEditor({
+        container: UI.codeEl,
+        defaultCode: initialCode,
         tabSize: 4,
         theme: 'monokai',
         softWrap: false,
         readOnly: false,
     });
     window.editor = editor;
+
+    // save code to localStorage
+    editor.on('change', () => {
+        try { localStorage.setItem(STORAGE_KEY, editor.getValue()); }
+        catch (error) { globalThis.console.warn('Failed to save editor content to localStorage:', error); }
+    });
 
     // font controls
     const fontCtrl = initFontControls({
