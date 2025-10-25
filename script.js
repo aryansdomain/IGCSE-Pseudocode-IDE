@@ -23,13 +23,18 @@
 
     // ace editor
     const STORAGE_KEY = 'igcse_ide_editor_code'
-    const defaultCode = `// Type your code here!
+    const defaultCode = ` 
+// Type your code here!
 
-FUNCTION greet(name : STRING) RETURNS STRING
-    RETURN "Hello, ", name, "!"
+DECLARE Name : STRING
+
+FUNCTION greet(Name : STRING) RETURNS STRING
+    RETURN "Hello, ", Name, "!"
 ENDFUNCTION
 
-OUTPUT greet("World")`;
+OUTPUT "Enter your name: "
+INPUT Name
+OUTPUT greet(Name)`;
 
     // load saved code from localStorage 
     const initialCode = localStorage.getItem(STORAGE_KEY) || defaultCode;
