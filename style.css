@@ -663,7 +663,6 @@ body.dragging {
 .btn.example-btn:hover {
     background: var(--elev);
     border-color: var(--keyword-color);
-    color: var(--keyword-color);
 }
 .btn.example-btn:focus {
     outline: none;
@@ -985,7 +984,7 @@ body.dragging {
 }
 
 /* tour restart button */
-.btn.tour-restart {
+.btn.replay-tour {
     width: 100%;
     padding: 8px 12px; 
     background: var(--panel);
@@ -1000,17 +999,16 @@ body.dragging {
     align-items: center;
     gap: 8px;
 }
-.btn.tour-restart:hover {
+.btn.replay-tour:hover {
     background: var(--elev);
     border-color: var(--keyword-color);
-    color: var(--keyword-color);
 }
-.btn.tour-restart:focus {
+.btn.replay-tour:focus {
     outline: none;
     border-color: var(--keyword-color);
     box-shadow: var(--keyword-color);
 }
-.btn.tour-restart i {
+.btn.replay-tour i {
     font-size: 16px;
 }
 
