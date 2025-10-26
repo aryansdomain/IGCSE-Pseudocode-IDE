@@ -309,13 +309,31 @@ async function interpret(code) {
     // array utilities
     function makeArray(l1, u1, l2, u2, fill) {
         if (l2 == null) {
+            if (!Number.isInteger(l1) || !Number.isInteger(u1)) {
+                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', __LINE_NUMBER)
+            }
+            if (u1 < l1) {
+                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', __LINE_NUMBER)
+            }
             const len = u1 - l1 + 1;
+            if (len < 0 || len > 1000000) {
+                throwErr('ValueError: ', `Invalid ARRAY length (${len}). Array length must be between 0 and 1,000,000`, __LINE_NUMBER)
+            }
             const arr = new Array(len).fill(fill);
             arr.__lb = l1; // store lower bound
             return arr;
         } else {
+            if (!Number.isInteger(l1) || !Number.isInteger(u1) || !Number.isInteger(l2) || !Number.isInteger(u2)) {
+                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', __LINE_NUMBER)
+            }
+            if (u1 < l1 || u2 < l2) {
+                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', __LINE_NUMBER)
+            }
             const rows = u1 - l1 + 1;
             const cols = u2 - l2 + 1;
+            if (rows < 0 || cols < 0 || rows * cols > 1000000) {
+                throwErr('ValueError: ', 'Invalid ARRAY dimensions. Total size must not exceed 1,000,000', __LINE_NUMBER)
+            }
             const arr = new Array(rows);
             for (let r = 0; r < rows; r++) {
                 arr[r] = new Array(cols).fill(fill);
@@ -328,8 +346,27 @@ async function interpret(code) {
     // get array element
     function arrGet(A, i, j) {
         if (Array.isArray(A)) {
-            if (A.__lb != null && j == null) return A[i - A.__lb];
-            if (A.__lb1 != null && A.__lb2 != null && j != null) return A[i - A.__lb1][j - A.__lb2];
+            if (A.__lb != null && j == null) {
+                const lowerBound = A.__lb;
+                const upperBound = lowerBound + A.length - 1;
+                if (i < lowerBound || i > upperBound) {
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, __LINE_NUMBER)
+                }
+                return A[i - A.__lb];
+            }
+            if (A.__lb1 != null && A.__lb2 != null && j != null) {
+                const lowerBound1 = A.__lb1;
+                const upperBound1 = lowerBound1 + A.length - 1;
+                const lowerBound2 = A.__lb2;
+                const upperBound2 = lowerBound2 + A[0].length - 1;
+                if (i < lowerBound1 || i > upperBound1) {
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, __LINE_NUMBER)
+                }
+                if (j < lowerBound2 || j > upperBound2) {
+                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, __LINE_NUMBER)
+                }
+                return A[i - A.__lb1][j - A.__lb2];
+            }
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
@@ -345,8 +382,27 @@ async function interpret(code) {
     // set array element
     function arrSet(A, i, j, v) {
         if (Array.isArray(A)) {
-            if (A.__lb != null && j == null) { A[i - A.__lb] = v; return; }
-            if (A.__lb1 != null && A.__lb2 != null && j != null) { A[i - A.__lb1][j - A.__lb2] = v; return; }
+            if (A.__lb != null && j == null) {
+                const lowerBound = A.__lb;
+                const upperBound = lowerBound + A.length - 1;
+                if (i < lowerBound || i > upperBound) {
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, __LINE_NUMBER)
+                }
+                A[i - A.__lb] = v; return;
+            }
+            if (A.__lb1 != null && A.__lb2 != null && j != null) {
+                const lowerBound1 = A.__lb1;
+                const upperBound1 = lowerBound1 + A.length - 1;
+                const lowerBound2 = A.__lb2;
+                const upperBound2 = lowerBound2 + A[0].length - 1;
+                if (i < lowerBound1 || i > upperBound1) {
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, __LINE_NUMBER)
+                }
+                if (j < lowerBound2 || j > upperBound2) {
+                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, __LINE_NUMBER)
+                }
+                A[i - A.__lb1][j - A.__lb2] = v; return;
+            }
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
@@ -623,7 +679,7 @@ async function interpret(code) {
         const lit = [];
         s = s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, m => { lit.push(m); return `\uE000${lit.length-1}\uE001`; });
 
-        // Handle comma as concatenation operator (outside brackets/parentheses)
+        // replace , with + (outside brackets and parens)
         function replaceCommasWithConcat(src) {
             let result = '';
             let depth = 0;
@@ -645,7 +701,6 @@ async function interpret(code) {
             }
             return result;
         }
-        
         s = replaceCommasWithConcat(s);
 
         if (/\bDIV\b(?!\s*\()/i.test(s) || /\bMOD\b(?!\s*\()/i.test(s)) {
@@ -653,13 +708,13 @@ async function interpret(code) {
         }
 
         // bools
-        s = s.replace(/\bTRUE\b/g,  'true')
-        s = s.replace(/\bFALSE\b/g, 'false');
+        s = s.replace(/\bTRUE\b/gi,  'true')
+        s = s.replace(/\bFALSE\b/gi, 'false');
 
         // logical operators
-        s = s.replace(/\bAND\b/g, '&&')
-        s = s.replace(/\bOR\b/g,  '||')
-        s = s.replace(/\bNOT\b/g, '!');
+        s = s.replace(/\bAND\b/gi, '&&')
+        s = s.replace(/\bOR\b/gi,  '||')
+        s = s.replace(/\bNOT\b/gi, '!');
 
         // not-equal
         s = s.replace(/<>/g, '!==');
@@ -1027,7 +1082,7 @@ async function interpret(code) {
             }
             if ((m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*RETURNS\s+([A-Za-z]+)\s*$/i)) || (m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*RETURNS\s+([A-Za-z]+)\s*$/i))) {
                 const name = m[1];
-                const params = m[2] && !/RETURNS/i.test(m[2]) ? m[2] : '';
+                const params = m[3] ? (m[2] && !/RETURNS/i.test(m[2]) ? m[2] : '') : '';
                 const returns = (m[3] || m[2] || '').trim();
                 
                 // validate return type
@@ -1124,11 +1179,17 @@ async function interpret(code) {
                 const type = m[3];
 
                 if (dims.length === 1) {
-                    const [l, u] = dims[0].split(':').map(Number);
+                    const bounds = dims[0].split(':');
+                    const l = await evalExpr(bounds[0].trim(), scope);
+                    const u = await evalExpr(bounds[1].trim(), scope);
                     scope[name] = makeArray(l, u, null, null, defaultForType(type));
                 } else {
-                    const [l1, u1] = dims[0].split(':').map(Number);
-                    const [l2, u2] = dims[1].split(':').map(Number);
+                    const bounds1 = dims[0].split(':');
+                    const bounds2 = dims[1].split(':');
+                    const l1 = await evalExpr(bounds1[0].trim(), scope);
+                    const u1 = await evalExpr(bounds1[1].trim(), scope);
+                    const l2 = await evalExpr(bounds2[0].trim(), scope);
+                    const u2 = await evalExpr(bounds2[1].trim(), scope);
                     scope[name] = makeArray(l1, u1, l2, u2, defaultForType(type));
                 }
                 declareName(scope, name);
@@ -1565,9 +1626,6 @@ async function interpret(code) {
             throwErr('SyntaxError: ', msg, currentLine);
         }
     }
-
-    // checks if two values are equal
-    function eq(a, b) { return a === b; }
 
     // calls a PROCEDURE
     async function callProcedure(name, args, line) {
