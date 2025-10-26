@@ -536,13 +536,20 @@ async function interpret(code) {
         return s;
     }
 
-    // numeric ops to enforce numeric types & trap division by 0
+    // numeric operations
     function num(x, ctx) {
         if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('TypeError: ', String(ctx) + ' requires a finite number', __LINE_NUMBER)
         return x;
     }
     const NUM = {
-        ADD: (a,b) => num(a,'+ operation') + num(b,'+ operation'),
+        ADD: (a,b) => {
+            // if either is a string then concatenate
+            if (typeof a === 'string' || typeof b === 'string') {
+                return toString(a) + toString(b);
+            }
+            // otherwise add
+            return num(a,'+ operation') + num(b,'+ operation');
+        },
         SUB: (a,b) => num(a,'- operation') - num(b,'- operation'),
         MUL: (a,b) => num(a,'* operation') * num(b,'* operation'),
         DIV: (a,b) => {
@@ -598,7 +605,7 @@ async function interpret(code) {
         return 'UNKNOWN';
     }
 
-    // ------------------------ Expression evaluation ------------------------
+    // ------------------------ Expression Evaluation ------------------------
     async function evalExpr(expr, scope) {
 
         if (typeof window !== 'undefined' && window.__ide_stop_flag) {
@@ -608,13 +615,38 @@ async function interpret(code) {
         if (expr == null) return undefined;
         let s = String(expr).trim();
 
-        // ------------------------ REPLACE PSEUDOCODE THINGS WITH JS TOKENS ------------------------
+        // ------------------------ Replace Pseudocode with JS Tokens ------------------------
 
-        //console.log("s before everything: ", s);
+        // console.log("s before everything: ", s);
 
         // string and char literals
         const lit = [];
         s = s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, m => { lit.push(m); return `\uE000${lit.length-1}\uE001`; });
+
+        // Handle comma as concatenation operator (outside brackets/parentheses)
+        function replaceCommasWithConcat(src) {
+            let result = '';
+            let depth = 0;
+            let bracketDepth = 0;
+            let i = 0;
+            
+            while (i < src.length) {
+                const char = src[i];
+                
+                if (char === '(') depth++;
+                else if (char === ')') depth--;
+                else if (char === '[') bracketDepth++;
+                else if (char === ']') bracketDepth--;
+                
+                // replace comma with +
+                if (char === ',' && depth === 0 && bracketDepth === 0) result += '+';
+                else result += char;
+                i++;
+            }
+            return result;
+        }
+        
+        s = replaceCommasWithConcat(s);
 
         if (/\bDIV\b(?!\s*\()/i.test(s) || /\bMOD\b(?!\s*\()/i.test(s)) {
             throwErr('SyntaxError: ', 'invalid syntax', __LINE_NUMBER);
@@ -802,7 +834,7 @@ async function interpret(code) {
         // unprotect literals
         s = s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
 
-        //console.log("s after everything: ", s);
+        // console.log("s after everything: ", s);
 
         const IDENT = /^[A-Za-z][A-Za-z0-9]*$/;
 
