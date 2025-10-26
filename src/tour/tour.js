@@ -90,6 +90,14 @@
             title: 'Layout',
             intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor right, console left).',
         }, {
+            element: '#examples-btn',
+            title: 'Examples',
+            intro: 'Access example code snippets that showcase what the language can do.',
+        }, {
+            element: '#info-btn',
+            title: 'Documentation',
+            intro: 'View the official IGCSE documentation and learn about the pseudocode syntax.',
+        }, {
             element: '#issue-report-btn',
             title: 'Report an issue',
             intro: 'To report a bug, or if you feel there\'s something we can improve, use this button.',

@@ -15,6 +15,7 @@
     const { initUpload }            = await import('./src/utils/upload.js');
     const { initMode }              = await import('./src/ui/modeCtrl.js');
     const { initSettings }          = await import('./src/ui/settings.js');
+    const { initExamples }          = await import('./src/ui/examples.js');
     const { initSplitter }          = await import('./src/ui/splitter.js');
     const { initLayoutControls }    = await import('./src/ui/layout.js');
     const { initUI, on }            = await import('./src/utils/ui.js');
@@ -23,18 +24,17 @@
 
     // ace editor
     const STORAGE_KEY = 'igcse_ide_editor_code'
-    const defaultCode = ` 
-// Type your code here!
+    const defaultCode = `// Type your code here!
 
 DECLARE Name : STRING
 
-FUNCTION greet(Name : STRING) RETURNS STRING
+FUNCTION Greet(Name : STRING) RETURNS STRING
     RETURN "Hello, ", Name, "!"
 ENDFUNCTION
 
 OUTPUT "Enter your name: "
 INPUT Name
-OUTPUT greet(Name)`;
+OUTPUT Greet(Name)`;
 
     // load saved code from localStorage 
     const initialCode = localStorage.getItem(STORAGE_KEY) || defaultCode;
@@ -208,6 +208,15 @@ OUTPUT greet(Name)`;
             theme: '#editorThemeSelect',
             mode: '#modeSelect'
         }
+    });
+    
+    // examples panel
+    const examples = initExamples({
+        panelEl: UI.examplesOverlay,
+        openBtn: UI.examplesBtn,
+        closeBtn: UI.closeExamples,
+        overlayEl: UI.examplesOverlay,
+        editorApis
     });
     
     // layout controls
