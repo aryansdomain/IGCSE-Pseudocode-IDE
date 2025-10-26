@@ -1,6 +1,7 @@
 export function initFontControls({
     editor,
     sizeInput,
+    sizeValueEl,
     familySelect,
     min = 8,
     max = 48,
@@ -37,9 +38,8 @@ export function initFontControls({
     }
 
     // update html display
-    const fontSizeValue = document.getElementById('fontSizeValue');
-    fontSizeValue.textContent = String(size);
-    familySelect.value = family;
+    if (sizeValueEl) sizeValueEl.textContent = String(size);
+    if (familySelect) familySelect.value = family;
 
     // listeners
     const onSizeChange = (e) => {
@@ -80,8 +80,7 @@ export function initFontControls({
 
         // update slider
         if (sizeInput) sizeInput.value = String(size);
-        const fontSizeValue = document.getElementById('fontSizeValue');
-        if (fontSizeValue) fontSizeValue.textContent = String(size);
+        if (sizeValueEl) sizeValueEl.textContent = String(size);
         
         // track font size change analytics
         if (oldSize !== size) {

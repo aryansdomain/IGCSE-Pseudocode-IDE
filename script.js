@@ -59,6 +59,7 @@ OUTPUT Greet(Name)`;
     const fontCtrl = initFontControls({
         editor,
         sizeInput: UI.fontSizeSlider,
+        sizeValueEl: UI.fontSizeValue,
         familySelect: UI.fontFamilySelect,
         min: 6,
         max: 38,
@@ -241,8 +242,8 @@ OUTPUT Greet(Name)`;
             handle: UI.splitter,
             paneA: UI.editorPane,
             paneB: UI.consolePane,
-            btnA: document.getElementById('editorExpandBtn'),
-            btnB: document.getElementById('expandConsoleBtn'),
+            btnA: UI.editorExpandBtn,
+            btnB: UI.expandConsoleBtn,
             axis: layout,
             minA: 0,
             minB: 0,

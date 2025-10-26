@@ -41,6 +41,7 @@ export function initUI() {
 
         // editor settings
         fontSizeSlider:      byId('fontSizeSlider'),
+        fontSizeValue:       byId('fontSizeValue'),
         fontFamilySelect:    byId('fontFamilySelect'),
         tabSpacesSlider:     byId('tabSpacesSlider'),
         tabSpacesValue:      byId('tabSpacesValue'),
