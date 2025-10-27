@@ -2,9 +2,10 @@
     "name": "igcse-issue-worker",
     "main": "worker.js",
     "compatibility_date": "2025-10-05",
-        "vars": {
+    "vars": {
         "GITHUB_OWNER": "aryansdomain",
         "GITHUB_REPO": "IGCSE-Pseudocode-IDE",
-        "ALLOWED_ORIGINS": "https://aryansdomain.github.io,http://127.0.0.1:5500"
-    }
+        "ALLOWED_ORIGINS": "https://igcse-ide.com,https://aryansdomain.github.io,http://127.0.0.1:5500"
+    },
+    "preview_url": false
 }
