@@ -26,9 +26,9 @@ export function initExamples({
     // ------------------------ Buttons --------------------------
 
     // Variables
-    const variablesBtn = panelEl.querySelector('#variablesExampleBtn');
-    if (variablesBtn && editorApis) {
-        variablesBtn.addEventListener('click', () => {
+    const varsConstsDTsBtn = panelEl.querySelector('#varsConstsDTsExampleBtn');
+    if (varsConstsDTsBtn && editorApis) {
+        varsConstsDTsBtn.addEventListener('click', () => {
             const code = `// Variables, Constants, and Data Types
 
 CONSTANT Pi <- 3.1415
