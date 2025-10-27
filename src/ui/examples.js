@@ -308,9 +308,9 @@ NEXT i
     }
 
     // Procedures & Functions
-    const procsFuncsBtn = panelEl.querySelector('#procsFuncsExampleBtn');
-    if (procsFuncsBtn && editorApis) {
-        procsFuncsBtn.addEventListener('click', () => {
+    const funcsProcsBtn = panelEl.querySelector('#funcsProcsExampleBtn');
+    if (funcsProcsBtn && editorApis) {
+        funcsProcsBtn.addEventListener('click', () => {
             const code = `// Procedures and Functions
 
 // Procedures
