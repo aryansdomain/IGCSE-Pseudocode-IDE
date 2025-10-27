@@ -69,17 +69,15 @@ OUTPUT "Pi = ", Pi
     if (iOBtn && editorApis) {
         iOBtn.addEventListener('click', () => {
             const code = `// Input & Output
+
 DECLARE Name : STRING
 DECLARE Age : INTEGER
 
-// input
 OUTPUT "Enter your name: "
 INPUT Name
-
 OUTPUT "Enter your age: "
 INPUT Age
 
-// Output
 OUTPUT "Hello ", Name, "!"
 OUTPUT "You are ", Age, " years old."
 `;
@@ -150,7 +148,8 @@ DECLARE IsEqual, IsGreater, IsSmaller, InRange, NotEqual : BOOLEAN
 DECLARE Age : INTEGER
 DECLARE Eligible : BOOLEAN
 
-OUTPUT "Enter your age: "
+// Section 1 - Discount check
+OUTPUT "Enter your age (integer): "
 INPUT Age
 Eligible <- (Age < 18) OR (Age >= 65)
 
@@ -161,7 +160,7 @@ IF Eligible
     OUTPUT "You are not eligible for a discount."
 ENDIF
 
-
+// Section 2 - More operations
 OUTPUT ""
 OUTPUT "Enter A (integer): "
 INPUT A
@@ -189,7 +188,7 @@ OUTPUT "A < B? ", A < B
 DECLARE Grade : INTEGER
 DECLARE Result : STRING
 
-OUTPUT "Enter your exam grade (0–100): "
+OUTPUT "Enter your exam grade (0-100): "
 INPUT Grade
 
 IF Grade >= 85
@@ -265,7 +264,7 @@ OUTPUT "The sum of numbers 1 to 5 is ", Total
     const arraysBtn = panelEl.querySelector('#arraysExampleBtn');
     if (arraysBtn && editorApis) {
         arraysBtn.addEventListener('click', () => {
-            const code = `// Arrays (Bubble Sort)
+            const code = `// Arrays
 
 DECLARE Numbers : ARRAY[1:5] OF INTEGER
 DECLARE Temp : INTEGER
