@@ -122,12 +122,27 @@ async function interpret(code) {
         if (!Object.prototype.hasOwnProperty.call(scope, '__case')) {
             Object.defineProperty(scope, '__case', { value: Object.create(null), enumerable: false }); // lower -> canon
         }
+        if (!Object.prototype.hasOwnProperty.call(scope, '__init')) {
+            Object.defineProperty(scope, '__init', { value: Object.create(null), enumerable: false }); // lower -> bool
+        }
     }
     function declareName(scope, name) {
         ensureDeclSet(scope);
         const lower = String(name).toLowerCase();
         scope.__decl.add(lower);
         if (!scope.__case[lower]) scope.__case[lower] = String(name);
+        if (!Object.prototype.hasOwnProperty.call(scope.__init, lower)) scope.__init[lower] = false;
+    }
+    function markInitialized(scope, name) {
+        const s = findDeclScope(scope, name) || scope;
+        ensureDeclSet(s);
+        const lower = String(name).toLowerCase();
+        s.__init[lower] = true;
+    }
+    function isInitialized(scope, name) {
+        const s = findDeclScope(scope, name) || scope;
+        const lower = String(name).toLowerCase();
+        return !!(s.__init && s.__init[lower]);
     }
     function isDeclared(scope, name) {
         const lower = String(name).toLowerCase();
@@ -940,6 +955,9 @@ async function interpret(code) {
                     const declScope = findDeclScope(o, k) || o;
                     const canon = getCanonNameFrom(o, k);
                     warnCaseMismatch(k, canon);
+                    if (!isInitialized(o, k)) {
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                    }
                     return declScope[canon];
                 }
                 return o[k];
@@ -1026,7 +1044,12 @@ async function interpret(code) {
             const j = parts[1] != null ? await evalExpr(parts[1], scope) : undefined;
             return {
                 name: canon,
-                get: () => arrGet(declScope[canon], i, j),
+                get: () => {
+                    if (!isInitialized(scope, name)) {
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                    }
+                    return arrGet(declScope[canon], i, j);
+                },
                 set: (v) => {
                     // check type
                     const tKey = String(canon).toLowerCase();
@@ -1038,6 +1061,7 @@ async function interpret(code) {
                         }
                     }
                     arrSet(declScope[canon], i, j, v);
+                    markInitialized(scope, name);
                 }
             };
         } else {
@@ -1050,6 +1074,9 @@ async function interpret(code) {
                     if (!isDeclared(scope, name)) {
                         throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
                     }
+                    if (!isInitialized(scope, name)) {
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                    }
                     return declScope[canon];
                 },
                 set: (v) => {
@@ -1057,6 +1084,7 @@ async function interpret(code) {
                     if (Object.prototype.hasOwnProperty.call(constants, lower)) throwErr('TypeError: ', 'cannot assign to constant', __LINE_NUMBER)
                     if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
                     declScope[canon] = v;
+                    markInitialized(scope, name);
                 }
             };
         }
@@ -1230,7 +1258,8 @@ async function interpret(code) {
                     const bounds = dims[0].split(':');
                     const l = await evalExpr(bounds[0].trim(), scope);
                     const u = await evalExpr(bounds[1].trim(), scope);
-                    scope[name] = makeArray(l, u, null, null, defaultForType(type));
+                    const canon = getCanonNameFrom(scope, name);
+                    (findDeclScope(scope, name) || scope)[canon] = makeArray(l, u, null, null, defaultForType(type));
                 } else {
                     const bounds1 = dims[0].split(':');
                     const bounds2 = dims[1].split(':');
@@ -1238,7 +1267,8 @@ async function interpret(code) {
                     const u1 = await evalExpr(bounds1[1].trim(), scope);
                     const l2 = await evalExpr(bounds2[0].trim(), scope);
                     const u2 = await evalExpr(bounds2[1].trim(), scope);
-                    scope[name] = makeArray(l1, u1, l2, u2, defaultForType(type));
+                    const canon = getCanonNameFrom(scope, name);
+                    (findDeclScope(scope, name) || scope)[canon] = makeArray(l1, u1, l2, u2, defaultForType(type));
                 }
                 declareName(scope, name);
                 setType(scope, name, `ARRAY OF ${type}`);
@@ -1464,6 +1494,7 @@ async function interpret(code) {
                 let count = 0;
             // Single loop with direction-aware condition
             const canonForVar = getCanonNameFrom(scope, varName);
+            markInitialized(scope, varName);
             for ((findDeclScope(scope, varName) || scope)[canonForVar] = start; 
                     (step > 0) ? (findDeclScope(scope, varName) || scope)[canonForVar] <= end : (findDeclScope(scope, varName) || scope)[canonForVar] >= end; 
                     (findDeclScope(scope, varName) || scope)[canonForVar] += step) {
@@ -1588,10 +1619,7 @@ async function interpret(code) {
                 [ /^DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)\s*:\s*([A-Za-z]+)\s*$/i,
                     (m,scope) => m[1].split(',').map(t=>t.trim()).forEach(n => {
                         assertNotKeyword(n);
-
                         declareName(scope, n);
-                        const canon = getCanonNameFrom(scope, n);
-                        scope[canon] = defaultForType(m[2]);
                         setType(scope, n, m[2]);
                     })
                 ],
@@ -1632,6 +1660,7 @@ async function interpret(code) {
                         const value = parseInput(raw);
                     
                         assignChecked(lv, scope, `INPUT:${raw}`, value, true);
+                        markInitialized(scope, lv.name);
                     }
                 ],                      
                   
