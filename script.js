@@ -34,7 +34,8 @@ ENDFUNCTION
 
 OUTPUT "Enter your name: "
 INPUT Name
-OUTPUT Greet(Name)`;
+OUTPUT Greet(Name)
+`;
 
     // load saved code from localStorage 
     const initialCode = localStorage.getItem(STORAGE_KEY) || defaultCode;
