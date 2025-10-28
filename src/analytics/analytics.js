@@ -96,7 +96,7 @@ function tab_spaces_changed({
 }
 
 window.code_executed        = code_executed;
-window.mode_toggled         = mode_toggled
+window.mode_toggled         = mode_toggled;
 window.theme_changed        = theme_changed;
 window.layout_changed       = layout_changed;
 window.code_copied          = code_copied;
@@ -107,4 +107,4 @@ window.console_downloaded   = console_downloaded;
 window.code_formatted       = code_formatted;
 window.font_size_changed    = font_size_changed;
 window.font_family_changed  = font_family_changed;
-window.tab_spaces_changed   = tab_spaces_changed; 
+window.tab_spaces_changed   = tab_spaces_changed;
