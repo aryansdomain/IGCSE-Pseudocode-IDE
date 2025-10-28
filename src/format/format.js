@@ -409,7 +409,68 @@ function formatOnce(src) {
         normalized.push({ code, comment: hadComment ? comment : '' });
     }
 
-    // -------- Second pass: indentation --------
+    // ------------------------ Canon-ization ------------------------
+
+    // if the variable was declared as AbCd, instances of ABcd, aBcD, etc. get replaced with AbCd
+    const canonMap = Object.create(null);
+    function addCanon(name) {
+        const n = String(name);
+        const lower = n.toLowerCase();
+        if (!canonMap[lower]) canonMap[lower] = n;
+    }
+    function recordCanonFromLine(prot) {
+        const line = prot;
+        let m;
+        // DECLARE
+        if ((m = line.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)\s*:/i))) {
+            m[1].split(',').map(s => s.trim()).forEach(addCanon);
+            return;
+        }
+        // CONSTANT
+        if ((m = line.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\b/i))) {
+            addCanon(m[1]);
+            return;
+        }
+        // PROCEDURE
+        if ((m = line.match(/^\s*PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?/i))) {
+            addCanon(m[1]);
+            const params = (m[2] || '').trim();
+            if (params) params.split(',').forEach(p => {
+                const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
+                if (pm) addCanon(pm[1]);
+            });
+            return;
+        }
+        // FUNCTION
+        if ((m = line.match(/^\s*FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?\s+RETURNS\b/i))) {
+            addCanon(m[1]);
+            const params = (m[2] || '').trim();
+            if (params) params.split(',').forEach(p => {
+                const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
+                if (pm) addCanon(pm[1]);
+            });
+            return;
+        }
+    }
+    function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
+    function applyCanonToLine(prot) {
+        let out = prot;
+        for (const lower in canonMap) {
+            const canon = canonMap[lower];
+            const re = new RegExp(`\\b${escapeRegExp(lower)}\\b`, 'gi');
+            out = out.replace(re, canon);
+        }
+        return out;
+    }
+
+    // collect canon names from lines
+    normalized.forEach(({ code }) => recordCanonFromLine(code));
+    // canonize every line
+    for (let i = 0; i < normalized.length; i++) {
+        normalized[i].code = applyCanonToLine(normalized[i].code);
+    }
+
+    // ------------------------ Indentation ------------------------
     let indent = 0;
     const out = [];
 
