@@ -4,11 +4,13 @@ async function interpret(code) {
     const OUTPUT_LOG = [];
     let __capSummaryEmitted = false;
     const CAPITALIZATION_SEEN = new Set();
+    const CASE_MISMATCH_SEEN  = new Set();
     const constants = Object.create(null);
     const globals   = Object.create(null);
 
     // clear tracking
     CAPITALIZATION_SEEN.clear();
+    CASE_MISMATCH_SEEN.clear();
     __capSummaryEmitted = false;
 
     const PSC_KEYWORDS = new Set([
@@ -112,22 +114,51 @@ async function interpret(code) {
     const procs = Object.create(null);
     const funcs = Object.create(null);
 
-    // track declared identifiers
+    // track declared identifiers (case-insensitive)
     function ensureDeclSet(scope) {
         if (!Object.prototype.hasOwnProperty.call(scope, '__decl')) {
-            Object.defineProperty(scope, '__decl', { value: new Set(), enumerable: false });
+            Object.defineProperty(scope, '__decl', { value: new Set(), enumerable: false }); // stores lower-case names
+        }
+        if (!Object.prototype.hasOwnProperty.call(scope, '__case')) {
+            Object.defineProperty(scope, '__case', { value: Object.create(null), enumerable: false }); // lower -> canon
         }
     }
     function declareName(scope, name) {
         ensureDeclSet(scope);
-        scope.__decl.add(String(name));
+        const lower = String(name).toLowerCase();
+        scope.__decl.add(lower);
+        if (!scope.__case[lower]) scope.__case[lower] = String(name);
     }
     function isDeclared(scope, name) {
-        const N = String(name);
+        const lower = String(name).toLowerCase();
         for (let s = scope; s; s = Object.getPrototypeOf(s)) {
-            if (s.__decl && s.__decl.has(N)) return true;
+            if (s.__decl && s.__decl.has(lower)) return true;
         }
         return false;
+    }
+    function findDeclScope(scope, nameLower) {
+        const L = String(nameLower).toLowerCase();
+        for (let s = scope; s; s = Object.getPrototypeOf(s)) {
+            if (s.__decl && s.__decl.has(L)) return s;
+        }
+        return null;
+    }
+    function getCanonNameFrom(scope, name) {
+        const s = findDeclScope(scope, name);
+        if (s && s.__case && s.__case[String(name).toLowerCase()]) return s.__case[String(name).toLowerCase()];
+        return String(name);
+    }
+    function warnCaseMismatch(used, canon) {
+        try {
+            const usedStr = String(used);
+            const canonStr = String(canon);
+            if (usedStr === canonStr) return;
+            const sig = `${canonStr}|${usedStr}|${__LINE_NUMBER}`;
+            if (CASE_MISMATCH_SEEN.has(sig)) return;
+            CASE_MISMATCH_SEEN.add(sig);
+
+            throwWarning(`Warning: Line ${__LINE_NUMBER}: Identifier "${usedStr}" is different in case from declared variable "${canonStr}".`);
+        } catch {}
     }
 
     // ------------------------ Type Tracking ------------------------
@@ -138,10 +169,10 @@ async function interpret(code) {
     }
     function setType(scope, name, type) {
         ensureTypeMap(scope);
-        scope.__types[String(name)] = String(type || '').toUpperCase();
+        scope.__types[String(name).toLowerCase()] = String(type || '').toUpperCase();
     }
     function getType(scope, name) {
-        const N = String(name);
+        const N = String(name).toLowerCase();
         for (let s = scope; s; s = Object.getPrototypeOf(s)) {
             if (s.__types && s.__types[N]) return s.__types[N];
         }
@@ -906,7 +937,10 @@ async function interpret(code) {
                 if (typeof k !== 'string') return o[k];          // pass symbols through
                 if (IDENT.test(k)) {
                     if (!isDeclared(o, k)) throwErr('NameError: ', 'name ' + String(k) + ' is not defined', __LINE_NUMBER)
-                    return o[k];
+                    const declScope = findDeclScope(o, k) || o;
+                    const canon = getCanonNameFrom(o, k);
+                    warnCaseMismatch(k, canon);
+                    return declScope[canon];
                 }
                 return o[k];
             }
@@ -925,7 +959,11 @@ async function interpret(code) {
                 builtins.INTDIV,
                 builtins.MOD,
                 async (name, ...args) => {
-                    const def = funcs[name];
+                    const nameLC = String(name).toLowerCase();
+                    const def = funcs[nameLC];
+                    if (def && def.__canon && def.__canon !== name) {
+                        warnCaseMismatch(name, def.__canon);
+                    }
                     const ret = await callFunction(name, args, 0);
                     if (def && def.returns) {
                         const want = String(def.returns || '').toUpperCase();
@@ -941,7 +979,10 @@ async function interpret(code) {
                         e.line = __LINE_NUMBER;
                         throw e;
                     }
-                    return arrGet(scope[name], ...idx);
+                    const declScope = findDeclScope(scope, name) || scope;
+                    const canon = getCanonNameFrom(scope, name);
+                    warnCaseMismatch(name, canon);
+                    return arrGet(declScope[canon], ...idx);
                 },
                 NUM,
                 CMP,
@@ -973,6 +1014,9 @@ async function interpret(code) {
             if (!isDeclared(scope, name)) {
                 throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
             }
+            const declScope = findDeclScope(scope, name) || scope;
+            const canon = getCanonNameFrom(scope, name);
+            warnCaseMismatch(name, canon);
             
             const idxRaw = m[3];
 
@@ -981,33 +1025,38 @@ async function interpret(code) {
             const i = await evalExpr(parts[0], scope);
             const j = parts[1] != null ? await evalExpr(parts[1], scope) : undefined;
             return {
-                name: name,
-                get: () => arrGet(scope[name], i, j),
+                name: canon,
+                get: () => arrGet(declScope[canon], i, j),
                 set: (v) => {
                     // check type
-                    if (scope.__types && scope.__types[name]) {
-                        const arrayType = scope.__types[name];
+                    const tKey = String(canon).toLowerCase();
+                    if (declScope.__types && declScope.__types[tKey]) {
+                        const arrayType = declScope.__types[tKey];
                         if (arrayType.startsWith('ARRAY OF ')) {
                             const elementType = arrayType.substring(9); // remove "ARRAY OF "
                             checkAssignCompatible(elementType, '', v, false);
                         }
                     }
-                    arrSet(scope[name], i, j, v);
+                    arrSet(declScope[canon], i, j, v);
                 }
             };
         } else {
+            const declScope = findDeclScope(scope, name) || scope;
+            const canon = getCanonNameFrom(scope, name);
+            warnCaseMismatch(name, canon);
             return {
-                name: name,
+                name: canon,
                 get: () => {
                     if (!isDeclared(scope, name)) {
                         throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
                     }
-                    return scope[name];
+                    return declScope[canon];
                 },
                 set: (v) => {
-                    if (name in constants) throwErr('TypeError: ', 'cannot assign to constant', __LINE_NUMBER)
+                    const lower = String(canon).toLowerCase();
+                    if (Object.prototype.hasOwnProperty.call(constants, lower)) throwErr('TypeError: ', 'cannot assign to constant', __LINE_NUMBER)
                     if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
-                    scope[name] = v;
+                    declScope[canon] = v;
                 }
             };
         }
@@ -1062,7 +1111,6 @@ async function interpret(code) {
     // first pass: extract procedures/functions and store their bodies
     function extractDefs(lines) {
         const main = [];
-        let sawMain = false;
 
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
@@ -1077,7 +1125,7 @@ async function interpret(code) {
                 const name = m[1];
                 const params = (m[2] || '').trim();
                 const { block, next } = collectUntil(lines, i + 1, /^(ENDPROCEDURE)\b/i);
-                procs[name] = { params, body: block };
+                procs[String(name).toLowerCase()] = { __canon: name, params, body: block };
                 i = next; continue;
             }
             if ((m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*RETURNS\s+([A-Za-z]+)\s*$/i)) || (m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*RETURNS\s+([A-Za-z]+)\s*$/i))) {
@@ -1089,7 +1137,7 @@ async function interpret(code) {
                 assertType(returns, i + 1);
                 
                 const { block, next } = collectUntil(lines, i + 1, /^(ENDFUNCTION)\b/i);
-                funcs[name] = { params, returns, body: block };
+                funcs[String(name).toLowerCase()] = { __canon: name, params, returns, body: block };
                 i = next; continue;
             }
 
@@ -1359,7 +1407,7 @@ async function interpret(code) {
                     throwErr('NameError: ', 'name ' + String(varName) + ' is not defined', currentLine)
                 }
 
-                const varType = getType(scope, varName);
+            const varType = getType(scope, varName);
                 if (varType !== 'INTEGER') {
                     throwErr('TypeError: ', 'variable must be an INTEGER', currentLine)
                 }
@@ -1375,12 +1423,14 @@ async function interpret(code) {
                         if (/^FOR\b/i.test(c)) { depth++; continue; }
                         const nm = c.match(/^NEXT\s+([A-Za-z][A-Za-z0-9]*)$/i);
                         if (nm) {
-                            if (depth === 0 && nm[1] !== varName) {
+                            const canonFor  = getCanonNameFrom(scope, varName);
+                            const canonNext = getCanonNameFrom(scope, nm[1]);
+                            if (depth === 0 && canonNext !== canonFor) {
                                 const e = new Error(`Mismatched NEXT: expected NEXT ${varName} but found NEXT ${nm[1]}`);
                                 e.line = (typeof rawT === 'object') ? rawT.line : (t + 1);
                                 throw e;
                             }
-                            if (depth === 0 && nm[1] === varName) break;
+                            if (depth === 0 && canonNext === canonFor) break;
                             if (depth > 0) {
                                 depth--;
                                 continue;
@@ -1413,9 +1463,10 @@ async function interpret(code) {
 
                 let count = 0;
             // Single loop with direction-aware condition
-            for (scope[varName] = start; 
-                    (step > 0) ? scope[varName] <= end : scope[varName] >= end; // step is positive/negative 
-                    scope[varName] += step) {
+            const canonForVar = getCanonNameFrom(scope, varName);
+            for ((findDeclScope(scope, varName) || scope)[canonForVar] = start; 
+                    (step > 0) ? (findDeclScope(scope, varName) || scope)[canonForVar] <= end : (findDeclScope(scope, varName) || scope)[canonForVar] >= end; 
+                    (findDeclScope(scope, varName) || scope)[canonForVar] += step) {
                 
                 if (typeof window !== 'undefined' && window.__ide_stop_flag) throw new Error('Code execution stopped by user');
                 await runBlock(block, scope, undefined, allowReturn);
@@ -1538,8 +1589,9 @@ async function interpret(code) {
                     (m,scope) => m[1].split(',').map(t=>t.trim()).forEach(n => {
                         assertNotKeyword(n);
 
-                        scope[n] = defaultForType(m[2]);
                         declareName(scope, n);
+                        const canon = getCanonNameFrom(scope, n);
+                        scope[canon] = defaultForType(m[2]);
                         setType(scope, n, m[2]);
                     })
                 ],
@@ -1548,13 +1600,16 @@ async function interpret(code) {
                     async (m,scope) => {
                         assertNotKeyword(m[1]);
                         if (!isLiteral(m[2])) throwErr('TypeError: ', 'CONSTANT value must be a literal', __LINE_NUMBER)
-                        const N = m[1];   
+                        const N = m[1];
+                        const lower = String(N).toLowerCase();
 
-                        constants[N] = true;
-                        scope[N] = await evalExpr(m[2],scope);
+                        constants[lower] = true;
 
                         declareName(scope, N);
-                        const val = scope[N];
+                        const canon = getCanonNameFrom(scope, N);
+                        scope[canon] = await evalExpr(m[2],scope);
+
+                        const val = scope[canon];
                         const t = (typeof val === 'number') ? (Number.isInteger(val) ? 'INTEGER' : 'REAL') : (typeof val === 'boolean') ? 'BOOLEAN' : 'STRING';
                         setType(scope, N, t);
                     }
@@ -1629,8 +1684,9 @@ async function interpret(code) {
 
     // calls a PROCEDURE
     async function callProcedure(name, args, line) {
-        const def = procs[name];
+        const def = procs[String(name).toLowerCase()];
         if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
+        if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
         const scope = Object.create(globals);
         ensureDeclSet(scope);
         ensureTypeMap(scope);
@@ -1640,8 +1696,9 @@ async function interpret(code) {
 
     // calls a FUNCTION
     async function callFunction(name, args, line) {
-        const def = funcs[name];
+        const def = funcs[String(name).toLowerCase()];
         if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
+        if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
         const scope = Object.create(globals);
         ensureDeclSet(scope);
         ensureTypeMap(scope);
