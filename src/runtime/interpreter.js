@@ -979,15 +979,23 @@ async function interpret(code) {
                 async (name, ...args) => {
                     const nameLC = String(name).toLowerCase();
                     const def = funcs[nameLC];
-                    if (def && def.__canon && def.__canon !== name) {
-                        warnCaseMismatch(name, def.__canon);
+                    if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', 0 || __LINE_NUMBER)
+                    if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
+                    const scope = Object.create(globals);
+                    ensureDeclSet(scope);
+                    ensureTypeMap(scope);
+                    bindParams(def.params, args, scope);
+                    let ret;
+                    try {
+                        await runBlock(def.body, scope, 1, true);
+                        ret = undefined;
+                    } catch (e) {
+                        if (e && e.__return) ret = e.value;
+                        else throw e;
                     }
-                    const ret = await callFunction(name, args, 0);
-                    if (def && def.returns) {
+                    if (def.returns) {
                         const want = String(def.returns || '').toUpperCase();
-                        if (want) {
-                            checkAssignCompatible(want, '', ret, false);
-                        }
+                        if (want) checkAssignCompatible(want, '', ret, false);
                     }
                     return ret;
                 },
@@ -1279,7 +1287,17 @@ async function interpret(code) {
             if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
                 const name = m[1];
                 const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
-                await callProcedure(name, args, currentLine);
+
+                // call the procedure
+                const def = procs[String(name).toLowerCase()];
+                if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', currentLine || __LINE_NUMBER)
+                if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
+                const scope = Object.create(globals);
+                ensureDeclSet(scope);
+                ensureTypeMap(scope);
+                bindParams(def.params, args, scope);
+                await runBlock(def.body, scope, 1, false);
+                
                 continue;
             }
 
@@ -1723,24 +1741,6 @@ async function interpret(code) {
         await runBlock(def.body, scope, 1, false);
     }
 
-    // calls a FUNCTION
-    async function callFunction(name, args, line) {
-        const def = funcs[String(name).toLowerCase()];
-        if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
-        if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
-        const scope = Object.create(globals);
-        ensureDeclSet(scope);
-        ensureTypeMap(scope);
-        bindParams(def.params, args, scope);
-        try {
-            await runBlock(def.body, scope, 1, true);
-        } catch (e) {
-            if (e && e.__return) return e.value;
-            throw e;
-        }
-        // if the function doesn't return a value, return undefined
-        return undefined;
-    }
 
     // puts parameters in a PROCEDURE or FUNCTION
     function bindParams(paramSpec, argVals, scope) {
@@ -1758,8 +1758,10 @@ async function interpret(code) {
                 setType(scope, P, rawType);
                 checkAssignCompatible(String(rawType).toUpperCase(), '', v, false);
             }
-            scope[P] = v;
             declareName(scope, P);
+            const canon = getCanonNameFrom(scope, P);
+            scope[canon] = v;
+            markInitialized(scope, P);
         }
     }
 
