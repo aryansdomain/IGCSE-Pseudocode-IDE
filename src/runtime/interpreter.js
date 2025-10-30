@@ -666,34 +666,37 @@ async function interpret(code) {
     const CMP = {
         EQ(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b); // bool
-
             if (typeof a !== typeof b) // different types
                 throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER);
-
             return a === b; // otherwise
         },
         NE(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) !== (!!b);
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a !== typeof b)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             return a !== b;
         },
         LT(a, b) {
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a !== typeof b)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a < b;
             throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         GT(a, b) {
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a !== typeof b)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a > b;
             throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         LE(a, b) {
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a !== typeof b)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a <= b;
             throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
         GE(a, b) {
-            if (typeof a !== typeof b) throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+            if (typeof a !== typeof b)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a >= b;
             throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
         },
@@ -1026,8 +1029,7 @@ async function interpret(code) {
 
     async function getLValue(ref, scope) {
 
-        // ref is identifier, or identifier[index], or identifier[i,j]
-
+        // ref is identifier, or identifier[index], or identifier[i,j]\
         const m = ref.match(/^([A-Za-z][A-Za-z0-9]*)(\s*\[(.*)\])?$/);
         if (!m) {
             throwErr('SyntaxError: ', 'invalid identifier ' + String(ref), __LINE_NUMBER)
@@ -1654,6 +1656,7 @@ async function interpret(code) {
                         declareName(scope, N);
                         const canon = getCanonNameFrom(scope, N);
                         scope[canon] = await evalExpr(m[2],scope);
+                        markInitialized(scope, N);
 
                         const val = scope[canon];
                         const t = (typeof val === 'number') ? (Number.isInteger(val) ? 'INTEGER' : 'REAL') : (typeof val === 'boolean') ? 'BOOLEAN' : 'STRING';
@@ -1728,19 +1731,6 @@ async function interpret(code) {
             throwErr('SyntaxError: ', msg, currentLine);
         }
     }
-
-    // calls a PROCEDURE
-    async function callProcedure(name, args, line) {
-        const def = procs[String(name).toLowerCase()];
-        if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', line || __LINE_NUMBER)
-        if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
-        const scope = Object.create(globals);
-        ensureDeclSet(scope);
-        ensureTypeMap(scope);
-        bindParams(def.params, args, scope);
-        await runBlock(def.body, scope, 1, false);
-    }
-
 
     // puts parameters in a PROCEDURE or FUNCTION
     function bindParams(paramSpec, argVals, scope) {
