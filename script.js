@@ -211,7 +211,7 @@
         try { splitter?.destroy?.(); } catch {}
         
         // percentage of space editor takes up
-        let initialRatio = 0.5;
+        let initialRatio = 0.475;
         if (splitter) initialRatio = splitter.getRatio();
 
         splitter = initSplitter({

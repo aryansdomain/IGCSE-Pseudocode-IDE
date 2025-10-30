@@ -232,7 +232,7 @@ export function initSplitter({
     btnB.addEventListener('click', onClickB);
 
     // double-click handle to reset ratio
-    handle.addEventListener('dblclick', () => { ratio = 0.5; applySizes(); });
+    handle.addEventListener('dblclick', () => { ratio = 0.475; applySizes(); });
 
     // respond to window resize
     window.addEventListener('resize', applySizes);
