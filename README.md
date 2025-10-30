@@ -1,10 +1,10 @@
 # IGCSE Pseudocode IDE
 
-The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and addiitonal features that helps students practice their code-writing skills and real-world computer literacy. It can be accessed at https://igcse-ide.com.  
+The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and additional features that helps students practice their code-writing skills and real-world computer literacy. It can be accessed at https://igcse-ide.com.  
 The IDE is open-source, free-to-use, has no ads, and never collects your personal information without your consent.
 
 ## Language
-Following are some guidlines that the interpreter uses, that do not follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
+Following are some guidelines that the interpreter uses, that do not follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
 * Identifiers (Variable/constant/function names)
     * DECLARE does not initialize a variable or a constant, it must be set with a value (`Num <- 5`) before being operated on.
     * Identifiers that differ only in case (AbCd vs aBcD) will be treated as the same, and a warning will be output.
@@ -20,7 +20,7 @@ Following are some guidlines that the interpreter uses, that do not follow from 
     * A string must be in double quotes, otherwise it will be considered a char.
     * A real can be assigned an integer value (`Num <- 3`), but it will always be output in the real format, with numbers on both sides of the decimal point (`3.0`)
 * Operators
-    * , or + can be used for concatenating two operands if eiher is a string or char. Non-string and non-char operands will be converted to strings in the operation.
+    * , or + can be used for concatenating two operands if either is a string or char. Non-string and non-char operands will be converted to strings in the operation.
 
 ## Editor
 [ACE Editor](https://ace.c9.io/) (BSD license) is used in the IDE. It features automatic highlighting and auto-suggesting for keywords, declared identifiers, numbers, and more. It saves code on your device using localStorage, so you never lose it.
@@ -70,4 +70,4 @@ If you ever want to see the official documentation by IGCSE, click the info butt
 
 ## Issue Report
 Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.  
-If there are any issues that are not reportable using the Issue Report feature, email ascoder1248@gmail.com
+If there are any issues that are not reportable using the Issue Report feature, email ascoder1248@gmail.com.
