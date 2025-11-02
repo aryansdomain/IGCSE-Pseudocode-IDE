@@ -11,7 +11,7 @@ function(require, exports, module) {
             // iteration
             'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
 
-            // procedures and functions
+            // functions and procedures
             'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
 
             // input/output

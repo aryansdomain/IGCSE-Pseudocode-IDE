@@ -306,11 +306,20 @@ NEXT i
         });
     }
 
-    // Procedures & Functions
+    // Functions & Procedures
     const funcsProcsBtn = panelEl.querySelector('#funcsProcsExampleBtn');
     if (funcsProcsBtn && editorApis) {
         funcsProcsBtn.addEventListener('click', () => {
-            const code = `// Procedures and Functions
+            const code = `// Functions and Procedures
+
+// Functions
+FUNCTION Square(Number : INTEGER) RETURNS INTEGER
+    RETURN Number * Number
+ENDFUNCTION
+
+FUNCTION RandomPercentage RETURNS REAL
+    RETURN ROUND(RANDOM() * 100, 2)
+ENDFUNCTION
 
 // Procedures
 PROCEDURE Welcome
@@ -322,15 +331,6 @@ PROCEDURE DisplaySum(X : INTEGER, Y : INTEGER)
     Sum <- X + Y
     OUTPUT "The sum of ", X, " and ", Y, " is ", Sum
 ENDPROCEDURE
-
-// Functions
-FUNCTION Square(Number : INTEGER) RETURNS INTEGER
-    RETURN Number * Number
-ENDFUNCTION
-
-FUNCTION RandomPercentage RETURNS REAL
-    RETURN ROUND(RANDOM() * 100, 2)
-ENDFUNCTION
 
 // Main prorgam
 DECLARE A, B : INTEGER
