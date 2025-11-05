@@ -2,15 +2,15 @@ export function formatJSError(err) {
     if (!err) return "None";
     if (typeof err === "string") return err;
   
-    // unwrap error into seperate parts
-    const type = err.type || "error";
-    const msg  = err.message || (err.error && err.error.message) || String(err);
-    const file = err.filename || (err.error && err.error.fileName) || "";
-    const ln   = err.lineno != null ? err.lineno : (err.error && err.error.lineNumber);
-    const col  = err.colno != null ? err.colno : (err.error && err.error.columnNumber);
-    const loc  = file ? `${file}${ln != null ? `:${ln}` : ""}${col != null ? `:${col}` : ""}` : "";
+    // divide error into seperate parts
+    const type  =  err.type      ||  "";
+    const msg   =  err.message   ||  (err.error && err.error.message)       || String(err);
+    const file  =  err.filename  ||  (err.error && err.error.fileName)      || "";
+    const ln    =  err.lineno    ||  (err.error && err.error.lineNumber)    || "";
+    const col   =  err.colno     ||  (err.error && err.error.columnNumber)  || "";
+    const loc   =  file ? `${file}${ln != null ? `:${ln}` : ""}${col != null ? `:${col}` : ""}` : "";
   
-    // trim error length
+    // limit error length
     let stack = err.stack || (err.error && err.error.stack) || "";
     stack = String(stack).replace(/data:[^)\n]+/g, "[data-url]").slice(0, 2000);
   
