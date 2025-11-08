@@ -557,7 +557,7 @@ async function interpret(code) {
             let i = caretIdx - 1;
             while (i >= 0 && s[i] === ' ') i--;
         
-            // protected literal to the left: … \uE000 ... \uE001 ^ …
+            // protected literal to the left
             if (s[i] === END) {
                 let j = i - 1;
                 while (j >= 0 && s[j] !== START) j--;
@@ -588,7 +588,7 @@ async function interpret(code) {
             while (i < s.length && s[i] === ' ') i++;
             const start = i;
         
-            // protected literal to the right: … ^ \uE000 ... \uE001 …
+            // protected literal to the right
             if (s[i] === START) {
                 let j = i + 1;
                 while (j < s.length && s[j] !== END) j++;

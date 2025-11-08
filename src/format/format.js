@@ -65,8 +65,8 @@ function formatOnce(src) {
 
     const getTabSize = () => {
         const h = (__fmtEditor && __fmtEditor.session)
-                       ? __fmtEditor
-                       : (window.editor && window.editor.session ? window.editor : null);
+            ? __fmtEditor
+            : (window.editor && window.editor.session ? window.editor : null);
         return h ? h.session.getTabSize() : 4;
     };
     const tabSize   = getTabSize();
@@ -152,7 +152,6 @@ function formatOnce(src) {
         if (!m) return [prot];
         const header = m[1];
         const tail   = m[2];
-        // Always split; tail will be further broken (OUTPUT/…/ENDPROCEDURE) later
         return [header, tail];
     }
 
