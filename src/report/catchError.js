@@ -2,7 +2,7 @@ export function formatJSError(err) {
     if (!err) return "None";
     if (typeof err === "string") return err;
   
-    // divide error into seperate parts
+    // divide error into separate parts
     const type  =  err.type      ||  ""; 
     const msg   =  err.message   ||  (err.error && err.error.message)       ||  String(err);
     const file  =  err.filename  ||  (err.error && err.error.fileName)      ||  "";

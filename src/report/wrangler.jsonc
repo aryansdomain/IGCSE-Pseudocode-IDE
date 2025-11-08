@@ -2,9 +2,19 @@
     "name": "igcse-issue-worker",
     "main": "worker.js",
     "compatibility_date": "2025-10-05",
+    "r2_buckets": [
+        {
+            "bucket_name": "issue-uploads",
+            "binding": "BUCKET"
+        }
+    ],
     "vars": {
         "GITHUB_OWNER": "aryansdomain",
         "GITHUB_REPO": "IGCSE-Pseudocode-IDE",
-        "ALLOWED_ORIGINS": "https://igcse-ide.com,https://aryansdomain.github.io,http://127.0.0.1:5500"
+        "PUBLIC_BASE_URL": "https://igcse-issue-worker.aryansdomain.workers.dev",
+        "MAX_UPLOAD_BYTES": "2097152", // 2 MB
+        "ALLOWED_ORIGINS": "https://igcse-ide.com,http://127.0.0.1:5500",
+        "ACCOUNT_ID": "6ac518c689dfb45243b4390ee6fcac8b",
+        "BUCKET_NAME": "issue-uploads"
     }
 }

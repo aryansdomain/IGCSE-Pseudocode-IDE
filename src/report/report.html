@@ -24,15 +24,15 @@
 
 <body>
     <div class="report-wrap">
-        <section class="dialog-card" role="dialog" aria-labelledby="title">
-            <header class="dialog-header">
+        <section class="dialog-card" role="dialog" aria-labelledby="br-title">
+            <header class="header">
                 <div class="header-buttons">
                     <button class="btn mode" id="mode" title="Toggle dark/light mode">
                         <i class="fas fa-moon"></i>
                     </button>
                     <button class="btn close" id="closeBtn" title="Close"><i class="fas fa-xmark"></i></button>
                 </div>
-                <div class="error-text" id="errorText"></div>
+                <div class="error-dialog" id="errorDialog"></div>
             </header>
 
             <div class="dialog-content">
@@ -40,15 +40,32 @@
                     <label class="label" for="br-title">Title</label>
                     <input id="br-title" class="input" placeholder="[Issue] " />
                 </div>
-                <div class="field">
+                <div class="field drop-zone">
                     <label class="label" for="br-body">Details</label>
-                    <textarea id="br-body" class="textarea" spellcheck="true"></textarea>
+                    <div class="textarea-wrap">
+                        <textarea id="br-body" class="textarea" spellcheck="true"></textarea>
+                        <div class="drop-overlay" id="dropOverlay">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Drop files to attach</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
-
-            <div class="actions">
-                <button id="openGithub" class="btn secondary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)</button>
-                <button id="submit" class="btn primary">Submit anonymously</button>
+                <input type="file" id="br-files" class="file-input" accept="file/*" multiple style="display:none">
+                <div class="file-preview-container" id="filePreviewContainer"></div>
+                
+                <div class="actions-row">
+                    <div class="attach-row">
+                        <button class="attach-btn" type="button" id="attachBtn">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Paste, drop, or click to add files</span>
+                        </button>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="openGithub" class="btn secondary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)</button>
+                        <button id="submit" class="btn primary">Submit anonymously</button>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
