@@ -4,7 +4,7 @@ The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGC
 The IDE is open-source, free-to-use, has no ads, and never collects your personal information without your consent.
 
 ## Language
-Following are some guidelines that the interpreter uses, that do not follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
+Following are some guidelines that the interpreter uses, that do not directly follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
 * Identifiers (Variable/constant/function names)
     * DECLARE does not initialize a variable or a constant, it must be set with a value (`Num <- 5`) before being operated on.
     * Identifiers that differ only in case (AbCd vs aBcD) will be treated as the same, and a warning will be output.
@@ -18,7 +18,7 @@ Following are some guidelines that the interpreter uses, that do not follow from
 * Data Types
     * A char must be in single quotes, otherwise it will be considered a string.
     * A string must be in double quotes, otherwise it will be considered a char.
-    * A real can be assigned an integer value (`Num <- 3`), but it will always be output in the real format, with numbers on both sides of the decimal point (`3.0`)
+    * A real can be assigned an integer value (`Num <- 5`), but it will always be output in the real format, with numbers on both sides of the decimal point (`5.0`)
 * Operators
     * , or + can be used for concatenating two operands if either is a string or char. Non-string and non-char operands will be converted to strings in the operation.
 
@@ -36,7 +36,7 @@ else output "Hello, ",name,"!"
 endif
 endfunction
 
-declare name    :integer
+declare name    :string
 output "Enter your name: "
 input  name
 output     Greet(name)
