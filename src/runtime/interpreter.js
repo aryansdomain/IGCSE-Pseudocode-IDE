@@ -43,7 +43,7 @@ async function interpret(code) {
             || /^(?:TRUE|FALSE)$/i.test(t);     // BOOLEAN
     }
     function assertBoolean(v, ctx){
-        if (typeof v !== 'boolean') throwErr('TypeError: ', String(ctx) + ' must be a BOOLEAN', __LINE_NUMBER)
+        if (typeof v !== 'boolean') throwErr('TypeError: ', String(ctx) + ' must be a BOOLEAN', LINE_NUMBER)
         return v;
     }
 
@@ -168,11 +168,11 @@ async function interpret(code) {
             const usedStr = String(used);
             const canonStr = String(canon);
             if (usedStr === canonStr) return;
-            const sig = `${canonStr}|${usedStr}|${__LINE_NUMBER}`;
+            const sig = `${canonStr}|${usedStr}|${LINE_NUMBER}`;
             if (CASE_MISMATCH_SEEN.has(sig)) return;
             CASE_MISMATCH_SEEN.add(sig);
 
-            throwWarning(`Warning: Line ${__LINE_NUMBER}: Identifier "${usedStr}" is different in case from declared variable "${canonStr}".`);
+            throwWarning(`Warning: Line ${LINE_NUMBER}: Identifier "${usedStr}" is different in case from declared variable "${canonStr}".`);
         } catch {}
     }
 
@@ -204,15 +204,21 @@ async function interpret(code) {
     function assignChecked(lv, scope, rhsExpr, value, isInput) {
         const destType = getDestTypeForLValue(lv, scope);
         if (!destType) {
-            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', __LINE_NUMBER)
+            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', LINE_NUMBER)
         }
 
-        // accept numeric strings like "0", "3.5", "-2e3"
         if (isInput && typeof value === 'string') {
             const t = destType.toUpperCase();
-                if (t === 'INTEGER' || t === 'REAL') {
-                    const n = Number(value.trim());
+            const trimmed = value.trim();
+            if ((t === 'INTEGER' || t === 'REAL') && /^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+                const n = Number(trimmed);
                 if (!Number.isNaN(n) && Number.isFinite(n)) value = n;
+            } else if (t === 'BOOLEAN') {
+                const up = trimmed.toUpperCase();
+                if (up === 'TRUE') value = true;
+                else if (up === 'FALSE') value = false;
+            } else if (t === 'CHAR' && trimmed.length === 1) {
+                value = trimmed;
             }
         }
 
@@ -244,28 +250,28 @@ async function interpret(code) {
         switch (destType) {
             case 'INTEGER':
                 if (typeof value !== 'number' || !Number.isInteger(value))
-                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to INTEGER', __LINE_NUMBER)
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to INTEGER', LINE_NUMBER)
                 if (hasRhsText && isReal(rhsExpr))
-                    throwErr('', 'Cannot assign REAL value to INTEGER', __LINE_NUMBER)
+                    throwErr('', 'Cannot assign REAL value to INTEGER', LINE_NUMBER)
                 return;
             case 'REAL':
                 if (typeof value !== 'number' || !Number.isFinite(value))
-                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to REAL', __LINE_NUMBER)
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to REAL', LINE_NUMBER)
                 return;
             case 'BOOLEAN':
                 if (typeof value !== 'boolean')
-                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to BOOLEAN', __LINE_NUMBER)
+                    throwErr('', 'Cannot assign ' + getValueType(value, rhsExpr) + ' value to BOOLEAN', LINE_NUMBER)
                 return;
             case 'CHAR':
                 if (!isInput && hasRhsText && isDoubleQuoted(rhsExpr))
-                    throwErr('SyntaxError: ', 'invalid CHAR literal', __LINE_NUMBER)
+                    throwErr('SyntaxError: ', 'invalid CHAR literal', LINE_NUMBER)
                 if (toString(value).length !== 1)
-                    throwErr('ValueError: ', 'CHAR literal must be a single character', __LINE_NUMBER)
+                    throwErr('ValueError: ', 'CHAR literal must be a single character', LINE_NUMBER)
                 return;
             case 'STRING':
                 // no check here, anything can be string
                 if (!isInput && hasRhsText && isSingleQuoted(rhsExpr))
-                    throwErr('SyntaxError: ', 'STRING literal must use double quotes', __LINE_NUMBER)
+                    throwErr('SyntaxError: ', 'STRING literal must use double quotes', LINE_NUMBER)
                 return;
         }
     }
@@ -294,7 +300,8 @@ async function interpret(code) {
     ensureTypeMap(globals);
 
     const LOOP_LIMIT = 1000000;
-    let __LINE_NUMBER = 0;
+    const ARRAY_SIZE_LIMIT = 1000000;
+    let LINE_NUMBER = 0;
 
     // output buffer
     function out(values) {
@@ -324,22 +331,11 @@ async function interpret(code) {
 
     // parse input value
     function parseInput(raw) {
-        // remove ANSI escapes and stray CRs, then trim
         const cleaned = String(raw)
-        .replace(/\x1B\[[0-9;]*[A-Za-z]/g, '')  // ANSI SGR etc.
-        .replace(/\r/g, '')
-        .trim();
+            .replace(/\x1B\[[0-9;]*[A-Za-z]/g, '')
+            .replace(/\r/g, '')
+            .trim();
 
-        // numeric? -> number
-        if (/^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(cleaned)) {
-            return Number(cleaned);
-        }
-        // booleans
-        const up = cleaned.toUpperCase();
-        if (up === 'TRUE')  return true;
-        if (up === 'FALSE') return false;
-
-        // otherwise keep as string (for CHAR / STRING)
         return cleaned;
     }
 
@@ -356,29 +352,29 @@ async function interpret(code) {
     function makeArray(l1, u1, l2, u2, fill) {
         if (l2 == null) {
             if (!Number.isInteger(l1) || !Number.isInteger(u1)) {
-                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', __LINE_NUMBER)
+                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', LINE_NUMBER)
             }
             if (u1 < l1) {
-                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', __LINE_NUMBER)
+                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', LINE_NUMBER)
             }
             const len = u1 - l1 + 1;
-            if (len < 0 || len > 1000000) {
-                throwErr('ValueError: ', `Invalid ARRAY length (${len}). Array length must be between 0 and 1,000,000`, __LINE_NUMBER)
+            if (len < 0 || len > ARRAY_SIZE_LIMIT) {
+                throwErr('ValueError: ', `Invalid ARRAY length (${len}). Array length must be between 0 and ${ARRAY_SIZE_LIMIT.toLocaleString()}`, LINE_NUMBER)
             }
             const arr = new Array(len).fill(fill);
             arr.__lb = l1; // store lower bound
             return arr;
         } else {
             if (!Number.isInteger(l1) || !Number.isInteger(u1) || !Number.isInteger(l2) || !Number.isInteger(u2)) {
-                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', __LINE_NUMBER)
+                throwErr('TypeError: ', 'ARRAY bounds must be INTEGERs', LINE_NUMBER)
             }
             if (u1 < l1 || u2 < l2) {
-                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', __LINE_NUMBER)
+                throwErr('ValueError: ', 'Invalid ARRAY bounds (upper bound must be >= lower bound)', LINE_NUMBER)
             }
             const rows = u1 - l1 + 1;
             const cols = u2 - l2 + 1;
-            if (rows < 0 || cols < 0 || rows * cols > 1000000) {
-                throwErr('ValueError: ', 'Invalid ARRAY dimensions. Total size must not exceed 1,000,000', __LINE_NUMBER)
+            if (rows < 0 || cols < 0 || rows * cols > ARRAY_SIZE_LIMIT) {
+                throwErr('ValueError: ', `Invalid ARRAY dimensions. Total size must not exceed ${ARRAY_SIZE_LIMIT.toLocaleString()}`, LINE_NUMBER)
             }
             const arr = new Array(rows);
             for (let r = 0; r < rows; r++) {
@@ -396,7 +392,7 @@ async function interpret(code) {
                 const lowerBound = A.__lb;
                 const upperBound = lowerBound + A.length - 1;
                 if (i < lowerBound || i > upperBound) {
-                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, LINE_NUMBER)
                 }
                 return A[i - A.__lb];
             }
@@ -406,23 +402,23 @@ async function interpret(code) {
                 const lowerBound2 = A.__lb2;
                 const upperBound2 = lowerBound2 + A[0].length - 1;
                 if (i < lowerBound1 || i > upperBound1) {
-                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, LINE_NUMBER)
                 }
                 if (j < lowerBound2 || j > upperBound2) {
-                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, LINE_NUMBER)
                 }
                 return A[i - A.__lb1][j - A.__lb2];
             }
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
-                throwErr('TypeError: ', 'ARRAY indices must be INTEGERs, not tuple', __LINE_NUMBER)
+                throwErr('TypeError: ', 'ARRAY indices must be INTEGERs, not tuple', LINE_NUMBER)
             }
             if (A.__lb1 != null && A.__lb2 != null && j == null) {
-                throwErr('TypeError: ', 'too few indices for ARRAY', __LINE_NUMBER)
+                throwErr('TypeError: ', 'too few indices for ARRAY', LINE_NUMBER)
             }
         }
-        throwErr('TypeError: ', 'object is not subscriptable', __LINE_NUMBER)
+        throwErr('TypeError: ', 'object is not subscriptable', LINE_NUMBER)
     }
 
     // set array element
@@ -432,7 +428,7 @@ async function interpret(code) {
                 const lowerBound = A.__lb;
                 const upperBound = lowerBound + A.length - 1;
                 if (i < lowerBound || i > upperBound) {
-                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound} to ${upperBound})`, LINE_NUMBER)
                 }
                 A[i - A.__lb] = v; return;
             }
@@ -442,40 +438,40 @@ async function interpret(code) {
                 const lowerBound2 = A.__lb2;
                 const upperBound2 = lowerBound2 + A[0].length - 1;
                 if (i < lowerBound1 || i > upperBound1) {
-                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${i} out of bounds (${lowerBound1} to ${upperBound1})`, LINE_NUMBER)
                 }
                 if (j < lowerBound2 || j > upperBound2) {
-                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, __LINE_NUMBER)
+                    throwErr('IndexError: ', `ARRAY index ${j} out of bounds (${lowerBound2} to ${upperBound2})`, LINE_NUMBER)
                 }
                 A[i - A.__lb1][j - A.__lb2] = v; return;
             }
             
             // array exists but wrong dimensions
             if (A.__lb != null && j != null) {
-                throwErr('TypeError: ', 'ARRAY assignment index must be INTEGER, not tuple', __LINE_NUMBER)
+                throwErr('TypeError: ', 'ARRAY assignment index must be INTEGER, not tuple', LINE_NUMBER)
             }
             if (A.__lb1 != null && A.__lb2 != null && j == null) {
-                throwErr('TypeError: ', 'too few indices for ARRAY assignment', __LINE_NUMBER)
+                throwErr('TypeError: ', 'too few indices for ARRAY assignment', LINE_NUMBER)
             }
         }
-        throwErr('TypeError: ', 'object does not support item assignment', __LINE_NUMBER)
+        throwErr('TypeError: ', 'object does not support item assignment', LINE_NUMBER)
     }
 
     // builtin functions
     function assertNumber(n, name) {
         if (typeof n !== 'number' || !Number.isFinite(n)) {
-            throwErr('TypeError: ', String(name) + ' must be a number', __LINE_NUMBER)
+            throwErr('TypeError: ', String(name) + ' must be a number', LINE_NUMBER)
         }
     }
     function assertInteger(n, name) {
         assertNumber(n, name);
         if (!Number.isInteger(n)) {
-            throwErr('TypeError: ', String(name) + ' must be an INTEGER', __LINE_NUMBER)
+            throwErr('TypeError: ', String(name) + ' must be an INTEGER', LINE_NUMBER)
         }
     }
     function assertString(n, name) {
         if (typeof n !== 'string') {
-            throwErr('TypeError: ', String(name) + ' must be a STRING', __LINE_NUMBER)
+            throwErr('TypeError: ', String(name) + ' must be a STRING', LINE_NUMBER)
         }
         return n;
     }
@@ -509,8 +505,8 @@ async function interpret(code) {
             const str = toString(s);
             assertInteger(start, 'SUBSTRING start');
             assertInteger(len, 'SUBSTRING length');
-            if (start <= 0) throwErr('ValueError: ', 'SUBSTRING start must be positive', __LINE_NUMBER)
-            if (len <= 0)   throwErr('ValueError: ', 'SUBSTRING length must be positive', __LINE_NUMBER)
+            if (start <= 0) throwErr('ValueError: ', 'SUBSTRING start must be positive', LINE_NUMBER)
+            if (len <= 0)   throwErr('ValueError: ', 'SUBSTRING length must be positive', LINE_NUMBER)
             const st = start;
             const ln = len;
 
@@ -520,14 +516,14 @@ async function interpret(code) {
         INTDIV: (a, b) => {
             assertInteger(a, 'DIV first argument');
             assertInteger(b, 'DIV second argument');
-            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', LINE_NUMBER)
             return (a / b) >= 0 ? Math.floor(a / b) : Math.ceil(a / b);
         },
         
         MOD: (a, b) => {
             assertInteger(a, 'MOD first argument');
             assertInteger(b, 'MOD second argument');
-            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', LINE_NUMBER)
             const m = a % b;
             return m < 0 ? m + Math.abs(b) : m;
         },
@@ -627,7 +623,7 @@ async function interpret(code) {
             const R = grabRight(s, idx);
         
             if (!isNumericExpr(L.text) || !isNumericExpr(R.text)) {
-                throw new Error('Power operator ^ requires numeric operands', __LINE_NUMBER);
+                throw new Error('Power operator ^ requires numeric operands', LINE_NUMBER);
             }
         
             const before = s.slice(0, L.start);
@@ -640,7 +636,7 @@ async function interpret(code) {
 
     // numeric operations
     function num(x, ctx) {
-        if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('TypeError: ', String(ctx) + ' requires a finite number', __LINE_NUMBER)
+        if (typeof x !== 'number' || !Number.isFinite(x)) throwErr('TypeError: ', String(ctx) + ' requires a finite number', LINE_NUMBER)
         return x;
     }
     const NUM = {
@@ -657,7 +653,7 @@ async function interpret(code) {
         DIV: (a,b) => {
             a = num(a,'/ operation');
             b = num(b,'/ operation');
-            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', __LINE_NUMBER)
+            if (b === 0) throwErr('ZeroDivisionError: ', 'division by zero', LINE_NUMBER)
             return a/b;
         }
     };
@@ -667,38 +663,38 @@ async function interpret(code) {
         EQ(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) === (!!b); // bool
             if (typeof a !== typeof b) // different types
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER);
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER);
             return a === b; // otherwise
         },
         NE(a, b) {
             if (typeof a === 'boolean' || typeof b === 'boolean') return (!!a) !== (!!b);
             if (typeof a !== typeof b)
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER)
             return a !== b;
         },
         LT(a, b) {
             if (typeof a !== typeof b)
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a < b;
-            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', LINE_NUMBER)
         },
         GT(a, b) {
             if (typeof a !== typeof b)
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a > b;
-            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', LINE_NUMBER)
         },
         LE(a, b) {
             if (typeof a !== typeof b)
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a <= b;
-            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', LINE_NUMBER)
         },
         GE(a, b) {
             if (typeof a !== typeof b)
-                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, __LINE_NUMBER)
+                throwErr('TypeError: ', `cannot compare ${typeName(a)} with ${typeName(b)}`, LINE_NUMBER)
             if (typeof a === 'number' || typeof a === 'string') return a >= b;
-            throwErr('TypeError: ', 'relational comparison requires numbers or strings', __LINE_NUMBER)
+            throwErr('TypeError: ', 'relational comparison requires numbers or strings', LINE_NUMBER)
         },
     };
 
@@ -753,7 +749,7 @@ async function interpret(code) {
         s = replaceCommasWithConcat(s);
 
         if (/\bDIV\b(?!\s*\()/i.test(s) || /\bMOD\b(?!\s*\()/i.test(s)) {
-            throwErr('SyntaxError: ', 'invalid syntax', __LINE_NUMBER);
+            throwErr('SyntaxError: ', 'invalid syntax', LINE_NUMBER);
         }
 
         // bools
@@ -954,12 +950,12 @@ async function interpret(code) {
             get: (o, k) => {
                 if (typeof k !== 'string') return o[k];          // pass symbols through
                 if (IDENT.test(k)) {
-                    if (!isDeclared(o, k)) throwErr('NameError: ', 'name ' + String(k) + ' is not defined', __LINE_NUMBER)
+                    if (!isDeclared(o, k)) throwErr('NameError: ', 'name ' + String(k) + ' is not defined', LINE_NUMBER)
                     const declScope = findDeclScope(o, k) || o;
                     const canon = getCanonNameFrom(o, k);
                     warnCaseMismatch(k, canon);
                     if (!isInitialized(o, k)) {
-                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', LINE_NUMBER)
                     }
                     return declScope[canon];
                 }
@@ -982,7 +978,7 @@ async function interpret(code) {
                 async (name, ...args) => {
                     const nameLC = String(name).toLowerCase();
                     const def = funcs[nameLC];
-                    if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', 0 || __LINE_NUMBER)
+                    if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', 0 || LINE_NUMBER)
                     if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
                     const scope = Object.create(globals);
                     ensureDeclSet(scope);
@@ -1005,7 +1001,7 @@ async function interpret(code) {
                 (name, ...idx) => {
                     if (!isDeclared(scope, name)) {
                         const e = new Error('Undeclared array ' + name);
-                        e.line = __LINE_NUMBER;
+                        e.line = LINE_NUMBER;
                         throw e;
                     }
                     const declScope = findDeclScope(scope, name) || scope;
@@ -1021,7 +1017,7 @@ async function interpret(code) {
             const msg = String(e && e.message || e);
             const m   = msg.match(/(^|')([A-Za-z][A-Za-z0-9]*) is not defined/);
             if (m) {
-                throwErr('NameError: ', 'name ' + String(m[2]) + ' is not defined', __LINE_NUMBER)
+                throwErr('NameError: ', 'name ' + String(m[2]) + ' is not defined', LINE_NUMBER)
             }
             throw e;
         }
@@ -1032,7 +1028,7 @@ async function interpret(code) {
         // ref is identifier, or identifier[index], or identifier[i,j]\
         const m = ref.match(/^([A-Za-z][A-Za-z0-9]*)(\s*\[(.*)\])?$/);
         if (!m) {
-            throwErr('SyntaxError: ', 'invalid identifier ' + String(ref), __LINE_NUMBER)
+            throwErr('SyntaxError: ', 'invalid identifier ' + String(ref), LINE_NUMBER)
         }
         const name = m[1]
 
@@ -1040,7 +1036,7 @@ async function interpret(code) {
 
             // check if array is declared
             if (!isDeclared(scope, name)) {
-                throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
+                throwErr('NameError: ', 'name ' + String(name) + ' is not defined', LINE_NUMBER)
             }
             const declScope = findDeclScope(scope, name) || scope;
             const canon = getCanonNameFrom(scope, name);
@@ -1056,7 +1052,7 @@ async function interpret(code) {
                 name: canon,
                 get: () => {
                     if (!isInitialized(scope, name)) {
-                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', LINE_NUMBER)
                     }
                     return arrGet(declScope[canon], i, j);
                 },
@@ -1082,17 +1078,17 @@ async function interpret(code) {
                 name: canon,
                 get: () => {
                     if (!isDeclared(scope, name)) {
-                        throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
+                        throwErr('NameError: ', 'name ' + String(name) + ' is not defined', LINE_NUMBER)
                     }
                     if (!isInitialized(scope, name)) {
-                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', __LINE_NUMBER)
+                        throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', LINE_NUMBER)
                     }
                     return declScope[canon];
                 },
                 set: (v) => {
                     const lower = String(canon).toLowerCase();
-                    if (Object.prototype.hasOwnProperty.call(constants, lower)) throwErr('TypeError: ', 'cannot assign to constant', __LINE_NUMBER)
-                    if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', __LINE_NUMBER)
+                    if (Object.prototype.hasOwnProperty.call(constants, lower)) throwErr('TypeError: ', 'cannot assign to constant', LINE_NUMBER)
+                    if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', LINE_NUMBER)
                     declScope[canon] = v;
                     markInitialized(scope, name);
                 }
@@ -1248,7 +1244,7 @@ async function interpret(code) {
             
             const raw = blockLines[i];
             const currentLine = typeof raw === 'object' ? raw.line : (startLineNumber + i);
-            __LINE_NUMBER = currentLine;
+            LINE_NUMBER = currentLine;
             const content = typeof raw === 'object' ? raw.content : raw;
             const s = cleanLine(content);
             if (!s) continue;
@@ -1292,13 +1288,13 @@ async function interpret(code) {
 
                 // call the procedure
                 const def = procs[String(name).toLowerCase()];
-                if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', currentLine || __LINE_NUMBER)
+                if (!def) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', currentLine || LINE_NUMBER)
                 if (def.__canon && def.__canon !== name) warnCaseMismatch(name, def.__canon);
-                const scope = Object.create(globals);
-                ensureDeclSet(scope);
-                ensureTypeMap(scope);
-                bindParams(def.params, args, scope);
-                await runBlock(def.body, scope, 1, false);
+                const procScope = Object.create(globals);
+                ensureDeclSet(procScope);
+                ensureTypeMap(procScope);
+                bindParams(def.params, args, procScope);
+                await runBlock(def.body, procScope, 1, false);
                 
                 continue;
             }
@@ -1447,7 +1443,7 @@ async function interpret(code) {
         
             // FOR i <- a TOTEP s] ... NEXT i
             if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
-                const forStartLine = __LINE_NUMBER; // capture the exact line where FOR appeared
+                const forStartLine = LINE_NUMBER; // capture the exact line where FOR appeared
                 const varName   = m[1];
                 const startExpr = m[2];
                 const toExpr    = m[3];
@@ -1647,7 +1643,7 @@ async function interpret(code) {
                 [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)$/i,
                     async (m,scope) => {
                         assertNotKeyword(m[1]);
-                        if (!isLiteral(m[2])) throwErr('TypeError: ', 'CONSTANT value must be a literal', __LINE_NUMBER)
+                        if (!isLiteral(m[2])) throwErr('TypeError: ', 'CONSTANT value must be a literal', LINE_NUMBER)
                         const N = m[1];
                         const lower = String(N).toLowerCase();
 
@@ -1668,7 +1664,7 @@ async function interpret(code) {
                     async (m, scope) => {
                         const lv = await getLValue(m[1].trim(), scope);
                         if (!isDeclared(scope, lv.name)) {
-                            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', __LINE_NUMBER)
+                            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', LINE_NUMBER)
                         }
                     
                         // Flush any pending OUTPUT so prompts appear before the caret
@@ -1695,7 +1691,7 @@ async function interpret(code) {
                 ],
 
                 // assignment
-                [ /^(.+?)\s*(?:\u2190|<-|<--)\s*(.+)$/, // <- or <-- or ← accepted
+                [ /^(.+?)\s*(?:\u2190|<--|<-)\s*(.+)$/, // ← or <-- or <- accepted
                     async (m,scope)=>{ 
                         const lv=await getLValue(m[1].trim(),scope); 
                         const rhsExpr = m[2];
@@ -1736,7 +1732,7 @@ async function interpret(code) {
     function bindParams(paramSpec, argVals, scope) {
         const params = (paramSpec || '').trim() ? paramSpec.split(',').map(p => p.trim()).filter(Boolean) : [];
         if (argVals.length !== params.length) {
-            throwErr('TypeError: ', `expected ${params.length} arguments, got ${argVals.length}`, __LINE_NUMBER)
+            throwErr('TypeError: ', `expected ${params.length} arguments, got ${argVals.length}`, LINE_NUMBER)
         }
         for (let i = 0; i < params.length; i++) {
             const part = params[i];
@@ -1767,7 +1763,7 @@ async function interpret(code) {
     } catch (err) {
 
         // add line number to error
-        const line = (err && err.line) ? err.line : (__LINE_NUMBER || 'unknown');
+        const line = (err && err.line) ? err.line : (LINE_NUMBER || 'unknown');
         const msg  = (err && err.message) ? err.message : String(err);
         throwErr('', `Line ${line}: ${msg}`, line)
     }
