@@ -1,3 +1,5 @@
+import { format } from '../format/format.js';
+
 export function initRunCtrl({
     cursor,
     consoleOutput,
@@ -188,7 +190,8 @@ export function initRunCtrl({
         // set analytics vars
         code_executed_method = method
         startTime = performance.now(); code_executed_runtime = 0;
-        code_executed_size = (typeof getCode === 'function' ? (getCode() || '').length : 0);
+        const rawCode = typeof getCode === 'function' ? String(getCode() || '') : '';
+        code_executed_size = rawCode.length;
         code_executed_success = false;
 
         const localRunId = ++runId;
@@ -201,7 +204,7 @@ export function initRunCtrl({
         worker = new Worker(workerPath);
         attachWorkerHandlers(localRunId);
 
-        worker.postMessage({ type: 'run', code: getCode() });
+        worker.postMessage({ type: 'run', code: format(rawCode) }); // format before running
         
         // change run button to "Stop" after a delay
         setTimeout(() => {
