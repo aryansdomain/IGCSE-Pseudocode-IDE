@@ -75,7 +75,7 @@ function(require, exports, module) {
                     { token: 'keyword.control', regex: "\\b(?:FUNCTION|PROCEDURE)\\b", caseInsensitive: true, next: "function_name" },
 
                     // identifiers and keywords
-                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9]*\b/ },
+                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },
 
                     // punctuation
                     { token: 'punctuation.operator', regex: /[,:]/ },
@@ -91,7 +91,7 @@ function(require, exports, module) {
 
                 // function/procedure name state
                 function_name: [
-                    { token: 'entity.name.function', regex: /\b[A-Za-z][A-Za-z0-9]*\b/, next: 'start' },
+                    { token: 'entity.name.function', regex: /\b[A-Za-z][A-Za-z0-9_]*\b/, next: 'start' },
                     { defaultToken: 'entity.name.function' }
                 ]
 

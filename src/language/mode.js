@@ -1,10 +1,10 @@
-ace.define('ace/mode/lang', ['require',
-                             'exports',
-                             'module',
-                             'ace/lib/oop',
-                             'ace/mode/text',
-                             'ace/mode/rules',
-                             'ace/mode/behaviour'],
+ace.define('ace/mode/pseudocode', ['require',
+                                   'exports',
+                                   'module',
+                                   'ace/lib/oop',
+                                   'ace/mode/text',
+                                   'ace/mode/rules',
+                                   'ace/mode/behaviour'],
                              
 function(require, exports, module) {
     const oop = require('ace/lib/oop');
@@ -15,7 +15,7 @@ function(require, exports, module) {
         constructor() {
             super();
             this.HighlightRules = LangHighlightRules;
-            this.$id = 'ace/mode/lang';
+            this.$id = 'ace/mode/pseudocode';
         }
     }
 
@@ -66,12 +66,12 @@ function(require, exports, module) {
             const constNames = new Set();
 
             // extract varable names from DECLARE statements
-            const declareMatches = code.match(/DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)/gi);
+            const declareMatches = code.match(/DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)/gi);
             if (declareMatches) {
                 declareMatches.forEach(match => {
                     const variables = match.replace(/DECLARE\s+/i, '').split(',').map(v => v.trim());
                     variables.forEach(v => {
-                        if (v.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                        if (v.match(/^[A-Za-z][A-Za-z0-9_]*$/)) {
                             varNames.add(v);
                         }
                     });
@@ -79,33 +79,33 @@ function(require, exports, module) {
             }
             
             // extract constant names from CONSTANT statements
-            const constantMatches = code.match(/CONSTANT\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            const constantMatches = code.match(/CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (constantMatches) {
                 constantMatches.forEach(match => {
                     const constant = match.replace(/CONSTANT\s+/i, '').trim();
-                    if (constant.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                    if (constant.match(/^[A-Za-z][A-Za-z0-9_]*$/)) {
                         constNames.add(constant);
                     }
                 });
             }
             
             // extract procedure names from PROCEDURE statements
-            const procMatches = code.match(/PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            const procMatches = code.match(/PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (procMatches) {
                 procMatches.forEach(match => {
                     const procName = match.replace(/PROCEDURE\s+/i, '').trim();
-                    if (procName.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                    if (procName.match(/^[A-Za-z][A-Za-z0-9_]*$/)) {
                         procNames.add(procName);
                     }
                 });
             }
             
             // extract function names from FUNCTION statements
-            const funcMatches = code.match(/FUNCTION\s+([A-Za-z][A-Za-z0-9]*)/gi);
+            const funcMatches = code.match(/FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (funcMatches) {
                 funcMatches.forEach(match => {
                     const funcName = match.replace(/FUNCTION\s+/i, '').trim();
-                    if (funcName.match(/^[A-Za-z][A-Za-z0-9]*$/)) {
+                    if (funcName.match(/^[A-Za-z][A-Za-z0-9_]*$/)) {
                         funcNames.add(funcName);
                     }
                 });
