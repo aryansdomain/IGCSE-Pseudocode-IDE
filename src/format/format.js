@@ -90,7 +90,7 @@ function formatOnce(src) {
             /\b(ENDFUNCTION)\b/i,
             /\b(ENDPROCEDURE)\b/i,
             /\b(ENDCASE)\b/i,
-            /\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9]*)?)\b/i, // NEXT or NEXT i
+            /\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9_]*)?)\b/i, // NEXT or NEXT i
             /\b(UNTIL\b\s*[^]+)$/i                      // UNTIL cond...
         ];
         for (const re of PATTERNS) {
@@ -104,7 +104,7 @@ function formatOnce(src) {
                 let tokenOut = token.toUpperCase();
                 
                 // Preserve loop variable after NEXT
-                const mNext = token.match(/^next(\s+)([A-Za-z][A-Za-z0-9]*)$/i);
+                const mNext = token.match(/^next(\s+)([A-Za-z][A-Za-z0-9_]*)$/i);
                 if (mNext) tokenOut = 'NEXT' + mNext[1] + mNext[2];
                 
                 // Preserve the condition after UNTIL
@@ -137,7 +137,7 @@ function formatOnce(src) {
 
     // split a one-line FOR header + body
     function splitForHeaderLineProtected(prot) {
-        const m = prot.match(/^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9]*\s*(?:←|<-)\s*[^]*?\bTO\b\s*[^]*?(?:\s+STEP\s*[^]*?)?)\s+(.+)\s*$/i);
+        const m = prot.match(/^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9_]*\s*(?:←|<-)\s*[^]*?\bTO\b\s*[^]*?(?:\s+STEP\s*[^]*?)?)\s+(.+)\s*$/i);
         if (!m) return [prot];
         const header = m[1];
         const tail   = m[2];
@@ -235,7 +235,18 @@ function formatOnce(src) {
             }
         }
 
-        // --- 3) Ensure "ELSE ..." becomes its own line ---
+        // --- 3) Ensure "THEN ..." becomes its own line ---
+        {
+            const m = code.match(/^\s*THEN\b\s*(.*)$/i);
+            if (m) {
+                const restProt = m[1].trim();
+                normalized.push({ code: 'THEN', comment: '' });
+                if (restProt) normalized.push({ code: restProt, comment: '' });
+                continue;
+            }
+        }
+
+        // --- 4) Ensure "ELSE ..." becomes its own line ---
         {
             const m = code.match(/^\s*ELSE\b\s*(.*)$/i);
             if (m) {
@@ -246,7 +257,7 @@ function formatOnce(src) {
             }
         }
 
-        // --- 4) Split inline ELSE/ENDIF/NEXT/END*/UNTIL that appear after a statement ---
+        // --- 5) Split inline ELSE/ENDIF/NEXT/END*/UNTIL that appear after a statement ---
         // (We’re still on PROTECTED text, so strings are safe.)
         if (/\bELSE\b/i.test(code) && !/^\s*ELSE\b/i.test(code)) {
             const m = code.match(/^(.*?)(?:\s*)\bELSE\b\s*(.*)$/i);
@@ -288,7 +299,7 @@ function formatOnce(src) {
             }
         }
 
-        // --- 5) Split one-line FOR/WHILE headers from bodies ---
+        // --- 6) Split one-line FOR/WHILE headers from bodies ---
         {
             const parts = splitForHeaderLineProtected(code);
             if (parts.length > 1) {
@@ -342,17 +353,17 @@ function formatOnce(src) {
         }
 
         // protect assignment arrows
-        code = code.replace(/\s*(?:←|<-|<--)\s*/g, '\uE100');
+        code = code.replace(/\s*(?:←|<--|<-)\s*/g, '\uE100');
 
         // normalize spacing between operators and other tokens
         code = code
             .replace(/\s*,\s*/g, ', ') // |1  ,3|becomes |1, 3|
             .replace(/\s*:\s*/g, ' : ') // |1  :3|becomes |1: 3|
 
-            //             +  *  /  ^ (not - )
+            //  +  *  /  ^ (not - )
             .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ') // |1  +3| becomes |1 + 3|
             //                  -
-            .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // |1  -3| becomes |1 - 3
+            .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // |1  -3| becomes |1 - 3|
             
             .trim();
 
@@ -420,13 +431,14 @@ function formatOnce(src) {
     function recordCanonFromLine(prot) {
         const line = prot;
         let m;
+        
         // DECLARE
-        if ((m = line.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)\s*:/i))) {
+        if ((m = line.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)\s*:/i))) {
             m[1].split(',').map(s => s.trim()).forEach(addCanon);
             return;
         }
         // CONSTANT
-        if ((m = line.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\b/i))) {
+        if ((m = line.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)\b/i))) {
             addCanon(m[1]);
             return;
         }
