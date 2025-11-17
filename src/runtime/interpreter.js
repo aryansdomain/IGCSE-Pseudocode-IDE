@@ -2,16 +2,14 @@ async function interpret(code) {
 
     // ------------------------ Helpers & Runtime ------------------------
     const OUTPUT_LOG = [];
-    let __capSummaryEmitted = false;
-    const CAPITALIZATION_SEEN = new Set();
-    const CASE_MISMATCH_SEEN  = new Set();
+    const CASE_MISMATCH_SEEN = new Set();
+    const NAME_KEYWORD_SEEN  = new Set();
+
     const constants = Object.create(null);
     const globals   = Object.create(null);
 
     // clear tracking
-    CAPITALIZATION_SEEN.clear();
     CASE_MISMATCH_SEEN.clear();
-    __capSummaryEmitted = false;
 
     const PSC_KEYWORDS = new Set([
         'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
@@ -23,14 +21,11 @@ async function interpret(code) {
         'ROUND','RANDOM','LENGTH','LCASE','UCASE','SUBSTRING','DIV','MOD'
     ]);
 
-    const NAME_KEYWORD_SEEN = new Set();
     function assertNotKeyword(id) {
         const keyword = String(id).toUpperCase();
-        if (PSC_KEYWORDS.has(keyword)) {
-            if (!NAME_KEYWORD_SEEN.has(keyword)) {
-                throwWarning(`Warning: "${id}" is a keyword. Do not use keywords as identifiers.`);
-                NAME_KEYWORD_SEEN.add(keyword);
-            }
+        if (PSC_KEYWORDS.has(keyword) && !NAME_KEYWORD_SEEN.has(keyword)) {
+            throwWarning(`Warning: "${id}" is a keyword. Do not use keywords as identifiers.`);
+            NAME_KEYWORD_SEEN.add(keyword);
         }
     }
 
@@ -60,56 +55,6 @@ async function interpret(code) {
     function isWorkerEnv() {
         return (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
     }
-
-    // remove all comments
-    function stripStringsAndComments(src) {
-        let out = '';
-        let inStr = false, quote = '';
-        for (let i = 0; i < src.length; i++) {
-            const c = src[i], p = src[i-1];
-            // line comment
-            if (!inStr && c === '/' && src[i+1] === '/') {
-                // replace the rest with spaces to preserve indices
-                while (i < src.length) { out += ' '; i++; }
-                break;
-            }
-            if (!inStr && (c === '"' || c === "'")) {
-                inStr = true; quote = c; out += ' ';
-                continue;
-            }
-            if (inStr) {
-                // leave a single space for each char so regex indices stay sane
-                if (c === quote && p !== '\\') { inStr = false; quote = ''; }
-                out += ' ';
-            } else {
-                out += c;
-            }
-        }
-        return out;
-    }
-
-    // check if keywords are capitalized
-    function checkCapitalization(text, lineNumber) {
-        const scan = stripStringsAndComments(text);
-      
-        for (const kw of PSC_KEYWORDS) {
-            // whole-word match, case-insensitive
-            const re = new RegExp(`\\b${kw}\\b`, 'gi');
-            let m;
-            while ((m = re.exec(scan)) !== null) {
-                if (m[0] !== kw) {
-                    const sig = `${kw}:${lineNumber}:${m.index}`;
-                    if (!CAPITALIZATION_SEEN.has(sig)) {
-                        CAPITALIZATION_SEEN.add(sig);
-                        if (!__capSummaryEmitted) {
-                            throwWarning(`Warning: Some keywords not capitalized. Click 'Format' to format code.`);
-                            __capSummaryEmitted = true;
-                        }
-                    }
-                }
-            }
-        }
-    } 
 
     const procs = Object.create(null);
     const funcs = Object.create(null);
@@ -316,7 +261,7 @@ async function interpret(code) {
     // Render one OUTPUT argument with type-aware formatting when possible.
     function renderForOutput(exprText, value, scope) {
         // variable or array element?
-        const varMatch = exprText.match(/^\s*([A-Za-z][A-Za-z0-9]*)(?:\s*\[.*\])?\s*$/);
+        const varMatch = exprText.match(/^\s*([A-Za-z][A-Za-z0-9_]*)(?:\s*\[.*\])?\s*$/);
         if (varMatch) {
             const name = varMatch[1];
             const t = getType(scope, name);
@@ -884,11 +829,11 @@ async function interpret(code) {
         s = replaceBinarySymbolOperator(s, '>',   '__CMP.GT');
 
         // arrays A[i] / A[i,j]
-        s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\[\s*([^\]\[]+?)\s*(?:,\s*([^\]\[]+?)\s*)?\]/g,
+        s = s.replace(/\b([A-Za-z][A-Za-z0-9_]*)\s*\[\s*([^\]\[]+?)\s*(?:,\s*([^\]\[]+?)\s*)?\]/g,
             (m, name, i1, i2) => `__AG("${name}", ${i1}${i2 ? `, ${i2}` : ''})`);
 
         // calls: builtins vs user functions
-        s = s.replace(/\b([A-Za-z][A-Za-z0-9]*)\s*\(/g, (m, name, off, str) => {
+        s = s.replace(/\b([A-Za-z][A-Za-z0-9_]*)\s*\(/g, (m, name, off, str) => {
             if (off > 0 && str.slice(off - 4, off) === 'Math') return m;
             if (off > 0 && str[off-1] === '.') return m;
 
@@ -903,7 +848,7 @@ async function interpret(code) {
 
         // replace var names that conflict with keywords
         s = s.replace(
-            /\b([A-Za-z][A-Za-z0-9]*)\b/g,
+            /\b([A-Za-z][A-Za-z0-9_]*)\b/g,
             (match, name, off, str) => {
 
                 // skip member/property names (__NUM.DIV)
@@ -936,7 +881,7 @@ async function interpret(code) {
 
         // console.log("s after everything: ", s);
 
-        const IDENT = /^[A-Za-z][A-Za-z0-9]*$/;
+        const IDENT = /^[A-Za-z][A-Za-z0-9_]*$/;
 
         const SAFE_GLOBALS = new Set(['Math']); // allow Math.pow
 
@@ -1015,7 +960,7 @@ async function interpret(code) {
             );
         } catch (e) {
             const msg = String(e && e.message || e);
-            const m   = msg.match(/(^|')([A-Za-z][A-Za-z0-9]*) is not defined/);
+            const m = msg.match(/(^|')([A-Za-z][A-Za-z0-9_]*) is not defined/);
             if (m) {
                 throwErr('NameError: ', 'name ' + String(m[2]) + ' is not defined', LINE_NUMBER)
             }
@@ -1026,7 +971,7 @@ async function interpret(code) {
     async function getLValue(ref, scope) {
 
         // ref is identifier, or identifier[index], or identifier[i,j]\
-        const m = ref.match(/^([A-Za-z][A-Za-z0-9]*)(\s*\[(.*)\])?$/);
+        const m = ref.match(/^([A-Za-z][A-Za-z0-9_]*)(\s*\[(.*)\])?$/);
         if (!m) {
             throwErr('SyntaxError: ', 'invalid identifier ' + String(ref), LINE_NUMBER)
         }
@@ -1151,18 +1096,16 @@ async function interpret(code) {
             const s = cleanLine(raw);
             if (!s) continue;
             
-            checkCapitalization(raw, i + 1);
-            
             let m;
 
-            if ((m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
+            if ((m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*$/i))) {
                 const name = m[1];
                 const params = (m[2] || '').trim();
                 const { block, next } = collectUntil(lines, i + 1, /^(ENDPROCEDURE)\b/i);
                 procs[String(name).toLowerCase()] = { __canon: name, params, body: block };
                 i = next; continue;
             }
-            if ((m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*RETURNS\s+([A-Za-z]+)\s*$/i)) || (m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9]*)\s*RETURNS\s+([A-Za-z]+)\s*$/i))) {
+            if ((m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*RETURNS\s+([A-Za-z]+)\s*$/i)) || (m = s.match(/^FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*RETURNS\s+([A-Za-z]+)\s*$/i))) {
                 const name = m[1];
                 const params = m[3] ? (m[2] && !/RETURNS/i.test(m[2]) ? m[2] : '') : '';
                 const returns = (m[3] || m[2] || '').trim();
@@ -1191,7 +1134,6 @@ async function interpret(code) {
             const text = (typeof raw === 'object') ? raw.content : raw;
             const s    = cleanLine(text);
             if (s && endRegex.test(s)) { 
-                checkCapitalization(text, i + 1);
                 found = true; 
                 break; 
             }
@@ -1249,11 +1191,8 @@ async function interpret(code) {
             const s = cleanLine(content);
             if (!s) continue;
 
-            // Check capitalization and output warnings
-            checkCapitalization(content, currentLine);
-
             // ARRAY declare: DECLARE A : ARRAY[1:10] OF INTEGER  or  DECLARE M : ARRAY[1:3, 1:3] OF CHAR
-            if ((m = s.match(/^DECLARE\s+([A-Za-z][A-Za-z0-9]*)\s*:\s*ARRAY\s*\[([^\]]+)\]\s*OF\s*([A-Za-z]+)\s*$/i))) {
+            if ((m = s.match(/^DECLARE\s+([A-Za-z][A-Za-z0-9_]*)\s*:\s*ARRAY\s*\[([^\]]+)\]\s*OF\s*([A-Za-z]+)\s*$/i))) {
                 const name = m[1];
                 assertNotKeyword(name);
 
@@ -1282,7 +1221,7 @@ async function interpret(code) {
             }
 
             // CALL a PROCEDURE
-            if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9]*)\s*$/i))) {
+            if ((m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9_]*)\s*\((.*)\)\s*$/i)) || (m = s.match(/^CALL\s+([A-Za-z][A-Za-z0-9_]*)\s*$/i))) {
                 const name = m[1];
                 const args = await Promise.all((m[2] ? splitArgs(m[2]) : []).map(a => evalExpr(a, scope)));
 
@@ -1441,8 +1380,8 @@ async function interpret(code) {
                 continue;
             }
         
-            // FOR i <- a TOTEP s] ... NEXT i
-            if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
+            // FOR i <- ... TO ... [STEP ...] ... NEXT i
+            if ((m = s.match(/^FOR\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\u2190|<-)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i))) {
                 const forStartLine = LINE_NUMBER; // capture the exact line where FOR appeared
                 const varName   = m[1];
                 const startExpr = m[2];
@@ -1450,10 +1389,15 @@ async function interpret(code) {
                 const stepExpr  = (m[4] == null || m[4].trim() === '') ? '1' : m[4];
 
                 if (!isDeclared(scope, varName)) {
-                    throwErr('NameError: ', 'name ' + String(varName) + ' is not defined', currentLine)
+                    declareName(scope, varName);
+                    setType(scope, varName, 'INTEGER');
                 }
 
-            const varType = getType(scope, varName);
+                let varType = getType(scope, varName);
+                if (!varType) {
+                    setType(scope, varName, 'INTEGER');
+                    varType = 'INTEGER';
+                }
                 if (varType !== 'INTEGER') {
                     throwErr('TypeError: ', 'variable must be an INTEGER', currentLine)
                 }
@@ -1467,7 +1411,7 @@ async function interpret(code) {
                         const c    = cleanLine(txt);
                         if (!c) continue;
                         if (/^FOR\b/i.test(c)) { depth++; continue; }
-                        const nm = c.match(/^NEXT\s+([A-Za-z][A-Za-z0-9]*)$/i);
+                        const nm = c.match(/^NEXT\s+([A-Za-z][A-Za-z0-9_]*)$/i);
                         if (nm) {
                             const canonFor  = getCanonNameFrom(scope, varName);
                             const canonNext = getCanonNameFrom(scope, nm[1]);
@@ -1632,7 +1576,7 @@ async function interpret(code) {
 
             // simple statement table (DECLARE, CONSTANT, INPUT, OUTPUT, ASSIGNMENT)
             const SIMPLE = [
-                [ /^DECLARE\s+([A-Za-z][A-Za-z0-9]*(?:\s*,\s*[A-Za-z][A-Za-z0-9]*)*)\s*:\s*([A-Za-z]+)\s*$/i,
+                [ /^DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)\s*:\s*([A-Za-z]+)\s*$/i,
                     (m,scope) => m[1].split(',').map(t=>t.trim()).forEach(n => {
                         assertNotKeyword(n);
                         declareName(scope, n);
@@ -1640,7 +1584,7 @@ async function interpret(code) {
                     })
                 ],
                 
-                [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9]*)\s*(?:\u2190|<-)\s*(.+)$/i,
+                [ /^CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\u2190|<-)\s*(.+)$/i,
                     async (m,scope) => {
                         assertNotKeyword(m[1]);
                         if (!isLiteral(m[2])) throwErr('TypeError: ', 'CONSTANT value must be a literal', LINE_NUMBER)
@@ -1718,7 +1662,7 @@ async function interpret(code) {
             let msg = 'invalid syntax';
 
             // if = is used in place of <-
-            if (/^[A-Za-z][A-Za-z0-9]*\s*=\s*.+$/.test(s)) {
+            if (/^[A-Za-z][A-Za-z0-9_]*\s*=\s*.+$/.test(s)) {
                 const lhs = s.split('=')[0].trim();
                 const rhs = s.slice(s.indexOf('=') + 1).trim();
                 msg += `. Did you mean ${lhs} <- ${rhs}?`; // helpful message
