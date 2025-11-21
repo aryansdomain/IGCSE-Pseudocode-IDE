@@ -7,6 +7,10 @@ export function initFileUpload(options = {}) {
     const workerUrl        = options.workerUrl || "";
     let selectedFiles = [];
 
+    // ------------------------ Constants ------------------------
+    const MAX_FILE_COUNT = 3;
+    const MAX_FILE_SIZE  = 2 * 1024 * 1024; // 2 MB
+
     // ------------------------ Utilities ------------------------
     
     function formatFileSize(bytes) {
@@ -95,10 +99,10 @@ export function initFileUpload(options = {}) {
         const newFiles = Array.from(fileList);
         
         // check if file count limit exceeded
-        if (selectedFiles.length + newFiles.length > 3) {
-            const remainingSlots = 3 - selectedFiles.length;
+        if (selectedFiles.length + newFiles.length > MAX_FILE_COUNT) {
+            const remainingSlots = MAX_FILE_COUNT - selectedFiles.length;
             if (remainingSlots <= 0) return;
-            showError('Maximum file count of 3 exceeded.');
+            showError(`Maximum file count of ${MAX_FILE_COUNT} exceeded.`);
             newFiles.splice(remainingSlots);
         }
         
@@ -114,10 +118,10 @@ export function initFileUpload(options = {}) {
                 showError(validation.error);
                 continue;
             }
-            
+
             // check file size
             const newTotalSize = totalSize + file.size;
-            if (newTotalSize > 2 * 1024 * 1024) { // 2 MB
+            if (newTotalSize > MAX_FILE_SIZE) {
                 showError('Maximum file size of 2 MB exceeded.');
                 break;
             }
