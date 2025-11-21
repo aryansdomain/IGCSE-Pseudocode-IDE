@@ -1,17 +1,12 @@
-export function initLayoutControls({
+export function initLayout({
     workspace,
     layoutBtn,
     initialLayout = 'vertical',
-    STORAGE_KEY = 'igcse_ide_layout',
 } = {}) {
+
+    const STORAGE_KEY = 'igcse_ide_layout';
     
-    // update workspace CSS classes
-    function updateWorkspace() {
-        workspace.classList.remove('layout-vertical', 'layout-horizontal');
-        workspace.classList.add(layout === 'vertical' ? 'layout-vertical' : 'layout-horizontal');
-    }
-    
-    // appearance of button
+    // appearance of layout button
     function updateLayoutButton() {
         const icon = layoutBtn.querySelector('i');
         
@@ -19,6 +14,10 @@ export function initLayoutControls({
         if (layout === 'vertical') icon.classList.remove('fa-rotate-90');
         else                       icon.classList.add('fa-rotate-90');
         
+        // class list
+        workspace.classList.remove('layout-vertical', 'layout-horizontal');
+        workspace.classList.add(layout === 'vertical' ? 'layout-vertical' : 'layout-horizontal');
+
         // attributes
         layoutBtn.setAttribute('aria-pressed', layout === 'horizontal');
         layoutBtn.title = layout === 'vertical' ? 'Switch to side-by-side layout' : 'Switch to top-bottom layout';
@@ -30,8 +29,6 @@ export function initLayoutControls({
         else                       layout = 'vertical';
         
         try { localStorage.setItem(STORAGE_KEY, layout); } catch {}
-        
-        updateWorkspace();
         updateLayoutButton();
         
         // track layout change analytics
@@ -42,7 +39,6 @@ export function initLayoutControls({
 
     // init
     let layout = localStorage.getItem(STORAGE_KEY) || initialLayout;
-    updateWorkspace();
     updateLayoutButton();
     
     return {

@@ -1,4 +1,4 @@
-export function initFontControls({
+export function initFont({
     editor,
     sizeInput,
     sizeValueEl,
@@ -8,8 +8,9 @@ export function initFontControls({
     step = 1,
     defaultSize = 14,
     defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
-    STORAGE_KEY = 'igcse_ide_editor_font',
 } = {}) {
+    
+    const STORAGE_KEY = 'igcse_ide_editor_font';
 
     // current values
     let size = defaultSize;
@@ -76,7 +77,7 @@ export function initFontControls({
 
         size = clamp(Number(n) || defaultSize, min, max);
         applySize(size);
-        persist();
+        saveToStorage();
 
         // update slider
         if (sizeInput) sizeInput.value = String(size);
@@ -105,7 +106,7 @@ export function initFontControls({
         const oldFamily = family;
         family = String(f || defaultFamily);
         applyFamily(family);
-        persist();
+        saveToStorage();
         if (familySelect) familySelect.value = family;
         
         // track font family change analytics
@@ -135,7 +136,7 @@ export function initFontControls({
         try { editor.resize(true); } catch {}
         document.documentElement.style.setProperty('--mono', fam);
     }
-    function persist() {
+    function saveToStorage() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ size, family })); } catch {}
     }
     // ensure n stays between lo and hi

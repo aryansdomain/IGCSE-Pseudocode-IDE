@@ -1,4 +1,4 @@
-export function initRunCtrl({
+export function initRun({
     cursor,
     consoleOutput,
     console,
@@ -21,7 +21,6 @@ export function initRunCtrl({
     let runId = 0;
     let isRunning = false;
 
-    let __flushedPrefix = '';
     let outputStorage = [];
     let warningStorage = [];
     let hadFlushOutput = false;
@@ -68,8 +67,7 @@ export function initRunCtrl({
 
                 // flush all output
                 const s = String(e.data.output || '');
-                const newPart = s.startsWith(__flushedPrefix) ? s.slice(__flushedPrefix.length) : s;
-                __flushedPrefix += newPart;
+                const newPart = s;
                 if (newPart.length) hadFlushOutput = true;
                 outputStorage.push(newPart);
 
@@ -193,7 +191,6 @@ export function initRunCtrl({
 
         const localRunId = ++runId;
 
-        __flushedPrefix = '';
         outputStorage = [];
         warningStorage = [];
         hadFlushOutput = false;
