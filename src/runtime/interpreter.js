@@ -7,6 +7,8 @@ async function interpret(code) {
 
     const constants = Object.create(null);
     const globals   = Object.create(null);
+    const procs     = Object.create(null);
+    const funcs     = Object.create(null);
 
     // clear tracking
     CASE_MISMATCH_SEEN.clear();
@@ -56,10 +58,7 @@ async function interpret(code) {
         return (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
     }
 
-    const procs = Object.create(null);
-    const funcs = Object.create(null);
-
-    // track declared identifiers (case-insensitive)
+    // ------------------------ Declaration and Initialization ------------------------
     function ensureDeclSet(scope) {
         if (!Object.prototype.hasOwnProperty.call(scope, '__decl')) {
             Object.defineProperty(scope, '__decl', { value: new Set(), enumerable: false }); // stores lower-case names
@@ -80,7 +79,8 @@ async function interpret(code) {
     }
     function markInitialized(scope, name) {
         const s = findDeclScope(scope, name) || scope;
-        ensureDeclSet(s);
+        if (!isDeclared(scope, name)) declareName(scope, name); // ensure var is declared
+
         const lower = String(name).toLowerCase();
         s.__init[lower] = true;
     }
@@ -148,26 +148,37 @@ async function interpret(code) {
 
     function assignChecked(lv, scope, rhsExpr, value, isInput) {
         const destType = getDestTypeForLValue(lv, scope);
-        if (!destType) {
-            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', LINE_NUMBER)
-        }
 
         if (isInput && typeof value === 'string') {
-            const t = destType.toUpperCase();
             const trimmed = value.trim();
-            if ((t === 'INTEGER' || t === 'REAL') && /^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
-                const n = Number(trimmed);
-                if (!Number.isNaN(n) && Number.isFinite(n)) value = n;
+            const t = destType ? destType.toUpperCase() : '';
+            if (t === 'INTEGER' || t === 'REAL') {
+                if (/^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+                    const n = Number(trimmed);
+                    if (!Number.isNaN(n) && Number.isFinite(n)) value = n;
+                }
             } else if (t === 'BOOLEAN') {
                 const up = trimmed.toUpperCase();
                 if (up === 'TRUE') value = true;
                 else if (up === 'FALSE') value = false;
             } else if (t === 'CHAR' && trimmed.length === 1) {
                 value = trimmed;
+            } else if (!t) {
+                if (/^[+-]?(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?$/.test(trimmed)) {
+                    const n = Number(trimmed);
+                    if (!Number.isNaN(n) && Number.isFinite(n)) value = n;
+                } else {
+                    const up = trimmed.toUpperCase();
+                    if (up === 'TRUE') value = true;
+                    else if (up === 'FALSE') value = false;
+                    else if (trimmed.length === 1) value = trimmed;
+                }
             }
         }
 
-        checkAssignCompatible(destType, rhsExpr, value, isInput);
+        if (destType) {
+            checkAssignCompatible(destType, rhsExpr, value, isInput);
+        }
         lv.set(value);
     }
 
@@ -669,6 +680,11 @@ async function interpret(code) {
         const lit = [];
         s = s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, m => { lit.push(m); return `\uE000${lit.length-1}\uE001`; });
 
+        // error if == is used instead of =
+        if (/(^|[^!<>=])==([^=]|$)/.test(s)) {
+            throwErr('SyntaxError: ', 'operator "==" is not valid; did you mean "="?', LINE_NUMBER);
+        }
+
         // replace , with + (outside brackets and parens)
         function replaceCommasWithConcat(src) {
             let result = '';
@@ -895,14 +911,13 @@ async function interpret(code) {
             get: (o, k) => {
                 if (typeof k !== 'string') return o[k];          // pass symbols through
                 if (IDENT.test(k)) {
-                    if (!isDeclared(o, k)) throwErr('NameError: ', 'name ' + String(k) + ' is not defined', LINE_NUMBER)
-                    const declScope = findDeclScope(o, k) || o;
-                    const canon = getCanonNameFrom(o, k);
-                    warnCaseMismatch(k, canon);
+                    const declScope = findDeclScope(o, k);
+                    const canon = declScope ? getCanonNameFrom(o, k) : k;
                     if (!isInitialized(o, k)) {
                         throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', LINE_NUMBER)
                     }
-                    return declScope[canon];
+                    if (declScope) warnCaseMismatch(k, canon);
+                    return (declScope || o)[canon];
                 }
                 return o[k];
             }
@@ -1016,25 +1031,27 @@ async function interpret(code) {
                 }
             };
         } else {
-            const declScope = findDeclScope(scope, name) || scope;
-            const canon = getCanonNameFrom(scope, name);
-            warnCaseMismatch(name, canon);
             return {
-                name: canon,
+                name,
                 get: () => {
-                    if (!isDeclared(scope, name)) {
-                        throwErr('NameError: ', 'name ' + String(name) + ' is not defined', LINE_NUMBER)
-                    }
+                    const canon = getCanonNameFrom(scope, name);
                     if (!isInitialized(scope, name)) {
                         throwErr('NameError: ', 'name ' + String(canon) + ' is referenced before initialization', LINE_NUMBER)
                     }
-                    return declScope[canon];
+                    const owner = findDeclScope(scope, name) || scope;
+                    warnCaseMismatch(name, canon);
+                    return owner[canon];
                 },
                 set: (v) => {
+                    assertNotKeyword(name);
+                    const owner = findDeclScope(scope, name) || scope;
+                    if (!isDeclared(scope, name)) {
+                        declareName(owner, name);
+                    }
+                    const canon = getCanonNameFrom(owner, name);
                     const lower = String(canon).toLowerCase();
                     if (Object.prototype.hasOwnProperty.call(constants, lower)) throwErr('TypeError: ', 'cannot assign to constant', LINE_NUMBER)
-                    if (!isDeclared(scope, name)) throwErr('NameError: ', 'name ' + String(name) + ' is not defined', LINE_NUMBER)
-                    declScope[canon] = v;
+                    owner[canon] = v;
                     markInitialized(scope, name);
                 }
             };
@@ -1607,9 +1624,6 @@ async function interpret(code) {
                 [ /^INPUT\s+(.+)$/i,
                     async (m, scope) => {
                         const lv = await getLValue(m[1].trim(), scope);
-                        if (!isDeclared(scope, lv.name)) {
-                            throwErr('NameError: ', 'name ' + String(lv.name) + ' is not defined', LINE_NUMBER)
-                        }
                     
                         // Flush any pending OUTPUT so prompts appear before the caret
                         if (isWorkerEnv()) {
@@ -1661,8 +1675,11 @@ async function interpret(code) {
 
             let msg = 'invalid syntax';
 
-            // if = is used in place of <-
-            if (/^[A-Za-z][A-Za-z0-9_]*\s*=\s*.+$/.test(s)) {
+            // if == is used instead of =
+            if (/(^|[^!<>=])==([^=]|$)/.test(s)) msg += '. Did you mean "="?';
+
+            // if = is used instead of <-
+            else if (/^[A-Za-z][A-Za-z0-9_]*\s*=\s*.+$/.test(s)) {
                 const lhs = s.split('=')[0].trim();
                 const rhs = s.slice(s.indexOf('=') + 1).trim();
                 msg += `. Did you mean ${lhs} <- ${rhs}?`; // helpful message
