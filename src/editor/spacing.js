@@ -1,14 +1,43 @@
-export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl, tickSelector = null} = {}) {
-
+export function initSpacing({editor, editorApis, slider, valueEl, infoEl, tickSelector = null} = {}) {
     const Range = ace.require('ace/range').Range;
 
     function getTabSpaces() {
-
         const session = editor.session;
+        return session.getTabSize()
+    }
 
-        return typeof session.getTabSize === 'function'
-            ? session.getTabSize()
-            : (session.$tabSize);
+    function setTabSpaces(n) {
+        const session = editor.session;
+        const newSize = parseInt(n, 10);
+        const oldSize = getTabSpaces();
+        if (!Number.isFinite(newSize) || newSize === oldSize) return oldSize;
+
+        editorApis.setTab(newSize);
+        retabDocumentByUnits(session, oldSize, newSize);
+
+        // refresh ui
+        if (slider) slider.value = String(newSize);
+        if (valueEl) valueEl.textContent = newSize;
+        if (infoEl) infoEl.textContent  = `Tab Spaces: ${newSize}`;
+        editor.renderer.updateFull();
+
+        // track tab spaces change analytics
+        if (oldSize !== newSize) {
+            if (tabSpacesChangeTimeout) clearTimeout(tabSpacesChangeTimeout); // clear existing timeout
+            
+            // set timeout to track after user stops dragging
+            tabSpacesChangeTimeout = setTimeout(() => {
+                window.tab_spaces_changed && window.tab_spaces_changed({
+                    tab_spaces_changed_from: originalSpaces,
+                    tab_spaces_changed_to: newSize
+                });
+                
+                originalSpaces = newSize;
+                tabSpacesChangeTimeout = null;
+            }, 2000); // delay after user stops dragging
+        }
+
+        return newSize;
     }
 
     // convert original indent to the new size
@@ -49,41 +78,7 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
     let tabSpacesChangeTimeout = null;
     let originalSpaces = getTabSpaces();
 
-    function setTabSpaces(n) {
-        const session = editor.session;
-        const newSize = parseInt(n, 10);
-        const oldSize = getTabSpaces();
-        if (!Number.isFinite(newSize) || newSize === oldSize) return oldSize;
-
-        editorApis.setTab(newSize);
-        retabDocumentByUnits(session, oldSize, newSize);
-
-        // refresh ui
-        slider  && (slider.value = String(newSize));
-        valueEl && (valueEl.textContent = newSize);
-        infoEl  && (infoEl.textContent  = `Tab Spaces: ${newSize}`);
-        editor.renderer.updateFull();
-
-        // track tab spaces change analytics
-        if (oldSize !== newSize) {
-            if (tabSpacesChangeTimeout) clearTimeout(tabSpacesChangeTimeout); // clear existing timeout
-            
-            // set timeout to track after user stops dragging
-            tabSpacesChangeTimeout = setTimeout(() => {
-                window.tab_spaces_changed && window.tab_spaces_changed({
-                    tab_spaces_changed_from: originalSpaces,
-                    tab_spaces_changed_to: newSize
-                });
-                
-                originalSpaces = newSize;
-                tabSpacesChangeTimeout = null;
-            }, 2000); // delay after user stops dragging
-        }
-
-        return newSize;
-    }
-
-    // tab slider
+    // ------------------------ Tab Slider (Settings) ------------------------
     const onSlider = (e) => setTabSpaces(e.target.value);
     slider?.addEventListener('input', onSlider);
     slider?.addEventListener('change', onSlider);
@@ -99,11 +94,11 @@ export function initSpacingControls({editor, editorApis, slider, valueEl, infoEl
         });
     }
 
-    // initial ui
+    // ------------------------ Init ------------------------
     const initial = getTabSpaces();
     if (slider) slider.value = String(initial);
-    valueEl && (valueEl.textContent = initial);
-    infoEl  && (infoEl.textContent  = `Tab Spaces: ${initial}`);
+    if (valueEl) valueEl.textContent = initial;
+    if (infoEl) infoEl.textContent  = `Tab Spaces: ${initial}`;
 
     return { setTabSpaces, getTabSpaces };
 }
