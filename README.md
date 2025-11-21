@@ -6,7 +6,7 @@ The IDE is open-source, free-to-use, has no ads, and never collects your persona
 ## Language
 Following are some guidelines that the interpreter uses, that do not directly follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
 * Identifiers (Variable/constant/function names)
-    * DECLARE does not initialize a variable or a constant, it must be set with a value (`Num <- 5`) before being operated on.
+    * Declaration is not needed for a variable, although initalization is still needed.
     * Identifiers that differ only in case (AbCd vs aBcD) will be treated as the same, and a warning will be output.
     * Using a keyword (IF, FUNCTION) as an identifier will output a warning but still allow the code to run.
 * Arrays
