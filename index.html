@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Write, run, and share IGCSE Computer Science Pseudocode easily.">
     <title>IGCSE Pseudocode IDE</title>
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css"/>
 
     <!-- Google Analytics -->
@@ -87,6 +88,7 @@
     <!-- ACE Editor -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ace.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-language_tools.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-modelist.min.js"></script>
     <script src="src/language/highlight.js"></script>
     <script src="src/language/mode.js"></script>
 
@@ -117,13 +119,13 @@
                 </button>
             </div>
             <div class="utility-right">
-                <button id="examples-btn" type="button" class="btn examples" title="View examples">
+                <button id="examplesBtn" type="button" class="btn examples" title="View examples">
                     <i class="fa-solid fa-code"></i>
                 </button>
-                <button id="info-btn" type="button" class="btn info" title="View documentation">
+                <button id="infoBtn" type="button" class="btn info" title="View documentation">
                     <i class="fa fa-info-circle"></i>
                 </button>
-                <a id="issue-report-btn" href="#" rel="noopener" target="_blank" class="btn issue-report" title="Report an issue">
+                <a id="issueReportBtn" href="#" rel="noopener" target="_blank" class="btn issue-report" title="Report an issue">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     <span>Report an issue</span>
                 </a>
@@ -133,7 +135,7 @@
         <!-- Workspace -->
         <div class="workspace" id="workspace">
             <div id="editorPane">
-                <div class="topbar" role="toolbar" id="topBar" aria-label="IDE Toolbar">
+                <div class="topbar" role="toolbar" id="topBar" aria-label="Top Bar">
                     <div class="controls">
                         <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
                             <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
@@ -151,6 +153,10 @@
                             <i class="fas fa-upload"></i>
                         </button>
                         <input type="file" id="fileInput" accept=".txt,.js,.py,.java,.cpp,.c,.h,.css,.html,.json,.xml,.md" style="display: none;">
+                    </div>
+
+                    <div class="files-bar" id="filesBar" role="tablist" aria-label="Editor files">
+                        <div class="filelist" id="files"></div>
                     </div>
                 </div>
 
@@ -196,7 +202,7 @@
                     
                     <div class="console-content">
                         <div class="console-loadingbar" id="consoleLoadingBar" aria-hidden="true"></div>
-                        <div id="console-viewport"></div>
+                        <div id="consoleViewport"></div>
                     </div>
                 </section>
             </div>
@@ -226,6 +232,52 @@
                                 <span class="tick">8</span>
                             </div>
                         </div>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editorThemeSelect">Editor Theme:</label>
+                        <select id="editorThemeSelect" class="font-select">
+                            <optgroup label="Light">
+                                <option value="ace/theme/chrome">Chrome</option>
+                                <option value="ace/theme/clouds">Clouds</option>
+                                <option value="ace/theme/dawn">Dawn</option>
+                                <option value="ace/theme/dreamweaver">Dreamweaver</option>
+                                <option value="ace/theme/eclipse">Eclipse</option>
+                                <option value="ace/theme/github">GitHub</option>
+                                <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
+                                <option value="ace/theme/iplastic">iPlastic</option>
+                                <option value="ace/theme/katzenmilch">Katzenmilch</option>
+                                <option value="ace/theme/kuroir">Kuroir</option>
+                                <option value="ace/theme/solarized_light">Solarized Light</option>
+                                <option value="ace/theme/sqlserver">SQL Server</option>
+                                <option value="ace/theme/textmate">TextMate</option>
+                                <option value="ace/theme/tomorrow">Tomorrow</option>
+                                <option value="ace/theme/xcode">Xcode</option>
+                            </optgroup>
+                            <optgroup label="Dark">
+                                <option value="ace/theme/ambiance">Ambiance</option>
+                                <option value="ace/theme/chaos">Chaos</option>
+                                <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
+                                <option value="ace/theme/cobalt">Cobalt</option>
+                                <option value="ace/theme/dracula">Dracula</option>
+                                <option value="ace/theme/gruvbox">Gruvbox</option>
+                                <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
+                                <option value="ace/theme/idle_fingers">Idle Fingers</option>
+                                <option value="ace/theme/kr_theme">KR Theme</option>
+                                <option value="ace/theme/merbivore">Merbivore</option>
+                                <option value="ace/theme/monokai">Monokai (Default)</option>
+                                <option value="ace/theme/nord_dark">Nord Dark</option>
+                                <option value="ace/theme/one_dark">One Dark</option>
+                                <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
+                                <option value="ace/theme/solarized_dark">Solarized Dark</option>
+                                <option value="ace/theme/terminal">Terminal</option>
+                                <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
+                                <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
+                                <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
+                                <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
+                                <option value="ace/theme/twilight">Twilight</option>
+                                <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
+                            </optgroup>
+                        </select>
                     </div>
                     <div class="setting-group">
                         <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">14</span>px</label>
@@ -269,52 +321,6 @@
                             <option value="'PT Mono', monospace">PT Mono</option>
                             <option value="'Space Mono', monospace">Space Mono</option>
                             <option value="'Hack', monospace">Hack</option>
-                        </select>
-                    </div>
-                    <div class="setting-group">
-                        <label for="editorThemeSelect">Editor Theme:</label>
-                        <select id="editorThemeSelect" class="font-select">
-                            <optgroup label="Light">
-                                <option value="ace/theme/chrome">Chrome</option>
-                                <option value="ace/theme/clouds">Clouds</option>
-                                <option value="ace/theme/dawn">Dawn</option>
-                                <option value="ace/theme/dreamweaver">Dreamweaver</option>
-                                <option value="ace/theme/eclipse">Eclipse</option>
-                                <option value="ace/theme/github">GitHub</option>
-                                <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
-                                <option value="ace/theme/iplastic">iPlastic</option>
-                                <option value="ace/theme/katzenmilch">Katzenmilch</option>
-                                <option value="ace/theme/kuroir">Kuroir</option>
-                                <option value="ace/theme/solarized_light">Solarized Light</option>
-                                <option value="ace/theme/sqlserver">SQL Server</option>
-                                <option value="ace/theme/textmate">TextMate</option>
-                                <option value="ace/theme/tomorrow">Tomorrow</option>
-                                <option value="ace/theme/xcode">Xcode</option>
-                            </optgroup>
-                            <optgroup label="Dark">
-                                <option value="ace/theme/ambiance">Ambiance</option>
-                                <option value="ace/theme/chaos">Chaos</option>
-                                <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
-                                <option value="ace/theme/cobalt">Cobalt</option>
-                                <option value="ace/theme/dracula">Dracula</option>
-                                <option value="ace/theme/gruvbox">Gruvbox</option>
-                                <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
-                                <option value="ace/theme/idle_fingers">Idle Fingers</option>
-                                <option value="ace/theme/kr_theme">KR Theme</option>
-                                <option value="ace/theme/merbivore">Merbivore</option>
-                                <option value="ace/theme/monokai">Monokai</option>
-                                <option value="ace/theme/nord_dark">Nord Dark</option>
-                                <option value="ace/theme/one_dark">One Dark</option>
-                                <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
-                                <option value="ace/theme/solarized_dark">Solarized Dark</option>
-                                <option value="ace/theme/terminal">Terminal</option>
-                                <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
-                                <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
-                                <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
-                                <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
-                                <option value="ace/theme/twilight">Twilight</option>
-                                <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
-                            </optgroup>
                         </select>
                     </div>
                     <div class="setting-group">

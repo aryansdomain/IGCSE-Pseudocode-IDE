@@ -1,4 +1,4 @@
-export function initThemeControls({
+export function initTheme({
     editor,
     console,
     modeCtrl,
@@ -14,6 +14,8 @@ export function initThemeControls({
         'Tomorrow Night Eighties','Twilight','Vibrant Ink'
     ],
 }) {
+    const STORAGE_KEY = 'igcse_ide_theme';
+
     const toBare = (name) => {
         let bare = String(name).replace(/^ace\/theme\//, '');  // remove the ace/theme/
         bare = bare.toLowerCase().replace(/[\s-]/g, '_');      // convert to snake_case
@@ -39,10 +41,6 @@ export function initThemeControls({
         }
         return { ok: false };
     }
-    
-    function listThemes() {
-        return [...lightThemes, ...darkThemes].map(toBare);
-    }
 
     function updateConsoleTheme() {
         const light = modeCtrl.isLightMode();
@@ -55,24 +53,20 @@ export function initThemeControls({
         };
     }
 
+    function updateElements() {
+        updateBars();
+        updateSliders();
+        updateFiles();
+    }
     function updateBars() {
-        const hostEl = document.getElementById('code') || editor.container;
+        const hostEl   = document.getElementById('code') || editor.container;
         const editorBg = window.getComputedStyle(hostEl).backgroundColor;
         const editorFg = window.getComputedStyle(hostEl).color;
 
-        const topBar    = document.querySelector('.topbar');
-        const bottomBar = document.querySelector('.bottombar');
-
-        [bottomBar, topBar].filter(Boolean).forEach(bar => {
-            bar.style.backgroundColor = editorBg;
-            bar.style.color = editorFg;
-        });
-        document.querySelectorAll('.topbar .btn').forEach(btn => {
-            btn.style.color = editorFg;
-            btn.querySelectorAll('i').forEach(icon => (icon.style.color = editorFg));
-        });
+        // set css vars
+        document.documentElement.style.setProperty('--editor-bg', editorBg);
+        document.documentElement.style.setProperty('--editor-fg', editorFg);
     }
-
     function updateSliders() {
 
         // get color of keyword for current theme
@@ -86,6 +80,24 @@ export function initThemeControls({
         // apply color
         try { document.documentElement.style.setProperty('--keyword-color', keywordColor); } catch {}
     }
+    function updateFiles() {
+        const editorEl = document.getElementById('code') || editor.container;
+        
+        let lineNumColor = null;
+        
+        const gutter = editorEl.querySelector('.ace_gutter');
+        if (gutter) {
+            const activeGutterCell = gutter.querySelector('.ace_gutter-active-line, .ace_gutter-cell.ace_gutter-active-line');
+            if (activeGutterCell) {
+                lineNumColor = window.getComputedStyle(activeGutterCell).color;
+            }
+        }
+
+        // set css var
+        if (lineNumColor) {
+            document.documentElement.style.setProperty('--line-num-color', lineNumColor);
+        }
+    }
 
     function setTheme(name, skipAnalytics = false) {
         name = toBare(name);
@@ -94,6 +106,7 @@ export function initThemeControls({
         const newInfo = themeInfo(name);
         
         editor.setTheme(`ace/theme/${name}`);
+        localStorage.setItem(STORAGE_KEY, name);
         
         // track theme change analytics
         if (!skipAnalytics && previousInfo.ok && newInfo.ok && previousTheme !== name) {
@@ -112,14 +125,8 @@ export function initThemeControls({
 
         // recolor bars and update accent color
         if (editor.renderer && editor.renderer.on) {
-            if (editor.renderer.$theme) {
-                updateBars();
-                updateSliders();
-            }
-            editor.renderer.on('themeLoaded', () => {
-                updateBars();
-                updateSliders();
-            });
+            if (editor.renderer.$theme) updateElements();
+            editor.renderer.on('themeLoaded', () => { updateElements(); });
         }
     }
     function getTheme() {
@@ -132,18 +139,26 @@ export function initThemeControls({
     editorThemeSelect?.addEventListener('change', (e) => setTheme(String(e.target.value)));
 
     // init
-    setTheme(getTheme(), true);
+    let savedTheme = null;
+    try {
+        savedTheme = localStorage.getItem(STORAGE_KEY);
+    } catch {}
+    
+    if (savedTheme && themeInfo(savedTheme).ok) {
+        setTheme(savedTheme, true);
+    } else {
+        setTheme(getTheme(), true);
+    }
     updateConsoleTheme();
     editorThemeSelect.value = 'ace/theme/' + toBare(getTheme());
 
-    return { 
-        setTheme, 
+    return {
+        setTheme,
         getTheme,
-        updateBars, 
         updateConsoleTheme,
-        themeInfo, 
-        listThemes, 
-        lightThemes, 
-        darkThemes 
+        updateElements,
+        themeInfo,
+        lightThemes,
+        darkThemes
     };
 }

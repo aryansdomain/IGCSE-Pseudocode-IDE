@@ -1,13 +1,12 @@
 (function () {
-    // ------------------------ Persistence ------------------------------
-    function tourSeen() {
-        try { return window.localStorage.getItem('tour_seen') === '1'; } catch { return false; }
+    const STORAGE_KEY = 'igcse_ide_tour_seen';
+
+    // ------------------------ localStorage ------------------------------
+    function loadFromStorage() {
+        try { return window.localStorage.getItem(STORAGE_KEY) === 'True'; } catch { return false; }
     }
-    function setTourSeen() {
-        try { window.localStorage.setItem('tour_seen', '1'); } catch {}
-    }
-    function resetTourSeen() {
-        try { window.localStorage.removeItem('tour_seen'); } catch {}
+    function saveToStorage() {
+        try { window.localStorage.setItem(STORAGE_KEY, 'True'); } catch {}
     }
 
     // ------------------------ Helpers ------------------------
@@ -66,11 +65,15 @@
             title: 'Editor',
             intro: 'Write your code here.'
         }, {
-            element: '#console-viewport',
+            element: '.files-bar',
+            title: 'Files',
+            intro: 'You can create multiple files of code to work on at once.'
+        }, {
+            element: '#consoleViewport',
             title: 'Console',
             intro: 'Input and output for the program is here.',
         }, {
-            element: '#console-viewport',
+            element: '#consoleViewport',
             title: 'Console',
             intro: 'Press the up arrow to bring back the last command ran, and the down arrow to go to the next command.',
         }, {
@@ -84,21 +87,21 @@
         }, {
             element: '#settingsBtn',
             title: 'Settings',
-            intro: 'Change font size, the theme of the editor, and more. A list of editor settings can be shown by focusing on the editor and pressing Cmd/Ctrl + ,',
+            intro: 'Change font size, the theme of the editor, and more. A list of more editor settings can be shown by focusing on the editor and pressing Cmd/Ctrl + ,',
         }, {
             element: '#layoutBtn',
             title: 'Layout',
-            intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor right, console left).',
+            intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor left, console right).',
         }, {
-            element: '#examples-btn',
+            element: '#examplesBtn',
             title: 'Examples',
             intro: 'Access example code snippets that showcase what the language can do.',
         }, {
-            element: '#info-btn',
+            element: '#infoBtn',
             title: 'Documentation',
             intro: 'View the official IGCSE documentation and learn about the pseudocode syntax.',
         }, {
-            element: '#issue-report-btn',
+            element: '#issueReportBtn',
             title: 'Report an issue',
             intro: 'To report a bug, or if you feel there\'s something we can improve, use this button.',
         }, {
@@ -127,7 +130,8 @@
                 highlightClass: 'tourHighlight',
                 buttonClass:    'tourBtn'
             });
-            tour.oncomplete(setTourSeen); tour.onexit(setTourSeen);
+            tour.oncomplete(saveToStorage);
+            tour.onexit(saveToStorage);
             tour.start();
         }
 
@@ -135,14 +139,13 @@
         window.startTutorial = startTutorial;
 
         // start tutorial if user hasn't seen it
-        if (!tourSeen() && stepsReady.length) startTutorial();
+        if (!loadFromStorage() && stepsReady.length) startTutorial();
     });
 
     // wire tour restart button
     const restartBtn = document.getElementById('restartTourBtn');
     if (restartBtn) {
         restartBtn.addEventListener('click', () => {
-            resetTourSeen();
             const settingsOverlay = document.getElementById('settingsOverlay');
             if (settingsOverlay) settingsOverlay.style.display = 'none';
             

@@ -2,8 +2,8 @@ export const qs    = (sel, root = document) => root.querySelector(sel);
 export const qsa   = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 export const byId  = (id) => document.getElementById(id);
 
-export const on    = (element, event, func, options) =>  element?.addEventListener?.(event, func, options);
-export const off   = (element, event, func, options) =>  element?.removeEventListener?.(event, func, options);
+export const on    = (element, event, func, options) => element?.addEventListener?.(event, func, options);
+export const off   = (element, event, func, options) => element?.removeEventListener?.(event, func, options);
 
 export const setVars = (el, obj) => {
     if (!el) return;
@@ -17,13 +17,17 @@ export function initUI() {
         workspace:           byId('workspace'),
         editorPane:          byId('editorPane'),
         topbar:              byId('topBar'),
-        codeEl:              byId('code'),
+        code:                byId('code'),
         bottombar:           byId('bottomBar'),
         splitter:            byId('splitter'),
         consolePane:         byId('consolePane'),
         runBtn:              byId('runBtn'),
-        consoleEl:           byId('console-viewport'),
+        console:             byId('consoleViewport'),
         consoleLoadingBar:   byId('consoleLoadingBar'),
+
+        // editor files
+        filesBar:            byId('filesBar'),
+        files:               byId('files'),
 
         // editor buttons
         editorExpandBtn:     byId('editorExpandBtn'),
@@ -50,7 +54,7 @@ export function initUI() {
         modeBtn:             byId('modeBtn'),
         editorThemeSelect:   byId('editorThemeSelect'),
         layoutBtn:           byId('layoutBtn'),
-        infoBtn:             byId('info-btn'),
+        infoBtn:             byId('infoBtn'),
         
         // settings
         settingsOverlay:     byId('settingsOverlay'),
@@ -60,7 +64,7 @@ export function initUI() {
         
         // examples
         examplesOverlay:     byId('examplesOverlay'),
-        examplesBtn:         byId('examples-btn'),
+        examplesBtn:         byId('examplesBtn'),
         closeExamples:       byId('closeExamples'),
 
         // info

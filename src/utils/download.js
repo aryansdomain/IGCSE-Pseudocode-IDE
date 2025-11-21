@@ -1,4 +1,4 @@
-export async function saveTextAsFile(filename, text) {
+async function saveTextAsFile(filename, text) {
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -13,37 +13,20 @@ export async function saveTextAsFile(filename, text) {
     URL.revokeObjectURL(url);
 }
 
-function formatISO(date = new Date(), { compact = false } = {}) {
-    const d = (date instanceof Date) ? date : new Date(date);
-    const iso = d.toISOString(); // e.g. 2025-09-20T12:34:56.789Z
-    if (!compact) return iso;
-    // compact: 2025-09-20_12-34-56
-    return iso.slice(0, 19).replace('T', '_').replaceAll(':', '-');
-}
-
-export function initDownload({consoleDownloadBtn, editorDownloadBtn, getCode, getConsoleText, consoleOutput }) {
-
-    // download console content
-    const downloadConsole = async () => {
-        try {
-            const text = getConsoleText();
-            const filename = `console_${formatISO(new Date(), { compact: true })}.txt`;
-            await saveTextAsFile(filename, text);
-            
-            // track console download analytics
-            try {
-                window.console_downloaded && window.console_downloaded({ console_downloaded_size: text.length });
-            } catch {}
-        } catch (err) {
-            consoleOutput.errln('Failed to download console content: ' + err + '. Please reload the page or report this issue.');
-        }
-    };
+export function initDownload({
+    consoleDownloadBtn,
+    editorDownloadBtn,
+    getCode,
+    getConsoleText,
+    consoleOutput,
+    getActiveFileName
+} = {}) {
 
     // download editor content
     const downloadEditor = async () => {
         try {
             const code = getCode();
-            const filename = `code_${formatISO(new Date(), { compact: true })}.txt`;
+            const filename = getActiveFileName();
             await saveTextAsFile(filename, code);
             
             // track code download analytics
@@ -51,11 +34,29 @@ export function initDownload({consoleDownloadBtn, editorDownloadBtn, getCode, ge
                 window.code_downloaded && window.code_downloaded({ code_downloaded_size: code.length });
             } catch {}
         } catch (err) {
-            consoleOutput.errln('Failed to download editor content: ' + err + '. Please reload the page or report this issue.');
+            consoleOutput.lnerrln('Failed to download console content: ' + err + '. Please reload the page or report this issue.');
+            consoleOutput.writePrompt();
         }
     };
 
-    // wire buttons
+    // download console content
+    const downloadConsole = async () => {
+        try {
+            const text = getConsoleText();
+            const filename = `console.txt`;
+            await saveTextAsFile(filename, text);
+            
+            // track console download analytics
+            try {
+                window.console_downloaded && window.console_downloaded({ console_downloaded_size: text.length });
+            } catch {}
+        } catch (err) {
+            consoleOutput.lnerrln('Failed to download console content: ' + err + '. Please reload the page or report this issue.');
+            consoleOutput.writePrompt();
+        }
+    };
+
+    // setup buttons
     consoleDownloadBtn.disabled = false;
     consoleDownloadBtn.addEventListener('click', downloadConsole);
 
