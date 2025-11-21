@@ -5,8 +5,9 @@ export function initMode({
     modeBtn,
     defaultMode = 'dark',
     page = 'ide',
-    STORAGE_KEY = 'igcse_ide_mode'
 } = {}) {
+
+    const STORAGE_KEY = 'igcse_ide_mode';
 
     let currentThemeCtrl = themeCtrl;
     let currentMode = null;
@@ -33,8 +34,12 @@ export function initMode({
 
         if (mode === 'light') document.documentElement.classList.add('light');
         else                  document.documentElement.classList.remove('light');
-
-        if (currentThemeCtrl) currentThemeCtrl.updateConsoleTheme();
+        
+        // update console theme 
+        if (currentThemeCtrl?.updateConsoleTheme) currentThemeCtrl.updateConsoleTheme();
+        
+        // update other elements
+        setTimeout(() => { if (currentThemeCtrl?.updateElements) currentThemeCtrl.updateElements(); }, 100);
         
         // enable transitions
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
@@ -54,8 +59,8 @@ export function initMode({
     let initial = null;
     try { initial = localStorage.getItem(STORAGE_KEY); } catch {}
     if (!initial) {
-        const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)')?.matches;
-        initial = prefersLight ? 'light' : defaultMode;
+        const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches;
+        initial = prefersDark ? 'dark' : defaultMode;
     }
 
     setMode(initial, true); // skip analytics during initialization
@@ -76,7 +81,7 @@ export function initMode({
         let saved = null;
         try { saved = localStorage.getItem(STORAGE_KEY); } catch {}
         if (saved) return;
-        setMode(e.matches ? 'light' : 'dark');
+        setMode(e.matches ? 'dark' : 'light');
         setIcons();
     };
     mql?.addEventListener?.('change', onPref);

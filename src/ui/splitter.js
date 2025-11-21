@@ -1,25 +1,26 @@
 export function initSplitter({
-    container,                                 // outer element containing paneA, handle, paneB
-    handle,                                    // splitter handle
-    paneA,                                     // editor: top or left
-    paneB,                                     // console: bottom or right
-    btnA,                                      // expand/collapse editor button
-    btnB,                                      // expand/collapse console button
-    axis,                                      // 'vertical' or 'horizontal'
-    minA,                                      // minimum height/width of A
-    minB,                                      // minimum height/width of B
-    barHeight,                                 // normal bar height
-    snapInPx,                                  // how close to an edge to snap in
-    snapOutPx,                                 // how far to pull to snap out
-    initialRatio,                              // initial fraction of space A takes up (0..1)
-    STORAGE_KEY = 'igcse_ide_splitter_ratio',  // save ratio across browser sessions
-    onResize = () => {},                       // called after layout updates (e.g., editor.resize(), refit())
+    container,             // outer element containing paneA, handle, paneB
+    handle,                // splitter handle
+    paneA,                 // editor: top or left
+    paneB,                 // console: bottom or right
+    btnA,                  // expand/collapse editor button
+    btnB,                  // expand/collapse console button
+    axis,                  // 'vertical' or 'horizontal'
+    minA,                  // minimum height/width of A
+    minB,                  // minimum height/width of B
+    barHeight,             // normal bar height
+    snapInPx,              // how close to an edge to snap in
+    snapOutPx,             // how far to pull to snap out
+    initialRatio,          // initial fraction of space A takes up (0..1)
+    onResize = () => {},   // called after layout updates (e.g., editor.resize(), refit())
 } = {}) {
+
+    const STORAGE_KEY = 'igcse_ide_splitter_ratio';
 
     // ------------------------ States/Config ------------------------
     const minBarHeight = snapInPx / 2;                      // minimum bar height before snapping
     const free = Math.max(0, totalSize() - handleSize());   // space for panelA and panelB
-    let ratio = loadRatio(STORAGE_KEY, initialRatio);        // amount of space A takes up, load from storage key 
+    let ratio = loadState(STORAGE_KEY, initialRatio);       // amount of space A takes up, load from storage key 
     let dragStartMousePos = 0;                              // mouse/touch position when dragging starts
     let dragStartSizeA = 0;                                 // height/width of paneA when dragging starts
     let dragging = false;                                   // user is dragging the handle?
@@ -45,22 +46,20 @@ export function initSplitter({
     function clamp(n, lo, hi) {           // ensure n stays between lo and hi
         return Math.max(lo, Math.min(hi, n));
     }
-    function loadRatio(key, fallback) {   // load ratio from localStorage
+    function loadState(key, fallback) {   // load ratio from localStorage
         try {
-            const v = localStorage.getItem(KEY_PREFIX + key);
-            const n = v == null ? NaN : Number(v);
+            const v = localStorage.getItem(key);
+            const n = (v && Number(v));
             if (!Number.isFinite(n) || n <= 0 || n >= 1) return fallback;
             return n;
         } catch { return fallback; }
     }
-    function saveRatio(key, r) {          // save ratio to localStorage
-        try { localStorage.setItem(KEY_PREFIX + key, String(r)); } catch {}
-    }
-    function totalSize() {                // total size of container
+
+    function totalSize() { // total size of container
         if (axis === 'vertical') return container.clientHeight;
         else                     return container.clientWidth;
     }
-    function handleSize() {               // size of splitter handle
+    function handleSize() { // size of splitter handle
         if (axis === 'vertical') return handle.offsetHeight;
         else                     return handle.offsetWidth;
     }
@@ -106,7 +105,7 @@ export function initSplitter({
         paneA.style.flex = `0 0 ${sizeA}px`;
         paneB.style.flex = `1 1 ${sizeB}px`;
 
-        saveRatio(STORAGE_KEY, ratio);
+        localStorage.setItem(STORAGE_KEY, String(ratio));
         onConsoleResizeSafe();
         updateButtons(); 
     }
@@ -181,7 +180,7 @@ export function initSplitter({
 
         handle.setPointerCapture?.(pointer.pointerId ?? undefined); // tell the handle the pointer ID
 
-        snapped = dragStartSizeA <= snapInPx; // should we snap?
+        snapped = dragStartSizeA <= snapInPx; // should the splitter snap?
     }
 
     function moveDrag(pointer) {
