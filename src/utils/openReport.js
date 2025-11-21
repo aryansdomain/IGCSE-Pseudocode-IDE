@@ -3,7 +3,7 @@ import { formatJSError } from '../report/catchError.js';
 
 // open issue report page
 function wireIssueButton() {
-    const el = document.getElementById("issue-report-btn");
+    const el = document.getElementById("issueReportBtn");
     if (!el) return;
 
     el.addEventListener("click", (e) => {
