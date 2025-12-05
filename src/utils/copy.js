@@ -49,7 +49,6 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
     const copyEditor = async () => {
         try {
             const code = getCode();
-            if (!code.trim()) return; // ignore empty files
             await navigator.clipboard.writeText(code);
 
             // show success checkmark
