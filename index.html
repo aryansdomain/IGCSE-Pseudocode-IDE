@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Write, run, and share IGCSE Computer Science Pseudocode easily.">
+    <meta name="description" content="Write, run, and share IGCSE/O-level Computer Science Pseudocode easily with this online compiler/interpreter.">
     <title>IGCSE Pseudocode IDE</title>
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="style.css"/>
@@ -39,7 +39,7 @@
                 }
             }, true);
       
-          // onerror fallback
+            // onerror fallback
             window.onerror = function (message, source, lineno, colno, error) {
                 window.__lastError = {
                     type: "onerror",
@@ -49,7 +49,7 @@
                 return false;
             };
       
-          // unhandled promise rejection
+            // unhandled promise rejection
             window.addEventListener("unhandledrejection", function (e) {
                 var r = e && e.reason;
                 window.__lastError = {
@@ -73,8 +73,8 @@
     <!-- Load font families -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=IBM+Plex+Mono:wght@300..700&family=Inconsolata:wght@300..900&family=JetBrains+Mono:wght@100..800&family=PT+Mono&family=Roboto+Mono:wght@100..700&family=Source+Code+Pro:wght@200..900&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=IBM+Plex+Mono:wght@300..700&family=Inconsolata:wght@300..900&family=JetBrains+Mono:wght@100..800&family=PT+Mono&family=Roboto+Mono:wght@100..700&family=Source+Code+Pro:wght@200..900&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <!-- Issue Report -->
     <script type="module" src="src/report/catchError.js" defer></script>
@@ -94,9 +94,6 @@
 
     <!-- Font Awesome -->
     <script src="https://kit.fontawesome.com/145a379a6e.js" crossorigin="anonymous"></script>
-
-    <!-- Interpreter -->
-    <script src="src/runtime/interpreter.js"></script>
 </head>
 
 <body>
@@ -108,13 +105,13 @@
         <!-- Utility Bar -->
         <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
             <div class="controls">
-                <button class="btn settings"  type="button"  title="Settings"  id="settingsBtn">
+                <button class="btn settings" type="button" title="Settings" id="settingsBtn">
                     <i class="fas fa-cog settings-icon"></i>
                 </button>
-                <button class="btn layout"  type="button"  title="Change layout"  id="layoutBtn"  aria-pressed="false">
+                <button class="btn layout" type="button" title="Change layout" id="layoutBtn" aria-pressed="false">
                     <i class="fas fa-columns"></i>
                 </button>
-                <button class="btn mode"  type="button"  title="Toggle Light/Dark Mode"  id="modeBtn">
+                <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
                     <i class="fas fa-sun"></i>
                 </button>
             </div>
@@ -374,8 +371,9 @@
 
         <!-- Footer -->
         <div class="footer">
-            <span>This project is not affiliated with or endorsed by Cambridge Assessment International Education.</span><br>
-            <span>'IGCSE' is a registered trademark of the University of Cambridge.</span>
+            <span>Made with
+                <i class="fas fa-heart"></i>
+                in India</span>
         </div>
         
         <!-- JavaScript -->
