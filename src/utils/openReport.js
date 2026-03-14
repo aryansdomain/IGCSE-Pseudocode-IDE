@@ -27,9 +27,10 @@ function wireIssueButton() {
         // detect IDE mode
         const ideMode = isLightMode() ? 'light' : 'dark';
         url.searchParams.set("mode", ideMode);
+        url.searchParams.set("code", window.editor?.getValue?.() || "");
 
         // open report page
-        window.open(url.toString(), "_blank", "noopener");
+        window.open(url.toString(), "_blank");
     });
 }
 
