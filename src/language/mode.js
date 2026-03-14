@@ -1,14 +1,9 @@
-ace.define('ace/mode/pseudocode', ['require',
-                                   'exports',
-                                   'module',
-                                   'ace/lib/oop',
-                                   'ace/mode/text',
-                                   'ace/mode/rules',
-                                   'ace/mode/behaviour'],
+ace.define('ace/mode/pseudocode', ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text',
+                                   'ace/mode/rules', 'ace/mode/behaviour'],
                              
 function(require, exports, module) {
-    const oop = require('ace/lib/oop');
-    const TextMode = require('ace/mode/text').Mode;
+    const oop                = require('ace/lib/oop');
+    const TextMode           = require('ace/mode/text').Mode;
     const LangHighlightRules = require('ace/mode/rules').LangHighlightRules;
 
     class Mode extends TextMode {
@@ -115,81 +110,81 @@ function(require, exports, module) {
             const varCompletions = Array.from(varNames).map(name => ({
                 name: name,
                 value: name,
-                score: 700,
+                score: 1300,
                 meta: 'variable'
             }));
             const constCompletions = Array.from(constNames).map(name => ({
                 name: name,
                 value: name,
-                score: 700,
+                score: 1100,
                 meta: 'constant'
             }));
             const funcCompletions = Array.from(funcNames).map(name => ({
                 name: name,
                 value: name,
-                score: 700,
+                score: 1400,
                 meta: 'function'
             }));
             const procCompletions = Array.from(procNames).map(name => ({
                 name: name,
                 value: name,
-                score: 700,
+                score: 1200,
                 meta: 'procedure'
             }));
             
             const keywordCompletions = [
                 // keywords
-                { name: 'IF',           value: 'IF',           score: 1000, meta: 'keyword' },
-                { name: 'THEN',         value: 'THEN',         score: 1000, meta: 'keyword' },
-                { name: 'ELSE',         value: 'ELSE',         score: 1000, meta: 'keyword' },
-                { name: 'ENDIF',        value: 'ENDIF',        score: 1000, meta: 'keyword' },
-                { name: 'CASE',         value: 'CASE',         score: 1000, meta: 'keyword' },
-                { name: 'OF',           value: 'OF',           score: 1000, meta: 'keyword' },
-                { name: 'OTHERWISE',    value: 'OTHERWISE',    score: 1000, meta: 'keyword' },
-                { name: 'ENDCASE',      value: 'ENDCASE',      score: 1000, meta: 'keyword' },
-                { name: 'FOR',          value: 'FOR',          score: 1000, meta: 'keyword' },
-                { name: 'TO',           value: 'TO',           score: 1000, meta: 'keyword' },
-                { name: 'STEP',         value: 'STEP',         score: 1000, meta: 'keyword' },
-                { name: 'NEXT',         value: 'NEXT',         score: 1000, meta: 'keyword' },
-                { name: 'WHILE',        value: 'WHILE',        score: 1000, meta: 'keyword' },
-                { name: 'DO',           value: 'DO',           score: 1000, meta: 'keyword' },
-                { name: 'ENDWHILE',     value: 'ENDWHILE',     score: 1000, meta: 'keyword' },
-                { name: 'REPEAT',       value: 'REPEAT',       score: 1000, meta: 'keyword' },
-                { name: 'UNTIL',        value: 'UNTIL',        score: 1000, meta: 'keyword' },
-                { name: 'PROCEDURE',    value: 'PROCEDURE',    score: 1000, meta: 'keyword' },
-                { name: 'FUNCTION',     value: 'FUNCTION',     score: 1000, meta: 'keyword' },
-                { name: 'RETURNS',      value: 'RETURNS',      score: 1000, meta: 'keyword' },
-                { name: 'RETURN',       value: 'RETURN',       score: 1000, meta: 'keyword' },
-                { name: 'CALL',         value: 'CALL',         score: 1000, meta: 'keyword' },
-                { name: 'ENDPROCEDURE', value: 'ENDPROCEDURE', score: 1000, meta: 'keyword' },
-                { name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword' },
-                { name: 'INPUT',        value: 'INPUT',        score: 1000, meta: 'keyword' },
-                { name: 'OUTPUT',       value: 'OUTPUT',       score: 1000, meta: 'keyword' },
-                { name: 'DECLARE',      value: 'DECLARE',      score: 1000, meta: 'keyword' },
-                { name: 'CONSTANT',     value: 'CONSTANT',     score: 1000, meta: 'keyword' },
-                { name: 'TRUE',         value: 'TRUE',         score: 1000, meta: 'keyword' },
-                { name: 'FALSE',        value: 'FALSE',        score: 1000, meta: 'keyword' },
-                { name: 'AND',          value: 'AND',          score: 1000, meta: 'keyword' },
-                { name: 'OR',           value: 'OR',           score: 1000, meta: 'keyword' },
-                { name: 'NOT',          value: 'NOT',          score: 1000, meta: 'keyword' },
-                
+                {name: 'IF',           value: 'IF',           score: 1000, meta: 'keyword'},
+                {name: 'THEN',         value: 'THEN',         score: 1000, meta: 'keyword'},
+                {name: 'ELSE',         value: 'ELSE',         score: 1000, meta: 'keyword'},
+                {name: 'ENDIF',        value: 'ENDIF',        score: 1000, meta: 'keyword'},
+                {name: 'CASE',         value: 'CASE',         score: 1000, meta: 'keyword'},
+                {name: 'OF',           value: 'OF',           score: 1000, meta: 'keyword'},
+                {name: 'OTHERWISE',    value: 'OTHERWISE',    score: 1000, meta: 'keyword'},
+                {name: 'ENDCASE',      value: 'ENDCASE',      score: 1000, meta: 'keyword'},
+                {name: 'FOR',          value: 'FOR',          score: 1000, meta: 'keyword'},
+                {name: 'TO',           value: 'TO',           score: 1000, meta: 'keyword'},
+                {name: 'STEP',         value: 'STEP',         score: 1000, meta: 'keyword'},
+                {name: 'NEXT',         value: 'NEXT',         score: 1000, meta: 'keyword'},
+                {name: 'WHILE',        value: 'WHILE',        score: 1000, meta: 'keyword'},
+                {name: 'DO',           value: 'DO',           score: 1000, meta: 'keyword'},
+                {name: 'ENDWHILE',     value: 'ENDWHILE',     score: 1000, meta: 'keyword'},
+                {name: 'REPEAT',       value: 'REPEAT',       score: 1000, meta: 'keyword'},
+                {name: 'UNTIL',        value: 'UNTIL',        score: 1000, meta: 'keyword'},
+                {name: 'PROCEDURE',    value: 'PROCEDURE',    score: 1000, meta: 'keyword'},
+                {name: 'FUNCTION',     value: 'FUNCTION',     score: 1000, meta: 'keyword'},
+                {name: 'RETURNS',      value: 'RETURNS',      score: 1000, meta: 'keyword'},
+                {name: 'RETURN',       value: 'RETURN',       score: 1000, meta: 'keyword'},
+                {name: 'CALL',         value: 'CALL',         score: 1000, meta: 'keyword'},
+                {name: 'ENDPROCEDURE', value: 'ENDPROCEDURE', score: 1000, meta: 'keyword'},
+                {name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword'},
+                {name: 'INPUT',        value: 'INPUT',        score: 1000, meta: 'keyword'},
+                {name: 'OUTPUT',       value: 'OUTPUT',       score: 1000, meta: 'keyword'},
+                {name: 'DECLARE',      value: 'DECLARE',      score: 1000, meta: 'keyword'},
+                {name: 'CONSTANT',     value: 'CONSTANT',     score: 1000, meta: 'keyword'},
+                {name: 'TRUE',         value: 'TRUE',         score: 1000, meta: 'keyword'},
+                {name: 'FALSE',        value: 'FALSE',        score: 1000, meta: 'keyword'},
+                {name: 'AND',          value: 'AND',          score: 1000, meta: 'keyword'},
+                {name: 'OR',           value: 'OR',           score: 1000, meta: 'keyword'},
+                {name: 'NOT',          value: 'NOT',          score: 1000, meta: 'keyword'},
+
                 // types
-                { name: 'INTEGER',      value: 'INTEGER',      score: 900,  meta: 'type' },
-                { name: 'REAL',         value: 'REAL',         score: 900,  meta: 'type' },
-                { name: 'BOOLEAN',      value: 'BOOLEAN',      score: 900,  meta: 'type' },
-                { name: 'CHAR',         value: 'CHAR',         score: 900,  meta: 'type' },
-                { name: 'STRING',       value: 'STRING',       score: 900,  meta: 'type' },
-                { name: 'ARRAY',        value: 'ARRAY',        score: 900,  meta: 'type' },
+                {name: 'INTEGER',      value: 'INTEGER',      score: 900,  meta: 'type'},
+                {name: 'REAL',         value: 'REAL',         score: 900,  meta: 'type'},
+                {name: 'BOOLEAN',      value: 'BOOLEAN',      score: 900,  meta: 'type'},
+                {name: 'CHAR',         value: 'CHAR',         score: 900,  meta: 'type'},
+                {name: 'STRING',       value: 'STRING',       score: 900,  meta: 'type'},
+                {name: 'ARRAY',        value: 'ARRAY',        score: 900,  meta: 'type'},
                 
                 // built-in functions
-                { name: 'ROUND',        value: 'ROUND',        score: 800,  meta: 'builtin' },
-                { name: 'RANDOM',       value: 'RANDOM',       score: 800,  meta: 'builtin' },
-                { name: 'LENGTH',       value: 'LENGTH',       score: 800,  meta: 'builtin' },
-                { name: 'LCASE',        value: 'LCASE',        score: 800,  meta: 'builtin' },
-                { name: 'UCASE',        value: 'UCASE',        score: 800,  meta: 'builtin' },
-                { name: 'SUBSTRING',    value: 'SUBSTRING',    score: 800,  meta: 'builtin' },
-                { name: 'DIV',          value: 'DIV',          score: 800,  meta: 'builtin' },
-                { name: 'MOD',          value: 'MOD',          score: 800,  meta: 'builtin' }
+                {name: 'ROUND',        value: 'ROUND',        score: 800,  meta: 'builtin'},
+                {name: 'RANDOM',       value: 'RANDOM',       score: 800,  meta: 'builtin'},
+                {name: 'LENGTH',       value: 'LENGTH',       score: 800,  meta: 'builtin'},
+                {name: 'LCASE',        value: 'LCASE',        score: 800,  meta: 'builtin'},
+                {name: 'UCASE',        value: 'UCASE',        score: 800,  meta: 'builtin'},
+                {name: 'SUBSTRING',    value: 'SUBSTRING',    score: 800,  meta: 'builtin'},
+                {name: 'DIV',          value: 'DIV',          score: 800,  meta: 'builtin'},
+                {name: 'MOD',          value: 'MOD',          score: 800,  meta: 'builtin'}
             ];
             
             // combine completions
