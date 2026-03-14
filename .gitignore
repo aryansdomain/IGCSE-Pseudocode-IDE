@@ -44,6 +44,9 @@ temp/
 .env.*
 !.env.example
 
+# Cloudflare Wrangler
+.wrangler/*
+
 # Misc/other
 *.swp
 *.swo
