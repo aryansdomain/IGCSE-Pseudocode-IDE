@@ -25,7 +25,7 @@ export function initExamples({
 
     // ------------------------ Buttons --------------------------
 
-    // Variables
+    // variables
     const varsConstsDTsBtn = panelEl.querySelector('#varsConstsDTsExampleBtn');
     if (varsConstsDTsBtn && editorApis) {
         varsConstsDTsBtn.addEventListener('click', () => {
@@ -64,7 +64,7 @@ OUTPUT "Pi = ", Pi
         });
     }
 
-    // Input/Output
+    // input/output
     const iOBtn = panelEl.querySelector('#iOExampleBtn');
     if (iOBtn && editorApis) {
         iOBtn.addEventListener('click', () => {
@@ -86,10 +86,10 @@ OUTPUT "You are ", Age, " years old."
         });
     }
 
-    // Arithmetic Operations
-    const arithmeticOpsBtn = panelEl.querySelector('#arithOpsExampleBtn');
-    if (arithmeticOpsBtn && editorApis) {
-        arithmeticOpsBtn.addEventListener('click', () => {
+    // arithmetic operations
+    const arithOpsBtn = panelEl.querySelector('#arithOpsExampleBtn');
+    if (arithOpsBtn && editorApis) {
+        arithOpsBtn.addEventListener('click', () => {
             const code = `// Arithmetic Operations
 
 DECLARE A, B : INTEGER
@@ -115,7 +115,7 @@ OUTPUT "Random number (0 to 1): ", RANDOM()
         });
     }
 
-    // String Operations
+    // string operations
     const strOpsBtn = panelEl.querySelector('#strOpsExampleBtn');
     if (strOpsBtn && editorApis) {
         strOpsBtn.addEventListener('click', () => {
@@ -124,7 +124,7 @@ OUTPUT "Random number (0 to 1): ", RANDOM()
 DECLARE Name, LowerCaseName, UpperCaseName, Part : STRING
 DECLARE LengthOfName : INTEGER
 
-OUTPUT "Enter your name (more than 3 characters): "
+OUTPUT "Enter your name (>= 3 characters): "
 INPUT Name
 
 OUTPUT "Your name's length is ", LENGTH(Name)
@@ -137,30 +137,29 @@ OUTPUT "The first three characters of your name are ", SUBSTRING(Name, 1, 3)
         });
     }
 
-    // Logical Operations
+    // logical operations
     const logicOpsBtn = panelEl.querySelector('#logicOpsExampleBtn');
     if (logicOpsBtn && editorApis) {
         logicOpsBtn.addEventListener('click', () => {
             const code = `// Logical Operations
 
 DECLARE A, B : INTEGER
-DECLARE IsEqual, IsGreater, IsSmaller, InRange, NotEqual : BOOLEAN
 DECLARE Age : INTEGER
 DECLARE Eligible : BOOLEAN
 
-// Section 1 - Discount check
+// Logic
 OUTPUT "Enter your age (integer): "
 INPUT Age
-Eligible <- (Age < 18) OR (Age >= 65)
+Eligible <- ((Age >= 13) AND (Age <= 18)) OR (Age >= 65)
 
-IF Eligible
+IF NOT Eligible
   THEN
-    OUTPUT "You are eligible for a discount."
-  ELSE
     OUTPUT "You are not eligible for a discount."
+  ELSE
+    OUTPUT "You are eligible for a discount."
 ENDIF
 
-// Section 2 - More operations
+// Comparisons
 OUTPUT ""
 OUTPUT "Enter A (integer): "
 INPUT A
@@ -172,13 +171,15 @@ OUTPUT "A = B? ", A = B
 OUTPUT "A not equal to B? ", A <> B
 OUTPUT "A > B? ", A > B
 OUTPUT "A < B? ", A < B
+OUTPUT "A >= B? ", A >= B
+OUTPUT "A <= B? ", A <= B
 `;
             editorApis.setCode?.(code, true);
             close();
         });
     }
 
-    // Conditionals
+    // conditionals
     const conditionalsBtn = panelEl.querySelector('#conditionalsExampleBtn');
     if (conditionalsBtn && editorApis) {
         conditionalsBtn.addEventListener('click', () => {
@@ -224,7 +225,7 @@ ENDCASE
         });
     }
 
-    // Loops
+    // loops
     const loopsBtn = panelEl.querySelector('#loopsExampleBtn');
     if (loopsBtn && editorApis) {
         loopsBtn.addEventListener('click', () => {
@@ -260,20 +261,20 @@ OUTPUT "The sum of numbers 1 to 5 is ", Total
         });
     }
 
-    // Arrays
+    // arrays
     const arraysBtn = panelEl.querySelector('#arraysExampleBtn');
     if (arraysBtn && editorApis) {
         arraysBtn.addEventListener('click', () => {
             const code = `// Arrays
 
-DECLARE Numbers : ARRAY[1:5] OF INTEGER
 DECLARE Temp : INTEGER
 DECLARE Len, i, j : INTEGER
 
-OUTPUT "Input length of array (2-10): "
-REPEAT
+Len <- 0
+WHILE Len < 2 OR Len > 10 DO
+    OUTPUT "Input length of array (2-10): "
     INPUT Len
-UNTIL Len >= 2 AND Len <= 10
+ENDWHILE
 
 // Input
 DECLARE Numbers : ARRAY[1:Len] OF INTEGER
@@ -332,10 +333,8 @@ PROCEDURE DisplaySum(X : INTEGER, Y : INTEGER)
     OUTPUT "The sum of ", X, " and ", Y, " is ", Sum
 ENDPROCEDURE
 
-// Main prorgam
+// Main program
 DECLARE A, B : INTEGER
-DECLARE Result : INTEGER
-DECLARE Chance : REAL
 
 CALL Welcome
 
@@ -356,4 +355,3 @@ OUTPUT "Random percentage = ", RandomPercentage(), "%"
 
     return { open, close };
 }
-
