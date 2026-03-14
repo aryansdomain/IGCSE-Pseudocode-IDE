@@ -7,7 +7,8 @@ export default {
 
         const origin = request.headers.get("Origin") || "";
         const allowed = String(env.ALLOWED_ORIGINS).split(",").map(s => s.trim()).filter(Boolean);
-        const allow = (origin && allowed.includes(origin)) ? origin : (allowed[0]);
+        const isLocalDevOrigin = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin);
+        const allow = (origin && (allowed.includes(origin) || isLocalDevOrigin)) ? origin : (allowed[0] || "*");
 
         // which origin is allowed to interact with worker.js?
         const cors = {
