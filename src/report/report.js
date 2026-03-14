@@ -1,5 +1,5 @@
-const { initMode }        = await import('../ui/modeCtrl.js');
-const { initFileUpload }  = await import('./fileUpload.js');
+const { initMode }       = await import('../ui/modeCtrl.js');
+const { initFileUpload } = await import('./fileUpload.js');
 
 // API vars
 const GH_OWNER   = "aryansdomain";
@@ -10,11 +10,6 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
 
     // ------------------------ Init ------------------------
     const $ = (id) => document.getElementById(id);
-    const errorDialog = $("errorDialog");
-    const title       = $("br-title");
-    const body        = $("br-body");
-
-    // ------------------------ Utilities ------------------------
 
     // query string parameter
     function qs(key) {
@@ -22,30 +17,11 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
         return v || "";
     }
 
-    // when making body, bold labels for ease of reading
-    function boldLabels(text) {
-        if (!text) return text;
+    const errorDialog = $("errorDialog");
+    const title       = $("br-title");
+    const body        = $("br-body");
 
-        const LABELS_TO_BOLD = [
-            "Type (UI issue, runtime error, formatting bug, etc.):",
-            "Steps to reproduce:",
-            "Expected result:",
-            "Actual result:",
-            "Additional information:",
-            "------------------------ PREFILLED INFORMATION ------------------------",
-            "UA:",
-            "Last JavaScript Error:",
-            "Last IDE Error:",
-        ];
-        const lines = text.split("\n");
-
-        for (let i = 0; i < lines.length; i++) {
-            if (LABELS_TO_BOLD.includes(lines[i])) {
-                lines[i] = `**${lines[i]}** `;
-            }
-        }
-        return lines.join("\n").trim();
-    }
+    // ------------------------ Utilities ------------------------
 
     // show an error in the error dialog
     function showError(message, duration = 3000) {
@@ -84,7 +60,8 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
     }
 
     // set button state
-    function setButtonState({ reset, submitBtnText = "Submit anonymously", gHBtnText = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)' }) {
+    function setButtonState({ reset, submitBtnText = "Submit anonymously",
+                              gHBtnText = '<i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)' }) {
         submitBtn.disabled = !reset;
         openGHBtn.disabled = !reset;
 
@@ -119,20 +96,24 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
     
     // generate template
     body.value =
-        "Type (UI issue, runtime error, formatting bug, etc.): \n\n" + 
-        "Steps to reproduce:\n" +
+        "**Type (UI issue, runtime error, formatting bug, etc.):** \n\n" + 
+        "**Steps to reproduce:**\n" +
         "1. \n" +
         "2. \n" +
         "3. \n\n" +
-        "Expected result:\n\n\n\n" + 
-        "Actual result:\n\n\n\n" +
-        "Additional information:\n\n\n\n" + 
-        "------------------------ PREFILLED INFORMATION ------------------------\n\n" +
-        `UA: ${navigator.userAgent}\n\n\n` +
-        "Last JavaScript Error:\n\n" +
-        (qs("jsError") || "None") + "\n\n" +
-        "Last IDE Error:\n\n" +
-        (qs("ideError") || "None");
+        "**Expected result:**\n\n\n\n" + 
+        "**Actual result:**\n\n\n\n" +
+        "**Additional information:**\n\n\n\n" + 
+        "**------------------------ PREFILLED INFORMATION ------------------------**\n\n" +
+        `**UA:** ${navigator.userAgent}\n\n\n` +
+        "**Last JavaScript Error:**\n\n" +
+        (qs("jsError")  || "None") + "\n\n" +
+        "**Last IDE Error:**\n\n" +
+        (qs("ideError") || "None") + "\n\n\n" +
+        "**IDE Code:**\n\n" +
+        "```\n" +
+        (window.opener?.editor?.getValue?.() || qs("code") || "") + "\n" +
+        "```";
 
     // ------------------------ Buttons ------------------------
     const closeBtn = $("closeBtn");
@@ -151,7 +132,7 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
             gh.searchParams.set("labels", "issue");
 
             // add files to issue message
-            let newBody = await uploadFiles(boldLabels(body.value));
+            let newBody = await uploadFiles(body.value);
             gh.searchParams.set("body", newBody);
 
             // open the page
@@ -182,7 +163,7 @@ const WORKER_URL = "https://igcse-issue-worker.aryansdomain.workers.dev";
             }
 
             // add files to issue message
-            let newBody = await uploadFiles(boldLabels(body.value));
+            let newBody = await uploadFiles(body.value);
 
             // talk to api to post to GitHub
             const res = await fetch(WORKER_URL, {
