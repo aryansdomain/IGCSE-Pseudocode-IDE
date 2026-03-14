@@ -2,7 +2,7 @@ export function initConsoleOutput(console) {
 
     const write = (text, color = null) => {
         if (color) console.write(`\x1b[${color}m${text}\x1b[0m`);
-              else console.write(text);
+        else       console.write(text);
     };
     const writePrompt = () => {
         write('% ', document.documentElement.classList.contains('light') ? '90' : '38;5;248');
@@ -30,16 +30,16 @@ export function initConsoleOutput(console) {
         lnprintln: (t = '', color = null) => write(`\r\n${t}\r\n`, color),
 
         // error (red)
-        err:       (t = '') => { setLastIdeError(t); write(t, '31'); },
-        errln:     (t = '') => { setLastIdeError(t); write(`${t}\r\n`, '31'); },
-        lnerr:     (t = '') => { setLastIdeError(t); write(`\r\n${t}`, '31'); },
-        lnerrln:   (t = '') => { setLastIdeError(t); write(`\r\n${t}\r\n`, '31'); },
+        err:       (t = '') => { setLastIdeError(t);   write(t,              '31'); },
+        errln:     (t = '') => { setLastIdeError(t);   write(`${t}\r\n`,     '31'); },
+        lnerr:     (t = '') => { setLastIdeError(t);   write(`\r\n${t}`,     '31'); },
+        lnerrln:   (t = '') => { setLastIdeError(t);   write(`\r\n${t}\r\n`, '31'); },
 
         // warning (italics + yellow)
-        warn:      (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m`); },
-        warnln:    (t = '') => { setLastIDEWarning(t); write(`\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
-        lnwarn:    (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m`); },
-        lnwarnln:  (t = '') => { setLastIDEWarning(t); write(`\r\n\x1b[3m\x1b[33m${t}\x1b[0m\r\n`); },
+        warn:      (t = '') => { setLastIDEWarning(t); write(t,              '3;33'); },
+        warnln:    (t = '') => { setLastIDEWarning(t); write(`${t}\r\n`,     '3;33'); },
+        lnwarn:    (t = '') => { setLastIDEWarning(t); write(`\r\n${t}`,     '3;33'); },
+        lnwarnln:  (t = '') => { setLastIDEWarning(t); write(`\r\n${t}\r\n`, '3;33'); },
 
         // clear line
         clear:          () => console.clear(),
