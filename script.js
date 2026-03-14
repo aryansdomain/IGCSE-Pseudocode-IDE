@@ -1,25 +1,25 @@
 (async function () {
 
     // import modules
-    const { initEditor }          = await import('./src/editor/editor.js');
-    const { initFiles }           = await import('./src/editor/files.js');
-    const { initFont }            = await import('./src/editor/font.js');
-    const { initSpacing }         = await import('./src/editor/spacing.js');
-    const { initTheme }           = await import('./src/ui/themeCtrl.js');
-    const { initFormatter }       = await import('./src/format/format.js');
-    const { initRun }             = await import('./src/runtime/runCtrl.js');
-    const { initConsole }         = await import('./src/console/console.js');
-    const { initConsoleOutput }   = await import('./src/console/consoleOutput.js');
-    const { initCursor }          = await import('./src/console/cursor.js');
-    const { initDownload }        = await import('./src/utils/download.js');
-    const { initCopy }            = await import('./src/utils/copy.js');
-    const { initUpload }          = await import('./src/utils/upload.js');
-    const { initMode }            = await import('./src/ui/modeCtrl.js');
-    const { initSettings }        = await import('./src/ui/settings.js');
-    const { initExamples }        = await import('./src/ui/examples.js');
-    const { initSplitter }        = await import('./src/ui/splitter.js');
-    const { initLayout }          = await import('./src/ui/layout.js');
-    const { initUI, on }          = await import('./src/utils/ui.js');
+    const { initEditor }        = await import('./src/editor/editor.js');
+    const { initFiles }         = await import('./src/editor/files.js');
+    const { initFont }          = await import('./src/editor/font.js');
+    const { initSpacing }       = await import('./src/editor/spacing.js');
+    const { initTheme }         = await import('./src/ui/themeCtrl.js');
+    const { initFormatter }     = await import('./src/format/format.js');
+    const { initRun }           = await import('./src/runtime/runCtrl.js');
+    const { initConsole }       = await import('./src/console/console.js');
+    const { initConsoleOutput } = await import('./src/console/consoleOutput.js');
+    const { initCursor }        = await import('./src/console/cursor.js');
+    const { initDownload}       = await import('./src/utils/download.js');
+    const { initCopy }          = await import('./src/utils/copy.js');
+    const { initUpload }        = await import('./src/utils/upload.js');
+    const { initMode }          = await import('./src/ui/modeCtrl.js');
+    const { initSettings }      = await import('./src/ui/settings.js');
+    const { initExamples }      = await import('./src/ui/examples.js');
+    const { initSplitter }      = await import('./src/ui/splitter.js');
+    const { initLayout }        = await import('./src/ui/layout.js');
+    const { initUI, on }        = await import('./src/utils/ui.js');
 
     const UI = initUI();
 
@@ -123,9 +123,7 @@
     attachCursorListeners();
 
     // update listeners when files switch
-    editor.on('changeSession', () => {
-        attachCursorListeners();
-    });
+    editor.on('changeSession', () => { attachCursorListeners(); });
 
     // ------------------------ Console ------------------------
 
@@ -145,6 +143,9 @@
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
         cursorBlink: true,
         cursorStyle: 'block',
+        onAwaitingInputChange: (awaitingInput) => {
+            UI.clearBtn.disabled = awaitingInput;
+        },
     });
 
     // console output
@@ -285,7 +286,7 @@
         }
     });
     
-    cursor = initCursor({ console, consoleOutput, setAwaitingInput, isAwaitingInput });
+    cursor = initCursor({ console, consoleOutput, isAwaitingInput });
     runCtrl.setCursor(cursor);
 
     // set dependencies for console

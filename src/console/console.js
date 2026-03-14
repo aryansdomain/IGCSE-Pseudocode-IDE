@@ -4,6 +4,7 @@ export function initConsole({
     fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     cursorBlink = true,
     cursorStyle = 'block',
+    onAwaitingInputChange = () => {},
 } = {}) {
 
     // initialize xterm
@@ -23,17 +24,20 @@ export function initConsole({
     // dependencies provided later
     let deps = {
         consoleOutput: undefined,
-        runCtrl: undefined,
-        editorApis: undefined,
-        themeCtrl: undefined,
-        modeCtrl: undefined,
-        cursor: undefined,
+        runCtrl:       undefined,
+        editorApis:    undefined,
+        themeCtrl:     undefined,
+        modeCtrl:      undefined,
+        cursor:        undefined,
     };
     function setDeps(next) { deps = { ...deps, ...next }; }
 
     // awaiting input
     let awaitingInput = false;
-    function setAwaitingInput(v) { awaitingInput = !!v; }
+    function setAwaitingInput(v) {
+        awaitingInput = v;
+        try { onAwaitingInputChange(awaitingInput); } catch {}
+    }
     function isAwaitingInput() { return awaitingInput; }
 
     // fit terminal to container size
@@ -197,7 +201,7 @@ export function initConsole({
               else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
               else if (data === '\u001b[D') cursor.moveCursorLeft();   // left arrow
               else if (data.length === 1 && data >= ' ') {             // printable characters
-                cursor.insertChar(data);   // data >= ' ' ensures ASCII value is >= 32
+                cursor.insertChar(data); // data >= ' ' ensures ASCII value is >= 32
             }
         } else {
             // shell mode
@@ -245,7 +249,7 @@ export function initConsole({
             } else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
               else if (data === '\u001b[D') cursor.moveCursorLeft();   // left arrow
               else if (data.length === 1 && data >= ' ') {             // printable characters
-                cursor.insertChar(data);        // data >= ' ' ensures the ASCII value is >= 32
+                cursor.insertChar(data)  // data >= ' ' ensures the ASCII value is >= 32
             }
         }
     });
@@ -281,19 +285,14 @@ export function initConsole({
         return trim ? text.trimEnd() : text;
     };
 
-    function refit() { try { if (fitAddon) fitAddon.fit(); } catch {} }
-    function dispose() { try { xterm.dispose(); } catch {} }
-
     return {
         console: xterm,
-        getline,
-        getConsoleText,
-        refit,
-        dispose,
+        getline, getConsoleText,
+        refit: () => { if (fitAddon) fitAddon.fit(); },
+        dispose: () => { xterm.dispose(); },
         execCommand,
         setDeps,
-        setAwaitingInput,
-        isAwaitingInput,
+        setAwaitingInput, isAwaitingInput,
         history: { get: () => hist.slice(), clear() { hist = []; hIdx = -1; } }
     };
 }
