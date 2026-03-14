@@ -56,7 +56,7 @@ and see how it works.
 
 
 ## Splitter and Resizing
-The splitter is a handle in between the editor and the console that allows you to resize  them. Double click the splitter to reset to a 50-50 ratio.  
+The splitter is a handle in between the editor and the console that allows you to resize them. Double click the splitter to reset to a 50-50 ratio.  
 You can also click the buttons on the editor and console to expand and collapse them.  
 The layout button lets you switch between a vertical (editor top, console bottom) and a horizontal (editor left, console right) layout.
 
@@ -66,7 +66,12 @@ Code output is written in the console, and you can input values there as well (j
 The code will either finish running successfully, run with warnings, or stop due to an error. 
 
 ## Info and Code Examples
-If you ever want to see the official documentation by IGCSE, click the info button on the top bar. Click the code examples button (to the left of the info button) to see the different features and functions of the language. Press a button, and code gets filled into the editor. You can run the code, and see, for example, how arrays work.
+If you ever want to see the official documentation of the language, click the info button on the top bar to acess the IGCSE pseudocode syllabus guide.  
+Click the code examples button (to the left of the info button) to see the different features and functions of the language. Press a button, and code gets filled into the editor. You can run the code, and see, for example, how arrays work.
+
+## File System
+The editor supports multiple files, each able to store seperate code. A maximum of 7 files are allowed, and each one is saved to your computer (so reloading the page restores the code).  
+The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file.
 
 ## Issue Report
 Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.  
