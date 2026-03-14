@@ -93,6 +93,14 @@
             title: 'Layout',
             intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor left, console right).',
         }, {
+            element: '#filesBar',
+            title: 'Files',
+            intro: 'Up to 7 different files can be created, each able to store seperate code. Undoing/redoing works here too.',
+        }, {
+            element: '#filesBar',
+            title: 'Files',
+            intro: 'Press return when focused on a file to rename it.',
+        }, {
             element: '#examplesBtn',
             title: 'Examples',
             intro: 'Access example code snippets that showcase what the language can do.',
