@@ -13,7 +13,7 @@
         "GITHUB_REPO": "IGCSE-Pseudocode-IDE",
         "PUBLIC_BASE_URL": "https://igcse-issue-worker.aryansdomain.workers.dev",
         "MAX_UPLOAD_BYTES": "2097152", // 2 MB
-        "ALLOWED_ORIGINS": "https://igcse-ide.com,http://127.0.0.1:5500",
+        "ALLOWED_ORIGINS": "https://www.igcse-ide.com,https://igcse-ide.com,http://127.0.0.1:5500,http://127.0.0.1:5501",
         "ACCOUNT_ID": "6ac518c689dfb45243b4390ee6fcac8b",
         "BUCKET_NAME": "issue-uploads"
     }
