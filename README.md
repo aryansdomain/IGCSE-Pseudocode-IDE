@@ -71,7 +71,7 @@ Click the code examples button (to the left of the info button) to see the diffe
 
 ## File System
 The editor supports multiple files, each able to store seperate code. A maximum of 7 files are allowed, and each one is saved to your computer (so reloading the page restores the code).  
-The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file.
+The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file. The files can also be renamed by clicking `return` when focused on the files (not on the editor).
 
 ## Issue Report
 Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.  
