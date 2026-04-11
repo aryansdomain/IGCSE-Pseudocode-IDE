@@ -1,37 +1,36 @@
-export function initSpacing({editor, editorApis, slider, valueEl, infoEl, tickSelector = null} = {}) {
+export function initSpacing({ aceEditor, slider, valueEl, infoEl, tickSelector = null } = {}) {
     const Range = ace.require('ace/range').Range;
 
     function getTabSpaces() {
-        const session = editor.session;
-        return session.getTabSize()
+        return aceEditor.session.getTabSize();
     }
 
     function setTabSpaces(n) {
-        const session = editor.session;
+        const session = aceEditor.session;
         const newSize = parseInt(n, 10);
         const oldSize = getTabSpaces();
         if (!Number.isFinite(newSize) || newSize === oldSize) return oldSize;
 
-        editorApis.setTab(newSize);
+        session.setTabSize(newSize);
         retabDocumentByUnits(session, oldSize, newSize);
 
         // refresh ui
         if (slider) slider.value = String(newSize);
         if (valueEl) valueEl.textContent = newSize;
         if (infoEl) infoEl.textContent  = `Tab Spaces: ${newSize}`;
-        editor.renderer.updateFull();
+        aceEditor.renderer.updateFull();
 
         // track tab spaces change analytics
         if (oldSize !== newSize) {
             if (tabSpacesChangeTimeout) clearTimeout(tabSpacesChangeTimeout); // clear existing timeout
-            
+
             // set timeout to track after user stops dragging
             tabSpacesChangeTimeout = setTimeout(() => {
                 window.tab_spaces_changed && window.tab_spaces_changed({
                     tab_spaces_changed_from: originalSpaces,
                     tab_spaces_changed_to: newSize
                 });
-                
+
                 originalSpaces = newSize;
                 tabSpacesChangeTimeout = null;
             }, 2000); // delay after user stops dragging
@@ -79,6 +78,7 @@ export function initSpacing({editor, editorApis, slider, valueEl, infoEl, tickSe
     let originalSpaces = getTabSpaces();
 
     // ------------------------ Tab Slider (Settings) ------------------------
+
     const onSlider = (e) => setTabSpaces(e.target.value);
     slider?.addEventListener('input', onSlider);
     slider?.addEventListener('change', onSlider);
@@ -95,6 +95,7 @@ export function initSpacing({editor, editorApis, slider, valueEl, infoEl, tickSe
     }
 
     // ------------------------ Init ------------------------
+
     const initial = getTabSpaces();
     if (slider) slider.value = String(initial);
     if (valueEl) valueEl.textContent = initial;

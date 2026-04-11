@@ -8,7 +8,7 @@ export function initConsole({
 } = {}) {
 
     // initialize xterm
-    const xterm = new Terminal({ 
+    const xterm = new Terminal({
         fontSize,
         fontFamily,
         cursorBlink,
@@ -25,7 +25,7 @@ export function initConsole({
     let deps = {
         consoleOutput: undefined,
         runCtrl:       undefined,
-        editorApis:    undefined,
+        editor:        undefined,
         themeCtrl:     undefined,
         modeCtrl:      undefined,
         cursor:        undefined,
@@ -41,7 +41,7 @@ export function initConsole({
     function isAwaitingInput() { return awaitingInput; }
 
     // fit terminal to container size
-    const FitCtor = window.FitAddon && window.FitAddon.FitAddon
+    const FitCtor = window.FitAddon && window.FitAddon.FitAddon;
     let fitAddon = new FitCtor();
     if (fitAddon) xterm.loadAddon(fitAddon);
     queueMicrotask(() => { // delay to ensure everything is applied to
@@ -50,57 +50,57 @@ export function initConsole({
     });
 
     // ------------------------ Command Execution ------------------------
+
     async function execCommand(line) {
-        const { consoleOutput, runCtrl, editorApis, themeCtrl, modeCtrl } = deps;
+        const { consoleOutput, runCtrl, editor, themeCtrl, modeCtrl } = deps;
         if (!consoleOutput) return; // not ready yet
 
-        const raw = String(line || '').trim();
-        const [cmd, ...rest] = raw.split(/\s+/);
-        const c = (cmd || '').toLowerCase();
-        const arg = rest.join(' ');
-        if (raw) hist.push(raw); // add to history
+        if (!line || !line.trim()) return; // no content
+        const [cmdCS, ...other] = line.split(/\s+/);
+        const cmd = cmdCS.toLowerCase();
+        const arg = other.join(' ');
+        hist.push(line); // add to history
 
-        if (c != 'clear') {
+        if (cmd !== 'clear') {
             consoleOutput.hideCursor();
             consoleOutput.clearline();
             consoleOutput.writePrompt();
-            consoleOutput.println(`${c} ${arg}`, 32); // green color
+            consoleOutput.println(`${cmd} ${arg}`, 32); // green color
             consoleOutput.showCursor();
         }
-    
-        switch (c) {
+
+        switch (cmd) {
             case 'help': {
                 const output =
-                    '\x1b[32mrun\x1b[0m                  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
-                    '\x1b[32mclear\x1b[0m                Clear console\r\n' +
-                    '\x1b[32mformat\x1b[0m               Format the editor code\r\n' +
-                    '\x1b[32mtab <n>\x1b[0m              Set editor tab size (0-8 spaces)\r\n' +
-                    '\x1b[32mfont <px>\x1b[0m            Set editor font size (6-38 px)\r\n' +
-                    '\x1b[32mmode <light|dark>\x1b[0m    Switch overall UI between light and dark modes\r\n' +
-                    '\x1b[32mtheme <name>\x1b[0m         Change the editor color theme\r\n' +
-                    '\x1b[32mhelp\x1b[0m                 Print a list of commands dialog\r\n';
+                    '\x1b[32mrun              \x1b[0m  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
+                    '\x1b[32mclear            \x1b[0m  Clear console\r\n' +
+                    '\x1b[32mformat           \x1b[0m  Format the editor code\r\n' +
+                    '\x1b[32mtab <n>          \x1b[0m  Set editor tab size (0-8 spaces)\r\n' +
+                    '\x1b[32mfont <px>        \x1b[0m  Set editor font size (6-38 px)\r\n' +
+                    '\x1b[32mmode <light|dark>\x1b[0m  Switch overall UI between light and dark modes\r\n' +
+                    '\x1b[32mtheme <name>     \x1b[0m  Change the editor color theme\r\n' +
+                    '\x1b[32mhelp             \x1b[0m  Print this list\r\n';
                 consoleOutput.lnprintln('Commands:', 1); // bold
                 consoleOutput.println(output);
                 break;
             }
-    
+
             case 'run': {
-                consoleOutput.newline();
                 runCtrl.run('console');
                 return;
             }
-    
+
             case 'clear': {
                 consoleOutput.clear();
                 break;
             }
-    
+
             case 'format': {
-                editorApis.formatCode();
+                editor.formatCode();
                 consoleOutput.println('Formatted.');
                 break;
             }
-    
+
             case 'tab': {
                 const n = parseInt(arg, 10);
                 if (!arg || Number.isNaN(n) || n < 0 || n > 8) {
@@ -108,7 +108,7 @@ export function initConsole({
                     break;
                 }
 
-                editorApis?.setTab?.(n);
+                editor?.setTab?.(n);
                 consoleOutput.println(`Tab spaces: ${n}`);
 
                 if (n === 0) {
@@ -117,7 +117,7 @@ export function initConsole({
                 }
                 break;
             }
-    
+
             case 'font': {
                 const n = parseInt(arg, 10);
                 if (!arg || Number.isNaN(n) || n < 6 || n > 38) {
@@ -125,34 +125,34 @@ export function initConsole({
                     break;
                 }
 
-                editorApis?.setFontSize?.(n);
-                consoleOutput.println(`Font size: ${n}`)
+                editor?.setFontSize?.(n);
+                consoleOutput.println(`Font size: ${n}`);
                 break;
             }
-    
-            case 'mode': {
-                const t = (arg || '').toLowerCase();
-                if (t === 'light' || t === 'dark') {
-                    if (modeCtrl && typeof modeCtrl.setMode === 'function') modeCtrl.setMode(t);
-                    else if (editorApis?.setMode) editorApis.setMode(t);
 
-                    consoleOutput.println(`Mode: ${t}`);
+            case 'mode': {
+                const mode = arg.toLowerCase();
+                if (mode === 'light' || mode === 'dark') {
+                    if (modeCtrl && typeof modeCtrl.setMode === 'function') modeCtrl.setMode(mode);
+                    else if (editor?.setMode) editor.setMode(mode);
+
+                    consoleOutput.println(`Mode: ${mode}`);
                 } else {
-                    consoleOutput.errln('Usage: mode <light|dark>')
-                    if (themeCtrl.themeInfo(t).ok) consoleOutput.errln(`Did you mean 'theme ${t}'?`);
+                    consoleOutput.errln('Usage: mode <light|dark>');
+                    if (themeCtrl.themeInfo(mode).ok) consoleOutput.errln(`Did you mean 'theme ${mode}'?`);
                 }
                 break;
             }
-    
+
             case 'theme': {
-                const name = (arg || '').trim().toLowerCase();
-                if (!name) { consoleOutput.errln('Usage: theme <name>'); break; }
+                const theme = arg.trim().toLowerCase();
+                if (!theme) { consoleOutput.errln('Usage: theme <name>'); break; }
 
                 // get theme name
-                const themeResult = themeCtrl.themeInfo(name);
+                const themeResult = themeCtrl.themeInfo(theme);
                 if (!themeResult.ok) {
                     consoleOutput.errln('Error: Invalid theme');
-                    if (name === 'light' || name === 'dark') consoleOutput.errln(`Did you mean 'mode ${name}'?`);
+                    if (theme === 'light' || theme === 'dark') consoleOutput.errln(`Did you mean 'mode ${theme}'?`);
                     break;
                 }
 
@@ -160,20 +160,21 @@ export function initConsole({
                 consoleOutput.println(`Theme: ${themeResult.name}`);
                 break;
             }
-                
+
             default: {
-                if (c != '') consoleOutput.errln(`Unknown command: ${cmd}`);
+                if (cmd !== '') consoleOutput.errln(`Unknown command: ${cmd}`);
                 break;
             }
         }
-        
-        if (c != 'clear') consoleOutput.writePrompt();
+
+        if (cmd !== 'clear') consoleOutput.writePrompt();
     }
 
     // ------------------------ Keyboard Input ------------------------
+
     let hist = [];
-    let hIdx = -1;
-    
+    let histLoc = -1;
+
     xterm.onData (async (data) => {
         const { runCtrl, cursor, consoleOutput } = deps;
         if (!consoleOutput) return; // not ready yet
@@ -186,13 +187,12 @@ export function initConsole({
             // input mode
             if (data === '\r') {                                       // enter, submit input
                 setAwaitingInput(false);
-                consoleOutput.newline();
-                
+
                 window.runCtrlProvideInput(cursor.getLine());
 
                 // reset
                 cursor.reset();
-                hIdx = -1;
+                histLoc = -1;
 
             } else if (data === '\u0003') {                            // ctrl-c, abort program
                 consoleOutput.newline();
@@ -208,11 +208,10 @@ export function initConsole({
             if (data === '\r') {                                       // enter, execute command
                 const origLine = cursor.getLine();
 
-                hIdx = -1;
+                histLoc = -1;
                 await cursor.setLine('');
 
-                execCommand(origLine);
-
+                await execCommand(origLine);
             } else if (data === '\u0003') {                            // ctrl-c, abort program
                 if (runCtrl.isRunning()) {
                     consoleOutput.newline();
@@ -227,10 +226,10 @@ export function initConsole({
               else if (data === '\u001b[A') {                          // up arrow
                 if (!hist.length) return;
 
-                if (hIdx === -1) hIdx = hist.length - 1;
-                else             hIdx = Math.max(0, hIdx - 1);
+                if (histLoc === -1) histLoc = hist.length - 1;
+                else               histLoc = Math.max(0, histLoc - 1);
 
-                const line = hist[hIdx] || '';
+                const line = hist[histLoc] || '';
 
                 await cursor.setLine(line);
                 cursor.moveCursorRight(line.length - cursor.getCursorPos());
@@ -238,10 +237,10 @@ export function initConsole({
             } else if (data === '\u001b[B') {                          // down arrow
                 if (!hist.length) return;
 
-                if (hIdx === -1) { await cursor.setLine(''); return; }
+                if (histLoc === -1) { await cursor.setLine(''); return; }
 
-                hIdx = Math.min(hist.length, hIdx + 1);
-                const line = (hIdx === hist.length) ? '' : (hist[hIdx] || '');
+                histLoc = Math.min(hist.length, histLoc + 1);
+                const line = (histLoc === hist.length) ? '' : (hist[histLoc] || '');
 
                 await cursor.setLine(line);
                 cursor.moveCursorRight(line.length - cursor.getCursorPos());
@@ -249,18 +248,19 @@ export function initConsole({
             } else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
               else if (data === '\u001b[D') cursor.moveCursorLeft();   // left arrow
               else if (data.length === 1 && data >= ' ') {             // printable characters
-                cursor.insertChar(data)  // data >= ' ' ensures the ASCII value is >= 32
+                cursor.insertChar(data);  // ^^^^^^^^^^^ ensures ASCII value >= 32
             }
         }
     });
 
     // ------------------------ Helpers/Utilities ------------------------
+
     const getline = () => {
         try {
-            const buf = xterm?.buffer?.active;
-            if (!buf) return '';
-            
-            const line = buf.getLine(buf.cursorY)?.translateToString(false) ?? '';
+            const buffer = xterm?.buffer?.active;
+            if (!buffer) return '';
+
+            const line = buffer.getLine(buffer.cursorY)?.translateToString(false) ?? '';
             return line;
         } catch {
             return '';
@@ -268,19 +268,19 @@ export function initConsole({
     };
 
     const getConsoleText = ({ trim = true } = {}) => {
-        const buf = xterm?.buffer?.active;
-        if (!buf) return '';
-      
+        const buffer = xterm?.buffer?.active;
+        if (!buffer) return '';
+
         const lines = [];
-        for (let i = 0; i < buf.length; i++) {
-            const line = buf.getLine(i);
+        for (let i = 0; i < buffer.length; i++) {
+            const line = buffer.getLine(i);
             if (!line) continue;
-        
+
             // remove right padding
             const s = line.translateToString(true, 0, xterm.cols);
             lines.push(s);
         }
-      
+
         const text = lines.join('\n');
         return trim ? text.trimEnd() : text;
     };
@@ -293,6 +293,6 @@ export function initConsole({
         execCommand,
         setDeps,
         setAwaitingInput, isAwaitingInput,
-        history: { get: () => hist.slice(), clear() { hist = []; hIdx = -1; } }
+        history: { get: () => hist.slice(), clear() { hist = []; histLoc = -1; } }
     };
 }

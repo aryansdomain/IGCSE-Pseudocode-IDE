@@ -7,7 +7,7 @@ export function initSettings({
     spacingCtrl = null,
     themeCtrl = null,
     modeCtrl = null,
-    editorApis = null,
+    editor = null,
     selectors = {
         fontSize:   '#font-size',
         fontFamily: '#font-family',
@@ -18,15 +18,12 @@ export function initSettings({
         mode:       '#modeSelect'
     }
 } = {}) {
-    // ----- open/close/toggle + accessibility -----
-    const focusables = 'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])';
-
     function isOpen() { return panelEl.style.display !== 'none'; }
     function open() {
         panelEl.style.display = 'flex';
         overlayEl?.classList.add('show');
         document.body.style.overflow = 'hidden';
-        const first = panelEl.querySelector(focusables);
+        const first = panelEl.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex = \'-1\'])');
         first?.focus();
     }
     function close() {
@@ -46,7 +43,8 @@ export function initSettings({
         }
     });
 
-    // ----- controls -----
+    // ------------------------ Controls ------------------------
+
     const $ = (sel) => sel ? panelEl.querySelector(sel) : null;
     const font_size    = $(selectors.fontSize);
     const font_family  = $(selectors.fontFamily);
@@ -59,8 +57,8 @@ export function initSettings({
     // font size
     if (font_size) {
         const apply = (n) => {
-            const v = Math.max(6, Math.min(72, parseInt(n, 10) || 14));
-            if (fontCtrl?.setFontSize) fontCtrl.setFontSize(v); else editorApis?.setFontSize?.(v);
+            const size = Math.max(6, Math.min(72, parseInt(n, 10) || 14));
+            if (fontCtrl?.setFontSize) fontCtrl.setFontSize(size); else editor?.setFontSize?.(size);
         };
         font_size.addEventListener('input', () => apply(font_size.value));
     }
@@ -76,25 +74,25 @@ export function initSettings({
     }
 
     // soft wrap / read-only
-    soft_wrap?.addEventListener('change', () => editorApis?.setSoftWrap?.(!!soft_wrap.checked));
-    read_only?.addEventListener('change', () => editorApis?.setReadOnly?.(!!read_only.checked));
+    soft_wrap?.addEventListener('change', () => editor?.setSoftWrap?.(!!soft_wrap.checked));
+    read_only?.addEventListener('change', () => editor?.setReadOnly?.(!!read_only.checked));
 
     // editor theme
     if (theme) {
         // populate if empty
         if (!theme.options.length) {
-            const allThemes = themeCtrl.lightThemes + themeCtrl.darkThemes
+            const allThemes = themeCtrl.lightThemes + themeCtrl.darkThemes;
             allThemes.array.forEach((name) => {
                 const opt = document.createElement('option');
                 opt.value = name; opt.textContent = name;
                 theme.appendChild(opt);
             });
         }
-        
+
         if (!themeCtrl) {
             theme.addEventListener('change', () => {
                 const name = theme.value;
-                editorApis?.setTheme?.(name);
+                editor?.setTheme?.(name);
             });
         }
     }
