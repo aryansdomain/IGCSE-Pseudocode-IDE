@@ -1,26 +1,49 @@
 # IGCSE Pseudocode IDE
 
-The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and additional features that helps students practice their code-writing skills and real-world computer literacy. It can be accessed at https://igcse-ide.com.  
+The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and additional features that helps students practice their code-writing skills and real-world computer literacy. It can be accessed at https://igcse-ide.com.
 The IDE is open-source, free-to-use, has no ads, and never collects your personal information without your consent.
 
 ## Language
 Following are some guidelines that the interpreter uses, that do not directly follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
-* Identifiers (Variable/constant/function names)
+* Scopes
+    * Constants can only be declared in the global scope, not in sub-scopes like procedures or loops.
+    * Variables cannot be declared (or initialized without being declared) in sub-scopes.
+* Declaration
     * Declaration is not needed for a variable, although initalization is still needed.
-    * Identifiers that differ only in case (AbCd vs aBcD) will be treated as the same, and a warning will be output.
-    * Using a keyword (IF, FUNCTION) as an identifier will output a warning but still allow the code to run.
-* Arrays
-    * Declaring an array fills it with its type's default value (0 for an integer, FALSE for a boolean, etc.)
-    * Total array size is limited to 1,000,000 elements.
-* Loops
-    * In FOR loops, the THEN is allowed to be in the same line as the IF: `IF Num < 5 THEN`. Formatting still moves the THEN to the next line.
-    * Loop size is limited to 1,000,000 loops.
+    * Multiple variables are allowed to be declared in one line (`DECLARE Var1, Var2, Var3 : INTEGER`)
+    * Multiple constants are allowed to be declared in one line (`CONSTANT Const1, Const2, Const3 <- 5`)
+* Identifiers
+    * Identifiers that differ only in case (`AbCd` vs `aBcD`) will be treated as the same.
+    * Using a keyword (`IF`, `FUNCTION`) as an identifier is not allowed.
+    * Identifiers must start with a letter, but then can contain letters, numbers, and underscores.
 * Data Types
     * A char must be in single quotes, otherwise it will be considered a string.
-    * A string must be in double quotes, otherwise it will be considered a char.
-    * A real can be assigned an integer value (`Num <- 5`), but it will always be output in the real format, with numbers on both sides of the decimal point (`5.0`)
-* Operators
-    * , or + can be used for concatenating two operands if either is a string or char. Non-string and non-char operands will be converted to strings in the operation.
+    * A string can be in double quotes or single quotes.
+    * A real can be assigned an integer value (`Num <- 5`), but it will always be output in the real format, with numbers on both sides of the decimal point (`5.0`). An integer can be assigned a real value so long as that real is an integer (`5.0`).
+    * Reals can be used in contexts where integers are supposed to be used, as long as the reals are integer-valued.
+    * Similarly, a string can be assigned a char value. A char can be assigned a string value so long as that string is either empty or is a single character.
+    * Strings can be compared with characters, but arrays cannot be compared.
+    * Integers and reals can use scientific notation (`6.45e-3`).
+    * Chars can be empty (`''`).
+* Builtins and Operators
+    * The operations `,` or `+` can be used for concatenating two operands if either is a string or char. Non-string and non-char operands will be converted to strings in the operation.
+    * `AND` and `OR` are "eager" - they evaluate both operands before executing the operation and do not short-circuit when the first operand itself is enough to determine the result of the operation. 
+* Conditionals
+    * `CASE OF` can accept expressions (that evaluate to values) as the check value, not just variables.
+    * `OTHERWISE` is not required to be the last case in a `CASE OF` block.
+* Loops
+    * In `FOR` loops, the `THEN` is allowed to be in the same line as the `IF`: `IF Num < 5 THEN`. Formatting still moves the `THEN` to the next line.
+    * After the `FOR` loop, the iterator variable is set to the end value of the `FOR` only if it ran.
+    * Nested `CASE` blocks are not allowed.
+    * Loop size is limited to `1,000,000` loops.
+* Arrays
+    * Arrays cannot be assigned directly (`A <- [1, 2, 3]`).
+    * Total array size is limited to `1,000,000` elements.
+* Procedures and Functions
+    * Procedures and functions do not have to be declared at the start of the program.
+    * They can only be declared in the global scope, not in sub-scopes like conditionals or loops.
+* Other
+    * The assignment arrow can either be `<-`, `<--`, or `←`.
 
 ## Editor
 [ACE Editor](https://ace.c9.io/) (BSD license) is used in the IDE. It features automatic highlighting and auto-suggesting for keywords, declared identifiers, numbers, and more. It saves code on your device using localStorage, so you never lose it.
@@ -56,23 +79,23 @@ and see how it works.
 
 
 ## Splitter and Resizing
-The splitter is a handle in between the editor and the console that allows you to resize them. Double click the splitter to reset to a 50-50 ratio.  
-You can also click the buttons on the editor and console to expand and collapse them.  
+The splitter is a handle in between the editor and the console that allows you to resize them. Double click the splitter to reset to a 50-50 ratio.
+You can also click the buttons on the editor and console to expand and collapse them.
 The layout button lets you switch between a vertical (editor top, console bottom) and a horizontal (editor left, console right) layout.
 
 ## Runtime
-You can run the code by either clicking the run button or by executing 'run' in the console, and you can stop the code by either clicking the stop button or pressing Ctrl-C in the console.  
-Code output is written in the console, and you can input values there as well (just type the input and press enter).  
-The code will either finish running successfully, run with warnings, or stop due to an error. 
+You can run the code by either clicking the run button or by executing 'run' in the console, and you can stop the code by either clicking the stop button or pressing Ctrl-C in the console.
+Code output is written in the console, and you can input values there as well (just type the input and press enter).
+The code will either finish running successfully, run with warnings, or stop due to an error.
 
 ## Info and Code Examples
-If you ever want to see the official documentation of the language, click the info button on the top bar to acess the IGCSE pseudocode syllabus guide.  
+If you ever want to see the official documentation of the language, click the info button on the top bar to acess the IGCSE pseudocode syllabus guide.
 Click the code examples button (to the left of the info button) to see the different features and functions of the language. Press a button, and code gets filled into the editor. You can run the code, and see, for example, how arrays work.
 
 ## File System
-The editor supports multiple files, each able to store seperate code. A maximum of 7 files are allowed, and each one is saved to your computer (so reloading the page restores the code).  
+The editor supports multiple files, each able to store seperate code. A maximum of 7 files are allowed, and each one is saved to your computer (so reloading the page restores the code).
 The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file. The files can also be renamed by clicking `return` when focused on the files (not on the editor).
 
 ## Issue Report
-Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.  
+Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.
 If there are any issues that are not reportable using the Issue Report feature, email ascoder1248@gmail.com.

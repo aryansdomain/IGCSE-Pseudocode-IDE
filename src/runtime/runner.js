@@ -1,36 +1,48 @@
 self.window = self;
-self.__ide_stop_flag = false;
 
-const INTERPRETER_URL = './interpreter.js';
+import { interpret } from './interpreter/interpret.js';
 
-// get input from main thread
-self.readInput = function () {
-    self.postMessage({ type: 'input_request' });
-    return new Promise((resolve) => {
-        const handle = (e) => {
-            if (e.data && e.data.type === 'input_response') {
-                self.removeEventListener('message', handle);
-                resolve(String(e.data.data || e.data.value || ''));
-            }
-        };
-        self.addEventListener('message', handle);
-    });
-};
+let currentResolve = null;
+self.readInput = () => {
+    // await a Promise - set the resolve function (finishes the Promise) to currentResolve
+    self.postMessage({ type: 'input' });                                            //
+    return new Promise((resolve) => { currentResolve = resolve; });              //
+};                                                                            //
+                                                                            //
+self.onmessage = async (e) => {                                          //
+    const msg = e.data || {};                                         //
+                                                                    //
+    // response to input request                                 //
+    // call the resolve function for that Promise, sending the readInput back
+    if (msg.type === 'input' && msg.line != null && currentResolve) {
+        const resolve = currentResolve;
+        currentResolve = null;
+        resolve(String(msg.line));
+        return;
+    }
 
-let imported = false;
-
-self.onmessage = async (e) => {
-    const msg = e.data || {};
+    // run
     if (msg.type === 'run') {
         try {
-            if (!imported) { importScripts(INTERPRETER_URL); imported = true; }
-            const output = await self.interpret(msg.code);
-            self.postMessage({ type: 'done', output: String(output ?? '') });
-        } catch (err) {
-            self.postMessage({ type: 'error', error: err?.message || String(err) });
+            await interpret(msg.code);
+            self.postMessage({ type: 'done' });
+        } catch (e) {
+            if (e.formatted) {
+                self.postMessage({
+                    type:      'error',
+                    formatted: e.formatted,
+                    lineNum:   e.lineNum,
+                    column:    e.col,
+                    len:       e.len,
+                    errorType: e.type,
+                    code:      e.code
+                });
+            } else { // JS error
+                self.postMessage({
+                    type: 'error',
+                    error: `${e?.message || String(e)}\nThis error is not properly formatted. Please report this bug.`
+                });
+            }
         }
-    } else if (msg.type === 'stop') {
-        self.__ide_stop_flag = true;
-        self.postMessage({ type: 'stopped' });
     }
 };

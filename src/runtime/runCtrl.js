@@ -1,35 +1,34 @@
 export function initRun({
-    cursor,
-    consoleOutput,
-    console,
-    getline,
-    getCode,
+    console, consoleOutput, cursor,
+    getline, getCode,
     workerPath = 'runner.js',
     onInputRequested = () => {},
-    onStateChange = () => {},
-    onLoadingChange = () => {},
+    onInputEnd       = () => {},
+    onStateChange    = () => {},
+    onLoadingChange  = () => {},
 } = {}) {
 
-    // ------------------------------- Analytics Vars -------------------------------
+    // ------------------------ Analytics Vars ------------------------
+
     let code_executed_method = 'button';
-    let startTime = 0; let code_executed_runtime = 0;
+    let code_executed_runtime = 0; let startTime = 0;
     let code_executed_size = 0;
     let code_executed_success = false;
 
-    // ------------------------------- Runtime State -------------------------------
+    // ------------------------ Runtime State ------------------------
+
     let worker = null;
     let runId = 0;
     let isRunning = false;
 
-    let outputStorage = [];
-    let warningStorage = [];
-    let hadFlushOutput = false;
-
     let consoleLocked = false;
     let loadingTimer = null;
-    const setLoading = (v) => { try { onLoadingChange(!!v); } catch {} };
+    let alreadyOutput = false;
 
-    const clearLoadingTimer = () => {
+    function setLoading(v) {
+        try { onLoadingChange(!!v); } catch {}
+    };
+    function clearLoadingTimer() {
         if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null; }
     };
 
@@ -37,9 +36,12 @@ export function initRun({
         if (localRunId !== runId) return;  // if run is stale
 
         isRunning = false;
+        consoleLocked = false;
         onStateChange(false);
         clearLoadingTimer();
         setLoading(false);
+        onInputEnd();
+        cursor.reset();
 
         try { worker && worker.terminate(); } catch {}
         worker = null;
@@ -58,122 +60,72 @@ export function initRun({
         } catch {}
     }
 
+    function outputError(formatted) {
+        let line = getline().replace(/\s+$/, '');
+        if (line.length > 0) consoleOutput.newline();
+
+        const lines = String(formatted).split('\n');
+        lines.forEach((line, index) => {
+            if (index !== lines.length - 1) consoleOutput.errln(line);
+            else                            consoleOutput.err(line);
+        });
+    }
+
     // process execution results
     function attachWorkerHandlers(localRunId) {
         worker.onmessage = async (e) => {
             const { type } = e.data;
 
-            if (type === 'flush') {
+            if (type === 'output') {
+                alreadyOutput = true;
 
-                // flush all output
-                const s = String(e.data.output || '');
-                const newPart = s;
-                if (newPart.length) hadFlushOutput = true;
-                outputStorage.push(newPart);
+                const s = String(e.data.text ?? '');
+                const parts = s.split('\n');
+                parts.forEach(line => consoleOutput.lnprint(line));
 
-            } else if (type === 'warning') {
-                const msg = (e.data && (e.data.message ?? e.data.text)) || '';
-                if (msg) warningStorage.push(msg);
-
-            } else if (type === 'input_request') {
+            } else if (type === 'input') {
+                if (!alreadyOutput) consoleOutput.println();
 
                 // switch to input mode
-                consoleLocked = false;
                 clearLoadingTimer();
                 setLoading(false);
+                onInputRequested();
 
-                // print pending stuff
-                if (warningStorage.length) {
-                    warningStorage.forEach(msg => consoleOutput.warnln(msg));
-                    warningStorage = [];
-                }
-                if (outputStorage.length) {
-                    const combined = outputStorage.join('');
-                    const parts = combined.split('\n');
-                    parts.forEach((line, idx) => {
-                        if (idx !== parts.length - 1) consoleOutput.println(line);
-                        else consoleOutput.print(line);
-                    });
-                    outputStorage = [];
-                }
-
-                // after waiting a frame, set input start column
-                await new Promise((resolve) => {
-                    const d = console.onWriteParsed(() => { d.dispose(); resolve(); });
-                });
+                await Promise.race([
+                    new Promise((resolve) => {
+                        const d = console.onWriteParsed(() => { d.dispose(); resolve(); }); // give console a chance to update
+                    }),
+                    new Promise((resolve) => setTimeout(resolve, 0)) // advance after one timer tick
+                ]);
                 const col = console.buffer.active.cursorX || 0;
                 cursor.setInputStartCol(col);
 
-                onInputRequested();
-
-            } else if (type === 'done') {
                 consoleLocked = false;
-                clearLoadingTimer();
-                setLoading(false);
 
-                // print warnings
-                if (warningStorage.length) {
-                    warningStorage.forEach(msg => consoleOutput.warnln(msg));
-                    warningStorage = [];
-                }
-
-                const combinedFromFlush = outputStorage.join('');
-                const combined = combinedFromFlush.length
-                    ? combinedFromFlush
-                    : String(e.data.output || '');
-                outputStorage = [];
-
-                if (combined.length) {
-                    const parts = combined.split('\n');
-                    parts.forEach(line => consoleOutput.println(line));
-                }
+            // stops the program
+            } else if (type === 'done' || type === 'error') {
+                consoleOutput.newline();
 
                 // set analytics vars
                 code_executed_runtime = performance.now() - startTime;
-                code_executed_success = true;
-
-                finishRun(localRunId);
-
-            } else if (type === 'stopped') {
-                consoleLocked = false;
-                clearLoadingTimer();
-                setLoading(false);
-
-                // set analytics vars
-                code_executed_runtime = performance.now() - startTime;
-                code_executed_success = false;
-
-                finishRun(localRunId);
-
-            } else if (type === 'error') {
-                consoleLocked = false;
-                clearLoadingTimer();
-                setLoading(false);
-
-                // set analytics vars
-                code_executed_runtime = performance.now() - startTime;
-                code_executed_success = false;
+                code_executed_success = (type === 'done'); // mark as fail if error
 
                 // output error
-                let line = getline().replace(/\s+$/, '');
-                if (line.length > 0) consoleOutput.newline();
-                consoleOutput.errln(String(e.data.error || 'Unknown error'));
+                if (type === 'error') {
+                    outputError(e.data.formatted || e.data.error || 'Unknown error');
+                }
 
                 finishRun(localRunId);
             }
         };
 
         worker.onerror = (e) => {
-            consoleLocked = false;
-            clearLoadingTimer();
-            setLoading(false);
-            
             // set analytics vars
             code_executed_runtime = performance.now() - startTime;
             code_executed_success = false;
-            
-            consoleOutput.errln(`Worker error: ${e.message || e.filename || 'unknown'}`);
-            consoleOutput.errln(`Please reload the page.`);
+
+            consoleOutput.lnerrln(`Worker error: ${e.message || e.filename || 'unknown'}`);
+            consoleOutput.errln(`Please reload the page, or report this bug.`);
             finishRun(localRunId);
         };
     }
@@ -184,71 +136,56 @@ export function initRun({
         consoleLocked = true;
 
         // set analytics vars
-        code_executed_method = method
+        code_executed_method = method;
         startTime = performance.now(); code_executed_runtime = 0;
         code_executed_size = getCode().length;
         code_executed_success = false;
+        alreadyOutput = false;
 
-        const localRunId = ++runId;
-
-        outputStorage = [];
-        warningStorage = [];
-        hadFlushOutput = false;
-
-        worker = new Worker(workerPath);
-        attachWorkerHandlers(localRunId);
+        // make worker
+        const newRunId = ++runId;
+        worker = new Worker(workerPath, { type: 'module' });
+        attachWorkerHandlers(newRunId);
 
         worker.postMessage({ type: 'run', code: getCode() });
-        
-        // change run button to "Stop" after a delay
-        setTimeout(() => {
-            if (isRunning && localRunId === runId) {
-                onStateChange(true);
-            }
-        }, 100);
-        
-        // show loading bar after a delay
+
+        onStateChange(true);
+
+        // change run button to 'Stop' and show loading bar after 100ms
         loadingTimer = setTimeout(() => {
-            if (isRunning && localRunId === runId && !hadFlushOutput) {
-                setLoading(true);
-            }
+            if (isRunning && newRunId === runId) setLoading(true);
         }, 100);
     }
-
     function stop() {
-        if (!isRunning || !worker) {
-            consoleOutput.errln('No running execution to stop');
-            return;
-        }
+        if (!isRunning || !worker) return;
 
-        let line = getline().replace(/\s+$/, '');
-        if (line.length > 0) consoleOutput.newline();
-        consoleOutput.errln('Execution stopped');
+        outputError('Execution stopped');
+        consoleOutput.newline();
 
-        try { worker.postMessage({ type: 'stop' }); } catch {}
+        // stop worker
         try { worker.terminate(); } catch {}
         worker = null;
-        consoleLocked = false;
-        clearLoadingTimer();
-        setLoading(false);
-        cursor.reset();
+
+        // set analytics vars
+        code_executed_runtime = performance.now() - startTime;
+        code_executed_success = false;
 
         finishRun(runId);
     }
 
     function provideInput(line) {
-        consoleLocked = true; // lock while program runs
+        consoleLocked = true;
 
-        worker.postMessage({ type: 'input_response', data: String(line) });
-        
-        // show loading bar after a delay after input
+        worker.postMessage({ type: 'input', line: String(line) });
+
+        // change run button to 'Stop' and show loading bar after input
         loadingTimer = setTimeout(() => {
             if (isRunning) setLoading(true);
-        }, 75);
+        }, 100);
     }
 
     window.runCtrlProvideInput = provideInput;
-    function setCursor(newCursor) { cursor = newCursor; }
 
-    return { run, stop, provideInput, isRunning: () => isRunning, isConsoleLocked: () => consoleLocked, setCursor };
+    return { run, stop, provideInput, isRunning: () => isRunning,
+             isConsoleLocked: () => consoleLocked, setCursor: (newCursor) => cursor = newCursor };
 }
