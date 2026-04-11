@@ -24,12 +24,12 @@
             if (window.__errorTapInstalled) return;
             window.__errorTapInstalled = true;
             window.__lastError = null;
-        
+
             // classic errors
-            window.addEventListener("error", function (e) {
+            window.addEventListener('error', function (e) {
                 if (e instanceof ErrorEvent) {
                     window.__lastError = {
-                        type: "runtime",
+                        type: 'runtime',
                         message: e.message,
                         filename: e.filename,
                         lineno: e.lineno,
@@ -38,22 +38,22 @@
                     };
                 }
             }, true);
-      
+
             // onerror fallback
             window.onerror = function (message, source, lineno, colno, error) {
                 window.__lastError = {
-                    type: "onerror",
+                    type: 'onerror',
                     message, filename: source, lineno, colno,
                     stack: error && error.stack ? error.stack : null
                 };
                 return false;
             };
-      
+
             // unhandled promise rejection
-            window.addEventListener("unhandledrejection", function (e) {
+            window.addEventListener('unhandledrejection', function (e) {
                 var r = e && e.reason;
                 window.__lastError = {
-                    type: "unhandledrejection",
+                    type: 'unhandledrejection',
                     message: r && r.message ? String(r.message) : String(r),
                     stack: r && r.stack ? r.stack : null
                 };
@@ -69,7 +69,7 @@
     <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
     <script src="src/tour/tour.js" defer></script>
     <link rel="stylesheet" href="src/tour/tour.css">
-    
+
     <!-- Load font families -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -79,7 +79,7 @@
     <!-- Issue Report -->
     <script type="module" src="src/report/catchError.js" defer></script>
     <script type="module" src="src/utils/openReport.js" defer></script>
-    
+
     <!-- xterm.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
@@ -196,7 +196,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="console-content">
                         <div class="console-loadingbar" id="consoleLoadingBar" aria-hidden="true"></div>
                         <div id="consoleViewport"></div>
@@ -375,7 +375,7 @@
                 <i class="fas fa-heart"></i>
                 in India</span>
         </div>
-        
+
         <!-- JavaScript -->
         <script src="script.js"></script>
     </div>

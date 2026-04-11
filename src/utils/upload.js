@@ -10,14 +10,14 @@ export function initUpload({ uploadBtn, fileInput, setCode, consoleOutput }) {
             setCode(text);
 
             // track upload analytics
-            window.file_uploaded && window.file_uploaded({ 
+            window.file_uploaded && window.file_uploaded({
                 file_uploaded_name: file.name,
                 file_uploaded_size: text.length,
                 file_uploaded_type: file.type
             });
 
         } catch (err) {
-            consoleOutput.lnerrln(`Failed to upload file "${file.name}": ${err.message}`);
+            consoleOutput.lnerrln(`Failed to upload file ${file.name}: ${err.message}`);
             consoleOutput.writePrompt();
         }
 

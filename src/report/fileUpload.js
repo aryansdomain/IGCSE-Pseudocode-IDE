@@ -4,24 +4,25 @@ export function initFileUpload(options = {}) {
     const attachBtn        = options.attachBtn;
     const textareaWrap     = options.textareaWrap;
     const showError        = options.showError || alert;
-    const workerUrl        = options.workerUrl || "";
+    const workerUrl        = options.workerUrl || '';
     let selectedFiles = [];
 
     // ------------------------ Constants ------------------------
+
     const MAX_FILE_COUNT = 3;
     const MAX_FILE_SIZE  = 2 * 1024 * 1024; // 2 MB
 
     // ------------------------ Utilities ------------------------
-    
+
     function formatFileSize(bytes) {
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(1024));
         return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
     }
-    
+
     // validate file extension
     function isValidFile(file) {
-        const fileName = file.name || "";
+        const fileName = file.name || '';
 
         const ALLOWED_EXTENSIONS = [
             '.jpg', '.jpeg', '.png', '.gif', '.webp',
@@ -29,45 +30,44 @@ export function initFileUpload(options = {}) {
             '.txt', '.md',
             '.json',
         ];
-        
+
         // check if file extension is allowed
         const extension = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')).toLowerCase() : '';
         if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
             return { valid: false, error: 'File type not allowed.' };
         }
-        
         return { valid: true };
     }
-    
+
     function addFilePreview(file) {
 
         // create a preview of the file
         const preview = document.createElement('div');
         preview.className = 'file-preview';
         preview.dataset.fileName = file.name;
-        
+
         // create file info
         const fileInfo = document.createElement('div');
         fileInfo.className = 'file-info';
         fileInfo.innerHTML = `
-            <div class="file-name">${file.name}</div>
-            <div class="file-size">${formatFileSize(file.size)}</div>
+            <div class='file-name'>${file.name}</div>
+            <div class='file-size'>${formatFileSize(file.size)}</div>
         `;
-        
+
         // create remove button
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
-        removeBtn.innerHTML = '<i class="fas fa-xmark"></i>';
+        removeBtn.innerHTML = '<i class = "fas fa-xmark"></i>';
         removeBtn.onclick = () => {
             selectedFiles = selectedFiles.filter(f => f !== file);
             files.files = createFileList(selectedFiles);
             updatePreviews();
-        }
-        
+        };
+
         preview.appendChild(fileInfo);
         preview.appendChild(removeBtn);
         previewContainer.appendChild(preview);
-        
+
         // show image on the screen
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -76,7 +76,7 @@ export function initFileUpload(options = {}) {
                 img.src = e.target.result;
                 img.alt = file.name;
                 img.className = 'file-image';
-                
+
                 preview.insertBefore(img, fileInfo);
                 fileInfo.style.display = 'none';
             };
@@ -97,7 +97,7 @@ export function initFileUpload(options = {}) {
 
     function handleFiles(fileList) {
         const newFiles = Array.from(fileList);
-        
+
         // check if file count limit exceeded
         if (selectedFiles.length + newFiles.length > MAX_FILE_COUNT) {
             const remainingSlots = MAX_FILE_COUNT - selectedFiles.length;
@@ -105,13 +105,12 @@ export function initFileUpload(options = {}) {
             showError(`Maximum file count of ${MAX_FILE_COUNT} exceeded.`);
             newFiles.splice(remainingSlots);
         }
-        
+
         // check if file size limit exceeded
         let totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
         const validFiles = [];
-        
+
         for (const file of newFiles) {
-            
             // validate file extension
             const validation = isValidFile(file);
             if (!validation.valid) {
@@ -125,11 +124,11 @@ export function initFileUpload(options = {}) {
                 showError('Maximum file size of 2 MB exceeded.');
                 break;
             }
-            
+
             validFiles.push(file);
             totalSize = newTotalSize;
         }
-        
+
         selectedFiles = [...selectedFiles, ...validFiles];
         files.files = createFileList(selectedFiles);
         updatePreviews();
@@ -137,7 +136,6 @@ export function initFileUpload(options = {}) {
 
     function showFileWarning() {
         return new Promise((resolve) => {
-            
             // create popup overlay
             const overlay = document.createElement('div');
             overlay.className = 'warning-overlay';
@@ -254,24 +252,24 @@ export function initFileUpload(options = {}) {
 
         // append files to FormData
         const fd = new FormData();
-        for (const f of selectedFiles) fd.append("file", f);
+        for (const file of selectedFiles) fd.append('file', file);
 
         // send POST request, upload files to Cloudflare
-        const result = await fetch(workerUrl + "/upload", { method: "POST", body: fd });
-        
+        const result = await fetch(workerUrl + '/upload', { method: 'POST', body: fd });
+
         // get urls from JSON
         const text = await result.text();
         let json = text ? JSON.parse(text) : {};
         if (!result.ok) throw new Error(json.error || `upload failed: ${result.status}`);
-        
+
         const urls = json.urls;
-        if (urls.length !== selectedFiles.length) throw new Error("upload failed: mismatch");
+        if (urls.length !== selectedFiles.length) throw new Error('upload failed: mismatch');
 
         // return urls with name and type
         return urls.map((url, idx) => ({
             url,
             name: selectedFiles[idx]?.name || `attachment-${idx + 1}`,
-            type: selectedFiles[idx]?.type || "",
+            type: selectedFiles[idx]?.type || '',
         }));
     }
 

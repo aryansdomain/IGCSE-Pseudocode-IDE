@@ -1,22 +1,22 @@
 export function formatJSError(err) {
-    if (!err) return "None";
-    if (typeof err === "string") return err;
-  
+    if (!err) return 'None';
+    if (typeof err === 'string') return err;
+
     // divide error into separate parts
-    const type  =  err.type      ||  ""; 
+    const type  =  err.type      ||  '';
     const msg   =  err.message   ||  (err.error && err.error.message)       ||  String(err);
-    const file  =  err.filename  ||  (err.error && err.error.fileName)      ||  "";
-    const ln    =  err.lineno    ||  (err.error && err.error.lineNumber)    ||  "";
-    const col   =  err.colno     ||  (err.error && err.error.columnNumber)  ||  "";
-    const loc   =  file ? `${file}${ln != null ? `:${ln}` : ""}${col != null ? `:${col}` : ""}` : "";
-  
+    const file  =  err.filename  ||  (err.error && err.error.fileName)      ||  '';
+    const ln    =  err.lineno    ||  (err.error && err.error.lineNumber)    ||  '';
+    const col   =  err.colno     ||  (err.error && err.error.columnNumber)  ||  '';
+    const loc   =  file ? `${file}${ln != null ? `:${ln}` : ''}${col != null ? `:${col}` : ''}` : '';
+
     // limit error length
-    let stack = err.stack || (err.error && err.error.stack) || "";
-    stack = String(stack).replace(/data:[^)\n]+/g, "[data-url]").slice(0, 2000);
-  
+    let stack = err.stack || (err.error && err.error.stack) || '';
+    stack = String(stack).replace(/data:[^)\n]+/g, '[data-url]').slice(0, 2000);
+
     // format error
     const header = loc ? `${msg} @ ${loc}` : msg;
-    return [type.toUpperCase() + ":", header, stack ? `\n${stack}` : ""].join(" ");
+    return [type.toUpperCase() + ':', header, stack ? `\n${stack}` : ''].join(' ');
 }
 
 // record last JS error (uncaught)
@@ -25,14 +25,14 @@ export function formatJSError(err) {
     window.__errorListenerInstalled = true;
     window.__lastError = null;
     const setLast = (v) => { try { window.__lastError = v; } catch {} };
-  
+
     // runtime/classic errors
     window.addEventListener(
-        "error",
+        'error',
         (e) => {
             if (e instanceof ErrorEvent) {
                 setLast({
-                    type: "runtime",
+                    type: 'runtime',
                     message: e.message,
                     filename: e.filename,
                     lineno: e.lineno,
@@ -46,25 +46,25 @@ export function formatJSError(err) {
     );
 
     // unhandled promise rejections
-    window.addEventListener("unhandledrejection", (e) => {
+    window.addEventListener('unhandledrejection', (e) => {
         const r = e && e.reason;
         setLast({
-            type: "unhandledrejection",
+            type: 'unhandledrejection',
             message:
                 r && r.message
                     ? String(r.message)
                     : r
                         ? String(r)
-                        : "unhandledrejection",
+                        : 'unhandledrejection',
             stack: r && r.stack ? r.stack : null,
             reason: r ?? null
         });
     });
-  
+
     // legacy fallback
     window.onerror = function (message, source, lineno, colno, error) {
         setLast({
-            type: "onerror",
+            type: 'onerror',
             message,
             filename: source,
             lineno,
@@ -81,13 +81,13 @@ export function formatJSError(err) {
     if (window.__ideConsoleListenerInstalled) return;
     const MAX_ERR_LEN = 4000;
 
-    window.addEventListener("ide-console", (e) => {
+    window.addEventListener('ide-console', (e) => {
         try {
             const d = e && (e.detail || {});
-            const text = (d.text != null) ? String(d.text) : "";
+            const text = (d.text != null) ? String(d.text) : '';
 
             // fallback regex
-            if (d.type === "error" || /(error|unknown command|exception|traceback)/i.test(text)) {
+            if (d.type === 'error' || /(error|unknown command|exception|traceback)/i.test(text)) {
                 window.__lastIDEError = text.slice(0, MAX_ERR_LEN);
             }
         } catch {}

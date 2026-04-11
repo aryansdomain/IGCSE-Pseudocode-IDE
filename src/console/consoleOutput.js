@@ -11,16 +11,15 @@ export function initConsoleOutput(console) {
     // on event - notify catchError.js
     const setLastIdeError = (text) => {
         try { window.__lastIDEError = String(text); } catch {}
-        try { window.dispatchEvent(new CustomEvent("ide-console", { detail: { type: 'error', text } })); } catch {}
+        try { window.dispatchEvent(new CustomEvent('ide-console', { detail: { type: 'error', text } })); } catch {}
     };
     const setLastIDEWarning = (text) => {
         try { window.__lastIDEWarning = String(text); } catch {}
-        try { window.dispatchEvent(new CustomEvent("ide-console", { detail: { type: 'warning', text } })); } catch {}
+        try { window.dispatchEvent(new CustomEvent('ide-console', { detail: { type: 'warning', text } })); } catch {}
     };
 
     // functions
     return {
-
         newline: () => write('\r\n'),
 
         // print
