@@ -1,17 +1,13 @@
-/* -----------------------------------------------------------------------------
-   Overlay, Highlight
-   ----------------------------------------------------------------------------- */
-.introjs-overlay { 
-    background: transparent; 
+/* ------------------------ Overlay, Highlight ------------------------ */
+.introjs-overlay {
+    background: transparent;
 }
 
 .tourHighlight {
     box-shadow: 0 0 0 99999px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* -----------------------------------------------------------------------------
-   Tooltip/Popver
-   ----------------------------------------------------------------------------- */
+/* ------------------------ Tooltip/Popver ------------------------ */
 .introjs-tooltip.tourTooltip {
     background: #000000;
     color: #ffffff;
@@ -19,9 +15,7 @@
     font: 500 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* -----------------------------------------------------------------------------
-   Buttons
-   ----------------------------------------------------------------------------- */
+/* ------------------------ Buttons ------------------------ */
 .tourBtn {
     padding: 6px 12px;
     color: #000000;
@@ -32,15 +26,13 @@
     cursor: pointer;
 }
 
-/* -----------------------------------------------------------------------------
-   Light Mode
-   ----------------------------------------------------------------------------- */
+/* ------------------------ Light Mode ------------------------ */
 @media (prefers-color-scheme: light) {
     .introjs-tooltip.tourTooltip {
         background: #ffffff;
         color: #000000;
     }
-    
+
     .introjs-tooltip.tourTooltip .introjs-arrow {
         border-bottom-color: #ffffff !important;
     }
