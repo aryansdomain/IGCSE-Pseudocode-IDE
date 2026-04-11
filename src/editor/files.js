@@ -54,9 +54,9 @@ OUTPUT Greet(Name)
 
         session.on('change', () => {
             if (!files[id]) return;
-            saveToStorage();
+            save();
         });
-        
+
         return session;
     }
 
@@ -82,14 +82,14 @@ OUTPUT Greet(Name)
         if (setActive) activeFileID = id;
 
         setSession();
-        saveToStorage();
+        save();
         setPreferWorkspace();
         renderFiles();
     }
     function addFile() {
         const id = 'f_' + (++fileCounter);
         addToHistory(
-            () => { addFileInternal({ id, name: nextFilename(), content: '', setActive: true }) },
+            () => { addFileInternal({ id, name: nextFilename(), content: '', setActive: true }); },
             () => { removeFileInternal(id); }
         );
     }
@@ -98,8 +98,8 @@ OUTPUT Greet(Name)
     function removeFileInternal(id) {
         if (order.length === 1) return; // keep at least one
 
-        const idx = order.indexOf(id);
-        if (idx >= 0) order.splice(idx, 1);
+        const index = order.indexOf(id);
+        if (index >= 0) order.splice(index, 1);
 
         const f = files[id];
         delete files[id];
@@ -111,12 +111,12 @@ OUTPUT Greet(Name)
 
         // set the active file to something new
         if (activeFileID === id) {
-            const next = order[Math.max(0, idx - 1)] || order[0] || null;
+            const next = order[Math.max(0, index - 1)] || order[0] || null;
             activeFileID = next;
             setSession();
         }
 
-        saveToStorage();
+        save();
         renderFiles();
     }
     function removeFile(id) {
@@ -124,7 +124,7 @@ OUTPUT Greet(Name)
         if (!id) return;
         if (order.length === 1) return;
 
-        const idx = order.indexOf(id);
+        const index = order.indexOf(id);
         const f = files[id];
         if (!f) return;
         const snapshot = {
@@ -135,8 +135,8 @@ OUTPUT Greet(Name)
         };
 
         addToHistory(
-            () => { removeFileInternal(id); saveToStorage(); setPreferWorkspace(); },
-            () => { restoreClosedFile(snapshot, idx); }
+            () => { removeFileInternal(id); save(); setPreferWorkspace(); },
+            () => { restoreClosedFile(snapshot, index); }
         );
     }
 
@@ -149,8 +149,8 @@ OUTPUT Greet(Name)
         const old = file.name;
 
         addToHistory(
-            () => { file.name = name; saveToStorage(); renderFiles(); setPreferWorkspace(); },
-            () => { file.name = old;  saveToStorage(); renderFiles(); }
+            () => { file.name = name; save(); renderFiles(); setPreferWorkspace(); },
+            () => { file.name = old;  save(); renderFiles(); }
         );
     }
 
@@ -215,7 +215,7 @@ OUTPUT Greet(Name)
 
     // ------------------------ Saving to localStorage ------------------------
 
-    function saveToStorage() {
+    function save() {
         clearTimeout(saveTimeout);
 
         // save after 300ms
@@ -240,7 +240,7 @@ OUTPUT Greet(Name)
         }, 300);
     }
 
-    function loadFromStorage() {
+    function load() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
             try {
@@ -248,7 +248,7 @@ OUTPUT Greet(Name)
                 order = Array.isArray(data.order) ? data.order.slice() : [];
                 activeFileID = data.activeFileID || null;
                 files = {};
-                
+
                 let maxCounter = 0;
                 for (const id of order) {
                     const file = data.files[id];
@@ -269,7 +269,7 @@ OUTPUT Greet(Name)
                     };
                 }
                 fileCounter = maxCounter;
-                
+
                 if (!activeFileID && order.length) activeFileID = order[0];
                 return;
             } catch {}
@@ -296,7 +296,7 @@ OUTPUT Greet(Name)
             nameSpan.textContent = file.name;
 
             btn.appendChild(nameSpan);
-            
+
             // show close button if more than one file
             if (order.length > 1) {
                 const closeIcon = document.createElement('i');
@@ -304,7 +304,7 @@ OUTPUT Greet(Name)
                 closeIcon.title = 'Close';
                 btn.appendChild(closeIcon);
             }
-            
+
             frag.appendChild(btn);
         }
 
@@ -358,7 +358,7 @@ OUTPUT Greet(Name)
         const entry = hist[histIndex + 1];
         if (!entry) return false;
         histIndex++;
-        
+
         try { entry.redo && entry.redo(); } catch {}
         return true;
     }
@@ -380,20 +380,20 @@ OUTPUT Greet(Name)
 
         activeFileID = id;
         setSession();
-        saveToStorage();
+        save();
         renderFiles();
     }
 
     // ------------------------ Init ------------------------
 
     editor = ace.edit(codeEl);
-    loadFromStorage();
+    load();
 
     // make a new file if none exist
     if (!order.length) {
-        addFileInternal({ id: 'f_1', name: "file1", content: DEFAULT_CODE, setActive: true });
+        addFileInternal({ id: 'f_1', name: 'file1', content: DEFAULT_CODE, setActive: true });
         fileCounter = 1;
-        saveToStorage();
+        save();
     }
 
     renderFiles();
@@ -419,20 +419,20 @@ OUTPUT Greet(Name)
             removeFile(id);
             return;
         }
-        
+
         // activate the file
         if (id === activeFileID || !files[id] || !id) return;
         activeFileID = id;
-        
+
         setSession();
-        saveToStorage();
+        save();
         renderFiles();
     });
 
     // enter to rename
     filesEl.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
-        
+
         const btn = e.target.closest('[data-id]');
         if (!btn) return;
 
@@ -449,7 +449,7 @@ OUTPUT Greet(Name)
         if (!e.metaKey && !e.ctrlKey) return;
 
         const key = (e.key || '').toLowerCase();
-    
+
         const session = editor && editor.getSession && editor.getSession();
         const um = session && session.getUndoManager && session.getUndoManager();
         const canTextUndo = !!(um && um.hasUndo && um.hasUndo());

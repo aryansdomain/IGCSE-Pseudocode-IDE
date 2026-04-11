@@ -1,15 +1,17 @@
 (function () {
     const STORAGE_KEY = 'igcse_ide_tour_seen';
 
-    // ------------------------ localStorage ------------------------------
-    function loadFromStorage() {
+    // ------------------------ localStorage ------------------------
+
+    function load() {
         try { return window.localStorage.getItem(STORAGE_KEY) === 'True'; } catch { return false; }
     }
-    function saveToStorage() {
+    function save() {
         try { window.localStorage.setItem(STORAGE_KEY, 'True'); } catch {}
     }
 
     // ------------------------ Helpers ------------------------
+
     function onWindowReady(fn) {
         if (document.readyState === 'complete') fn();
         else window.addEventListener('load', fn, { once: true });
@@ -55,7 +57,8 @@
         });
     }
 
-    // ------------------------ Steps of the tour ------------------------
+    // ------------------------ Steps ------------------------
+
     const STEPS = [
         {
             title: 'Welcome!',
@@ -64,10 +67,6 @@
             element: '#code .ace_scroller',
             title: 'Editor',
             intro: 'Write your code here.'
-        }, {
-            element: '.files-bar',
-            title: 'Files',
-            intro: 'You can create multiple files of code to work on at once.'
         }, {
             element: '#consoleViewport',
             title: 'Console',
@@ -95,11 +94,11 @@
         }, {
             element: '#filesBar',
             title: 'Files',
-            intro: 'Up to 7 different files can be created, each able to store seperate code. Undoing/redoing works here too.',
+            intro: 'You can create up to 7 different files, each able to store seperate code.',
         }, {
             element: '#filesBar',
             title: 'Files',
-            intro: 'Press return when focused on a file to rename it.',
+            intro: 'Undoing/redoing works here too, and press return when focused on a file to rename it.',
         }, {
             element: '#examplesBtn',
             title: 'Examples',
@@ -121,6 +120,7 @@
     const SELECTORS = STEPS.filter(s => s.element).map(s => s.element);
 
     // ------------------------ Init ------------------------
+
     onWindowReady(async () => {
         try { await whenIntroReady(); } catch { return; }
 
@@ -138,8 +138,8 @@
                 highlightClass: 'tourHighlight',
                 buttonClass:    'tourBtn'
             });
-            tour.oncomplete(saveToStorage);
-            tour.onexit(saveToStorage);
+            tour.oncomplete(save);
+            tour.onexit(save);
             tour.start();
         }
 
@@ -147,7 +147,7 @@
         window.startTutorial = startTutorial;
 
         // start tutorial if user hasn't seen it
-        if (!loadFromStorage() && stepsReady.length) startTutorial();
+        if (!load() && stepsReady.length) startTutorial();
     });
 
     // wire tour restart button
@@ -156,7 +156,7 @@
         restartBtn.addEventListener('click', () => {
             const settingsOverlay = document.getElementById('settingsOverlay');
             if (settingsOverlay) settingsOverlay.style.display = 'none';
-            
+
             // use global function
             if (window.startTutorial) window.startTutorial();
         });

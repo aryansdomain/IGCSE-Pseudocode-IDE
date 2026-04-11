@@ -7,9 +7,9 @@ export function initFont({
     max = 48,
     step = 1,
     defaultSize = 14,
-    defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace',
+    defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Courier New\', monospace',
 } = {}) {
-    
+
     const STORAGE_KEY = 'igcse_ide_editor_font';
 
     // current values
@@ -77,23 +77,23 @@ export function initFont({
 
         size = clamp(Number(n) || defaultSize, min, max);
         applySize(size);
-        saveToStorage();
+        save();
 
         // update slider
         if (sizeInput) sizeInput.value = String(size);
         if (sizeValueEl) sizeValueEl.textContent = String(size);
-        
+
         // track font size change analytics
         if (oldSize !== size) {
             if (sizeChangeTimeout) clearTimeout(sizeChangeTimeout); // clear existing timeout
-            
+
             // set timeout to track after user stops dragging
             sizeChangeTimeout = setTimeout(() => {
                 window.font_size_changed && window.font_size_changed({
                     font_size_changed_from: originalSize,
                     font_size_changed_to: size
                 });
-                
+
                 originalSize = size;
                 sizeChangeTimeout = null;
             }, 2000); // delay after user stops dragging
@@ -106,9 +106,9 @@ export function initFont({
         const oldFamily = family;
         family = String(f || defaultFamily);
         applyFamily(family);
-        saveToStorage();
+        save();
         if (familySelect) familySelect.value = family;
-        
+
         // track font family change analytics
         if (oldFamily !== family) {
             try {
@@ -118,7 +118,7 @@ export function initFont({
                 });
             } catch {}
         }
-        
+
         return family;
     }
     function getFont() {
@@ -136,7 +136,7 @@ export function initFont({
         try { editor.resize(true); } catch {}
         document.documentElement.style.setProperty('--mono', fam);
     }
-    function saveToStorage() {
+    function save() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ size, family })); } catch {}
     }
     // ensure n stays between lo and hi
