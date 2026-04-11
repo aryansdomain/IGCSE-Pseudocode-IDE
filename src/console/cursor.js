@@ -1,12 +1,12 @@
-export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitingInput }) {
-    let inputStartCol = 0;      // column where program input begins
-    let line = '';              // current line content
-    let cursorPos = 0;          // cursor position in line, does not account for propmt
+export function initCursor({ console, consoleOutput, isAwaitingInput }) {
+    let inputStartCol = 0; // column where program input begins
+    let line = '';         // current line content
+    let cursorPos = 0;     // cursor position in line, does not account for propmt
 
     // ------------------------ Utilities ------------------------
+
     async function setLine(newLine) {
         line = newLine;
-
         consoleOutput.hideCursor();
 
         if (isAwaitingInput()) {
@@ -24,7 +24,7 @@ export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitin
             const back = line.length - cursorPos;
             if (back > 0) consoleOutput.moveCursorLeft(back);
         }
-        
+
         consoleOutput.showCursor();
     }
 
@@ -59,7 +59,6 @@ export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitin
         consoleOutput.moveCursorRight(n);
     }
 
-
     // reset everything
     function reset() {
         inputStartCol = 0;
@@ -68,9 +67,11 @@ export function initCursor({ console, consoleOutput, setAwaitingInput, isAwaitin
     }
 
     return {
-        setLine, getLine: () => { return line },
         insertChar, deleteChar, moveCursorLeft, moveCursorRight,
-        getCursorPos: () => { return cursorPos }, reset,
-        focus: () => { console.focus() }, setInputStartCol: (col) => { inputStartCol = col; }
+        reset,
+        setLine, getLine: ()    => { return line; },
+        getCursorPos:     ()    => { return cursorPos; },
+        focus:            ()    => { console.focus(); },
+        setInputStartCol: (col) => { inputStartCol = col; }
     };
 }

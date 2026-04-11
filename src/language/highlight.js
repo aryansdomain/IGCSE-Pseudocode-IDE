@@ -3,38 +3,18 @@ function(require, exports, module) {
     const oop = require('ace/lib/oop');
     const TextHighlightRules = require('ace/mode/text_highlight_rules').TextHighlightRules;
 
-    const KEYWORDS = (
-        [
-            // conditionals
-            'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',
+    const KEYWORDS = ([
+        'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',                  // conditionals
+        'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',             // iteration
+        'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION', // functions and procedures
+        'INPUT','OUTPUT',                                                              // input/output
+        'DECLARE','CONSTANT','OF',                                                     // declarations
+        'TRUE','FALSE',                                                                // boolean
+        'AND','OR','NOT',                                                              // logical operators
+    ].join('|'));
 
-            // iteration
-            'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',
-
-            // functions and procedures
-            'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION',
-
-            // input/output
-            'INPUT','OUTPUT',
-
-            // declarations
-            'DECLARE','CONSTANT','OF',
-
-            // boolean
-            'TRUE','FALSE',
-
-            // logical operators
-            'AND','OR','NOT'
-        ].join('|')
-    );
-
-    const TYPES = (
-        ['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING', 'ARRAY'].join('|')
-    );
-
-    const BUILTINS = (
-        ['ROUND', 'RANDOM', 'LENGTH', 'LCASE', 'UCASE', 'SUBSTRING', 'DIV', 'MOD'].join('|')
-    );
+    const TYPES    = (['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING', 'ARRAY'                 ].join('|'));
+    const BUILTINS = (['ROUND', 'RANDOM', 'LENGTH', 'LCASE', 'UCASE', 'SUBSTRING', 'DIV', 'MOD'].join('|'));
 
     class LangHighlightRules extends TextHighlightRules {
         constructor() {
@@ -47,40 +27,21 @@ function(require, exports, module) {
 
             this.$rules = {
                 start: [
-                    // comments
-                    { token: 'comment.line.double-slash', regex: /\/\/.*$/ },
-
-                    // char (single quotes)
-                    { token: 'string.quoted.single', regex: /'(?:[^'\\]|\\.)'/ },
-
-                    // strings (double quotes)
-                    { token: 'string.quoted.double', regex: '"', next: 'string_dq' },
-
-                    // integer, real, scientific notation
-                    { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ },
-
-                    // assignment
-                    { token: 'keyword.operator', regex: /<-|<--|←/ },
-
-                    // comparison
-                    { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },
-
-                    // arithmetic operators
-                    { token: 'keyword.operator', regex: /\+|\-|\*|\/|\^/ },
-
-                    // logical operators
-                    { token: 'keyword.operator', regex: /\b(?:AND|OR|NOT)\b/i },
-
-                    // function and procedure declarations
-                    { token: 'keyword.control', regex: "\\b(?:FUNCTION|PROCEDURE)\\b", caseInsensitive: true, next: "function_name" },
-
-                    // identifiers and keywords
-                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },
-
-                    // punctuation
-                    { token: 'punctuation.operator', regex: /[,:]/ },
-                    { token: 'paren.lparen', regex: /[\[(]/ },
-                    { token: 'paren.rparen', regex: /[\])]/ }
+                    { token: 'comment.line.double-slash', regex: /\/\/.*$/ },                      // comments
+                    { token: 'string.quoted.single', regex: /'[^']*'/ },                           // char (single quotes)
+                    { token: 'string.quoted.double', regex: '"', next: 'string_dq' },              // strings (double quotes)
+                    { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ }, // integer, real, scientific notation
+                    { token: 'keyword.operator', regex: /<-|<--|←/ },                              // assignment
+                    { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },                        // comparison
+                    { token: 'keyword.operator', regex: /\+|\-|\*|\/|\^/ },                        // arithmetic
+                    { token: 'keyword.operator', regex: /\b(?:AND|OR|NOT)\b/i },                   // logical
+                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },                  // identifiers and keywords
+                    { token: 'punctuation.operator', regex: /[,:]/ },                              // , :
+                    { token: 'paren.lparen', regex: /[\[(]/ },                                     // [ and (
+                    { token: 'paren.rparen', regex: /[\])]/ },                                     // ] and )
+                    // func/proc declarations
+                    { token: 'keyword.control', regex: '\\b(?:FUNCTION|PROCEDURE)\\b',
+                        caseInsensitive: true, next: 'function_name' },
                 ],
 
                 // double quotes
@@ -89,14 +50,13 @@ function(require, exports, module) {
                     { defaultToken: 'string.quoted.double' }
                 ],
 
-                // function/procedure name state
+                // func/proc names
                 function_name: [
                     { token: 'entity.name.function', regex: /\b[A-Za-z][A-Za-z0-9_]*\b/, next: 'start' },
                     { defaultToken: 'entity.name.function' }
                 ]
 
             };
-            
             this.normalizeRules();
         }
     }

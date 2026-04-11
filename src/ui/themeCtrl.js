@@ -30,7 +30,7 @@ export function initTheme({
 
     function themeInfo(name) {
         name = toBare(name);
-        
+
         if (bareLightThemes.includes(name)) {
             const originalTheme = lightThemes[bareLightThemes.indexOf(name)];
             return { ok: true, kind: 'light', name: originalTheme, bare: toBare(originalTheme) };
@@ -82,9 +82,9 @@ export function initTheme({
     }
     function updateFiles() {
         const editorEl = document.getElementById('code') || editor.container;
-        
+
         let lineNumColor = null;
-        
+
         const gutter = editorEl.querySelector('.ace_gutter');
         if (gutter) {
             const activeGutterCell = gutter.querySelector('.ace_gutter-active-line, .ace_gutter-cell.ace_gutter-active-line');
@@ -104,10 +104,10 @@ export function initTheme({
         const previousTheme = getTheme();
         const previousInfo = themeInfo(previousTheme);
         const newInfo = themeInfo(name);
-        
+
         editor.setTheme(`ace/theme/${name}`);
         localStorage.setItem(STORAGE_KEY, name);
-        
+
         // track theme change analytics
         if (!skipAnalytics && previousInfo.ok && newInfo.ok && previousTheme !== name) {
             try {
@@ -143,7 +143,7 @@ export function initTheme({
     try {
         savedTheme = localStorage.getItem(STORAGE_KEY);
     } catch {}
-    
+
     if (savedTheme && themeInfo(savedTheme).ok) {
         setTheme(savedTheme, true);
     } else {

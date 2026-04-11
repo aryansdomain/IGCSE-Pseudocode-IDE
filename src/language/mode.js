@@ -1,6 +1,6 @@
 ace.define('ace/mode/pseudocode', ['require', 'exports', 'module', 'ace/lib/oop', 'ace/mode/text',
                                    'ace/mode/rules', 'ace/mode/behaviour'],
-                             
+
 function(require, exports, module) {
     const oop                = require('ace/lib/oop');
     const TextMode           = require('ace/mode/text').Mode;
@@ -19,40 +19,41 @@ function(require, exports, module) {
         getCompletions: function(editor, session, pos, prefix, callback) {
 
             // ------------------------ String/Comment Check ------------------------
+
             const beforeCursor = session.getLine(pos.row).substring(0, pos.column);
 
             let inSingle = false; // in single quotes
             let inDouble = false; // in double quotes
             let inComment = false; // in comment
-            
+
             for (let i = 0; i < beforeCursor.length; i++) {
                 const ch = beforeCursor[i];
-                
+
                 // comment start only if not in a string
                 if (!inSingle && !inDouble && ch === '/' && beforeCursor[i + 1] === '/') {
                     inComment = true;
                     break;
                 }
-                
+
                 // toggle in single-quoted string (if not already in double)
                 if (!inDouble && ch === '\'') {
                     inSingle = !inSingle;
                     continue;
                 }
-                
+
                 // toggle in double-quoted string (if not already in single)
                 if (!inSingle && ch === '"') {
                     inDouble = !inDouble;
                     continue;
                 }
             }
-            
+
             // if inside string or comment, dont suggest
             if (inSingle || inDouble || inComment) {
                 callback(null, []);
                 return;
             }
-            
+
             // extract variable names
             const code = editor.getValue();
             const varNames  = new Set();
@@ -72,7 +73,7 @@ function(require, exports, module) {
                     });
                 });
             }
-            
+
             // extract constant names from CONSTANT statements
             const constantMatches = code.match(/CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (constantMatches) {
@@ -83,7 +84,7 @@ function(require, exports, module) {
                     }
                 });
             }
-            
+
             // extract procedure names from PROCEDURE statements
             const procMatches = code.match(/PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (procMatches) {
@@ -94,7 +95,7 @@ function(require, exports, module) {
                     }
                 });
             }
-            
+
             // extract function names from FUNCTION statements
             const funcMatches = code.match(/FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)/gi);
             if (funcMatches) {
@@ -131,7 +132,7 @@ function(require, exports, module) {
                 score: 1200,
                 meta: 'procedure'
             }));
-            
+
             const keywordCompletions = [
                 // keywords
                 {name: 'IF',           value: 'IF',           score: 1000, meta: 'keyword'},
@@ -175,8 +176,8 @@ function(require, exports, module) {
                 {name: 'CHAR',         value: 'CHAR',         score: 900,  meta: 'type'},
                 {name: 'STRING',       value: 'STRING',       score: 900,  meta: 'type'},
                 {name: 'ARRAY',        value: 'ARRAY',        score: 900,  meta: 'type'},
-                
-                // built-in functions
+
+                // builtins
                 {name: 'ROUND',        value: 'ROUND',        score: 800,  meta: 'builtin'},
                 {name: 'RANDOM',       value: 'RANDOM',       score: 800,  meta: 'builtin'},
                 {name: 'LENGTH',       value: 'LENGTH',       score: 800,  meta: 'builtin'},
@@ -186,19 +187,19 @@ function(require, exports, module) {
                 {name: 'DIV',          value: 'DIV',          score: 800,  meta: 'builtin'},
                 {name: 'MOD',          value: 'MOD',          score: 800,  meta: 'builtin'}
             ];
-            
+
             // combine completions
             const completions = [...keywordCompletions,
                                  ...varCompletions,
                                  ...constCompletions,
                                  ...funcCompletions,
                                  ...procCompletions];
-            
+
             // filter completions based on prefix
-            const filtered = completions.filter(completion => 
+            const filtered = completions.filter(completion =>
                 completion.name.toLowerCase().startsWith(prefix.toLowerCase())
             );
-            
+
             callback(null, filtered);
         }
     };
@@ -261,7 +262,7 @@ function(require, exports, module) {
             openIndent = prev.match(/^\s*/)[0];
             break;
         }
-        
+
         if (openIndent != null) {
             doc.replace({start: {row, column: 0}, end: {row, column: match[1].length}}, openIndent);
         }

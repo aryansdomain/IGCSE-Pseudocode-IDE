@@ -6,11 +6,8 @@ export function initMode({
     defaultMode = 'dark',
     page = 'ide',
 } = {}) {
-
     const STORAGE_KEY = 'igcse_ide_mode';
-
     let currentThemeCtrl = themeCtrl;
-    let currentMode = null;
 
     function isLightMode() {
         return document.documentElement.classList.contains('light');
@@ -18,29 +15,27 @@ export function initMode({
 
     function setIcons() {
         const light = isLightMode();
-        
+
         const icon = modeBtn.querySelector('i');
         if (icon) icon.className = light ? 'fas fa-moon' : 'fas fa-sun';
-        
+
         modeBtn.setAttribute('aria-pressed', String(light));
         modeBtn.title = light ? 'Switch to dark mode' : 'Switch to light mode';
     }
 
     function setMode(mode, skipAnalytics = false) {
-        currentMode = mode;
-
         // disable transitions
         document.documentElement.classList.add('mode-switching');
 
         if (mode === 'light') document.documentElement.classList.add('light');
         else                  document.documentElement.classList.remove('light');
-        
-        // update console theme 
+
+        // update console theme
         if (currentThemeCtrl?.updateConsoleTheme) currentThemeCtrl.updateConsoleTheme();
-        
+
         // update other elements
         setTimeout(() => { if (currentThemeCtrl?.updateElements) currentThemeCtrl.updateElements(); }, 100);
-        
+
         // enable transitions
         setTimeout(() => document.documentElement.classList.remove('mode-switching'), 50);
 

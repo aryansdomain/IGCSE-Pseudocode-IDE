@@ -1,5 +1,5 @@
 async function saveTextAsFile(filename, text) {
-    const blob = new Blob([text], { type: "text/plain" });
+    const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
 
@@ -28,7 +28,7 @@ export function initDownload({
             const code = getCode();
             const filename = getActiveFileName();
             await saveTextAsFile(filename, code);
-            
+
             // track code download analytics
             try {
                 window.code_downloaded && window.code_downloaded({ code_downloaded_size: code.length });
@@ -45,7 +45,7 @@ export function initDownload({
             const text = getConsoleText();
             const filename = `console.txt`;
             await saveTextAsFile(filename, text);
-            
+
             // track console download analytics
             try {
                 window.console_downloaded && window.console_downloaded({ console_downloaded_size: text.length });

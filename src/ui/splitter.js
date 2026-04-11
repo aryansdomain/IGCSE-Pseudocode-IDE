@@ -18,9 +18,10 @@ export function initSplitter({
     const STORAGE_KEY = 'igcse_ide_splitter_ratio';
 
     // ------------------------ States/Config ------------------------
+
     const minBarHeight = snapInPx / 2;                      // minimum bar height before snapping
     const free = Math.max(0, totalSize() - handleSize());   // space for panelA and panelB
-    let ratio = loadState(STORAGE_KEY, initialRatio);       // amount of space A takes up, load from storage key 
+    let ratio = loadState(STORAGE_KEY, initialRatio);       // amount of space A takes up, load from storage key
     let dragStartMousePos = 0;                              // mouse/touch position when dragging starts
     let dragStartSizeA = 0;                                 // height/width of paneA when dragging starts
     let dragging = false;                                   // user is dragging the handle?
@@ -43,6 +44,7 @@ export function initSplitter({
     applySizes(); // initial layout
 
     // ------------------------ Helpers ------------------------
+
     function clamp(n, lo, hi) {           // ensure n stays between lo and hi
         return Math.max(lo, Math.min(hi, n));
     }
@@ -65,13 +67,14 @@ export function initSplitter({
     }
 
     // ------------------------ Resizing ------------------------
-    function collapseA() { 
-        ratio = 0; 
-        applySizes(); 
+
+    function collapseA() {
+        ratio = 0;
+        applySizes();
     }
-    function collapseB() { 
-        ratio = 1; 
-        applySizes(); 
+    function collapseB() {
+        ratio = 1;
+        applySizes();
     }
     function reset() {
         ratio = initialRatio;
@@ -107,7 +110,7 @@ export function initSplitter({
 
         localStorage.setItem(STORAGE_KEY, String(ratio));
         onConsoleResizeSafe();
-        updateButtons(); 
+        updateButtons();
     }
 
     // use requestAnimationFrame to prevent flickering
@@ -123,6 +126,7 @@ export function initSplitter({
     }
 
     // ------------------------ Expand/Collapse Buttons ------------------------
+
     function normalizeIcon(el) {
         if (!el) return;
         el.classList.remove(expandIconClass, collapseIconClass);
@@ -140,7 +144,7 @@ export function initSplitter({
 
         // change button appearance and function based on ratio state
         if (ratio === 1) {
-            
+
             // A button becomes collapse
             iconA.classList.remove(expandIconClass);
             iconA.classList.add(collapseIconClass);
@@ -166,6 +170,7 @@ export function initSplitter({
     }
 
     // ------------------------ Dragging ------------------------
+
     function startDrag(pointer) {
         if (dragging) return;
         pointer.preventDefault(); // override cursor default action
@@ -204,7 +209,7 @@ export function initSplitter({
             if (newSizeA > snapOutPx) snapped = false; // snap out
             else                      newSizeA = 0;    // keep snapped
         }
-        
+
         ratio = newSizeA / Math.max(1, free);
         applySizes();
     }
@@ -241,11 +246,11 @@ export function initSplitter({
     updateButtons();
 
     return {
-        setRatio(r) { 
+        setRatio(r) {
             const minRatio = minA / Math.max(1, free);
             const maxRatio = minB / Math.max(1, free);
-            ratio = clamp(Number(r) || initialRatio, minRatio, maxRatio); 
-            applySizes(); 
+            ratio = clamp(Number(r) || initialRatio, minRatio, maxRatio);
+            applySizes();
         },
         getRatio()  { return ratio; },
         collapseA,

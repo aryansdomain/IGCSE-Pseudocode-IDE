@@ -2,7 +2,7 @@
     let shown = false;
     let timer;
     let loadingEl = null;
-  
+
     // style for dots and text
     const style = document.createElement('style');
     style.setAttribute('data-boot-style', 'true');
@@ -18,11 +18,11 @@
         @keyframes boot-b{ from {transform:scale(.6); opacity:.5 } to { transform:scale(1); opacity:1} }
     `;
     document.head.appendChild(style);
-  
+
     function showLoadingDots() {
         if (shown || window.appReady) return;
         shown = true;
-        
+
         // make the element
         const el = document.createElement('div');
         el.id = 'appLoader';
@@ -38,7 +38,7 @@
             </div>
         `;
         loadingEl = el;
-        
+
         // add to the page
         if (document.body) {
             document.body.appendChild(el);
@@ -58,26 +58,26 @@
         const spinnerContainer = loadingEl.querySelector('.spinner-container');
         if (!spinnerContainer) return;
         if (spinnerContainer.querySelector('.error-message')) return; // already shown
-        
+
         const errorMsg = document.createElement('div');
         errorMsg.className = 'error-message';
         errorMsg.textContent = 'Loading is taking longer than usual. Please reload the page.';
         spinnerContainer.appendChild(errorMsg);
     }
-  
+
     function clear() {
         if (shown || window.appReady) clearTimeout(timer);
         loadingEl = null;
         document.getElementById('appLoader')?.remove();
     }
-  
+
     // errors during loading
     function onError() {
         if (!window.appReady && loadingEl) showReloadPrompt();
     }
     window.addEventListener('error', onError, true);
     window.addEventListener('unhandledrejection', onError);
-  
+
     // signal that app is usable
     window.setAppReady = () => {
         window.appReady = true;

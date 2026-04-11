@@ -1,20 +1,20 @@
 function showCopySuccess(button) {
     const icon = button.querySelector('i');
     if (!icon) return;
-    
+
     const originalClass = icon.className;
-    
+
     // scale down, transform into checkmark, scale back ups
     icon.style.transform = 'scale(0.6)';
     setTimeout(() => {
         icon.className = 'fa-solid fa-check';
         icon.style.transform = 'scale(1)';
     }, 150);
-    
+
     // animate back to original after 2 seconds
     setTimeout(() => {
         icon.style.transform = 'scale(0.8)';
-        
+
         setTimeout(() => {
             icon.className = originalClass;
             icon.style.transform = 'scale(1)';
