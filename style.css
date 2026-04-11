@@ -1,6 +1,4 @@
-/* ==========================================================================
-   CSS Variables & Themes
-   ========================================================================== */
+/* ------------------------ CSS Variables & Themes ------------------------ */
 
 :root {
     --solid: #000000;
@@ -21,7 +19,7 @@
     --line-num-color: #8b949e;
     --editor-bg: #272822;
     --editor-fg: #f8f8f2;
-    
+
     --radius: 14px;
     --radius-xs: 8px;
     --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
@@ -53,9 +51,7 @@
     --editor-fg: #24292f;
 }
 
-/* ==========================================================================
-   Global Reset & Base Styles
-   ========================================================================== */
+/* ------------------------ Global Reset & Base Styles ------------------------ */
 
 * {
     box-sizing: border-box;
@@ -73,9 +69,7 @@ html, body {
     font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* ==========================================================================
-   Main Layout
-   ========================================================================== */
+/* ------------------------ Main Layout ------------------------ */
 
 .app {
     height: 100dvh;
@@ -84,9 +78,7 @@ html, body {
     padding: var(--gap);
 }
 
-/* ==========================================================================
-   Workspace & Layout System
-   ========================================================================== */
+/* ------------------------ Workspace & Layout System ------------------------ */
 
 #workspace {
     display: flex;
@@ -101,11 +93,11 @@ html, body {
 #workspace.layout-horizontal { flex-direction: row; }
 
 /* shrink panes */
-#editorPane, #consolePane { 
-    display: flex; 
-    flex-direction: column; 
-    min-width: 0; 
-    min-height: 0; 
+#editorPane, #consolePane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
     flex: 0 0 0;
     position: relative;
     z-index: 0;
@@ -116,13 +108,11 @@ html, body {
     margin-left: var(--gap);
 }
 
-/* ==========================================================================
-   Splitter
-   ========================================================================== */
+/* ------------------------ Splitter ------------------------ */
 
-#splitter { 
-    box-sizing: border-box; 
-    margin: 0; 
+#splitter {
+    box-sizing: border-box;
+    margin: 0;
     position: relative;
     z-index: 100;
     background: var(--splitter-bg, rgba(127,127,127,.25));
@@ -160,19 +150,18 @@ html, body {
         radial-gradient(circle, var(--text) 0.75px, transparent 0.5px),
         radial-gradient(circle, var(--text) 0.75px, transparent 0.5px);
     background-size: 3px 3px;
-    background-position: 
+    background-position:
         0px 0px, 3px 0px, 6px 0px, 9px 0px, 12px 0px, 15px 0px, 18px 0px, 21px 0px,
         0px 3px, 3px 3px, 6px 3px, 9px 3px, 12px 3px, 15px 3px, 18px 3px, 21px 3px;
-    opacity: 0.6;
 }
 /* rotate dots in horizontal layout */
 #workspace.layout-horizontal #splitter::before {
     transform: rotate(90deg);
 }
 
-#splitter:active, #splitter:focus { 
-    outline: none; 
-    border-width: 0; 
+#splitter:active, #splitter:focus {
+    outline: none;
+    border-width: 0;
 }
 
 #splitter:hover {
@@ -197,9 +186,7 @@ body.dragging {
     cursor: row-resize !important;
 }
 
-/* ==========================================================================
-   Utility Bar
-   ========================================================================== */
+/* ------------------------ Utility Bar ------------------------ */
 
 .utilitybar {
     display: flex;
@@ -233,7 +220,7 @@ body.dragging {
     background: transparent;
     border: none;
     border-radius: var(--radius-xs);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     cursor: pointer;
 }
 .btn.examples:hover {
@@ -252,7 +239,7 @@ body.dragging {
     color: var(--text);
     background: transparent;
     border: none;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     cursor: pointer;
 }
 .btn.info:hover {
@@ -268,16 +255,14 @@ body.dragging {
     font-size: 13px;
     color: var(--text);
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .btn.issue-report i {
     font-size: 12px;
 }
 
-/* ==========================================================================
-   Files Bar
-   ========================================================================== */
+/* ------------------------ Files Bar ------------------------ */
 
 .files-bar {
     position: relative;
@@ -349,14 +334,12 @@ body.dragging {
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: transform 0.2s ease, color 0.2s ease;
 }
 .filelist .file:hover .close {
     opacity: 1;
 }
 .filelist .close:hover {
     color: var(--red);
-    transform: scale(1.2);
 }
 
 .filelist .file.add {
@@ -373,20 +356,20 @@ body.dragging {
     background: transparent;
     border: none;
     color: var(--line-num-color);
-    transition: transform 0.2s ease, color 0.2s ease;
     line-height: 1;
     margin-top: -1px;
 }
 .filelist .file.add:hover {
     opacity: 1;
-    transform: scale(1.2);
 }
+.filelist .add:hover {
+    color: var(--green);
+}
+
 
 #editorPane .editor { min-height: 0; }
 
-/* ==========================================================================
-   Editor Pane
-   ========================================================================== */
+/* ------------------------ Editor Pane ------------------------ */
 
 #editorPane {
     position: relative;
@@ -466,13 +449,11 @@ body.dragging {
 }
 
 /* collapse bars */
-.topbar, .bottombar { 
-    overflow: hidden; 
+.topbar, .bottombar {
+    overflow: hidden;
 }
 
-/* ==========================================================================
-   Console
-   ========================================================================== */
+/* ------------------------ Console ------------------------ */
 
 #consolePane {
     padding-top: 0;
@@ -525,12 +506,16 @@ body.dragging {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
-
 .console-controls .btn:disabled {
-    opacity: 0.4;
     cursor: not-allowed;
+    color: var(--muted);
+    opacity: 0.55;
+    pointer-events: none;
+}
+.console-controls .btn:disabled i {
+    color: inherit;
 }
 
 .console-content {
@@ -542,8 +527,8 @@ body.dragging {
 }
 
 .console,
-.console-content { 
-    min-height: 0; 
+.console-content {
+    min-height: 0;
 }
 
 /* loading bar above console */
@@ -574,9 +559,7 @@ body.dragging {
     min-height: 0;
 }
 
-/* ==========================================================================
-   Buttons
-   ========================================================================== */
+/* ------------------------ Buttons ------------------------ */
 
 .btn {
     appearance: none;
@@ -597,7 +580,7 @@ body.dragging {
     color: var(--green);
     font-weight: 600;
     padding: 8px 16px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 .btn.run:hover {
     background: var(--green);
@@ -609,7 +592,7 @@ body.dragging {
     color: var(--red);
     font-weight: 600;
     padding: 8px 16px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 .btn.stop:hover {
     background: var(--red);
@@ -625,7 +608,7 @@ body.dragging {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     position: relative;
 }
 .btn.mode i {
@@ -633,7 +616,6 @@ body.dragging {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    transition: opacity 0.2s ease;
 }
 
 /* layout button */
@@ -650,7 +632,7 @@ body.dragging {
 
 /* copy */
 .btn.copy i {
-    transition: transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.15s ease;
 }
 
 /* close */
@@ -661,7 +643,7 @@ body.dragging {
     font-size: 18px;
     cursor: pointer;
     padding: 4px;
-    transition: background 0.2s;
+    transition: transform 0.2s ease;
 }
 
 /* icon scaling */
@@ -674,9 +656,7 @@ body.dragging {
     transition: transform 0.2s ease;
 }
 
-/* ==========================================================================
-   Settings Panel
-   ========================================================================== */
+/* ------------------------ Settings Panel ------------------------ */
 
 .settings-overlay {
     position: fixed;
@@ -756,8 +736,8 @@ body.dragging {
     font-weight: 600;
 }
 
-.examples-content { 
-    padding: 20px; 
+.examples-content {
+    padding: 20px;
 }
 .examples-content .example-btn {
     margin-bottom: 12px;
@@ -769,7 +749,7 @@ body.dragging {
 /* example buttons */
 .btn.example-btn {
     width: 100%;
-    padding: 8px 12px; 
+    padding: 8px 12px;
     background: var(--panel);
     color: var(--text);
     border: 1px solid var(--border);
@@ -777,7 +757,7 @@ body.dragging {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -790,7 +770,6 @@ body.dragging {
 .btn.example-btn:focus {
     outline: none;
     border-color: var(--keyword-color);
-    box-shadow: var(--keyword-color);
 }
 .btn.example-btn i {
     font-size: 16px;
@@ -826,15 +805,11 @@ body.dragging {
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid var(--panel);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
-
 .setting-group input[type="range"]::-webkit-slider-thumb:hover {
     background: var(--keyword-color);
-    opacity: 0.8;
     transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .setting-group input[type="range"]::-webkit-slider-track {
@@ -850,16 +825,13 @@ body.dragging {
     border-radius: 50%;
     cursor: pointer;
     border: 3px solid var(--panel);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-    transition: all 0.2s ease;
-    transform: translateY(-2px); /* nudge to visual center in Firefox */
+    transition: transform 0.2s ease;
+    transform: translateY(-2px);
 }
 
 .setting-group input[type="range"]::-moz-range-thumb:hover {
     background: var(--keyword-color);
-    opacity: 0.8;
     transform: translateY(-2px) scale(1.1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
 }
 
 .setting-group input[type="range"]::-moz-range-track {
@@ -920,7 +892,7 @@ body.dragging {
     color: var(--muted);
     font-weight: 500;
     position: relative;
-    transition: color 0.2s ease;
+    transition: none;
 }
 
 .slider-ticks .tick:not(:empty) {
@@ -952,7 +924,6 @@ body.dragging {
     font-size: 14px;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .font-select:hover {
@@ -962,7 +933,6 @@ body.dragging {
 .font-select:focus {
     outline: none;
     border-color: var(--keyword-color);
-    box-shadow: var(--keyword-color);
 }
 
 .font-select optgroup {
@@ -981,7 +951,7 @@ body.dragging {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .btn.editortheme-changer:hover {
@@ -1019,7 +989,7 @@ body.dragging {
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     text-align: left;
     border-radius: 4px;
 }
@@ -1077,7 +1047,7 @@ body.dragging {
     font-size: 14px;
     cursor: pointer;
     border-radius: 4px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     border: 1px solid transparent;
     position: relative;
 }
@@ -1109,7 +1079,7 @@ body.dragging {
 /* tour restart button */
 .btn.replay-tour {
     width: 100%;
-    padding: 8px 12px; 
+    padding: 8px 12px;
     background: var(--panel);
     color: var(--text);
     border: 1px solid var(--border);
@@ -1117,7 +1087,7 @@ body.dragging {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1129,18 +1099,15 @@ body.dragging {
 .btn.replay-tour:focus {
     outline: none;
     border-color: var(--keyword-color);
-    box-shadow: var(--keyword-color);
 }
 .btn.replay-tour i {
     font-size: 16px;
 }
 
-/* ==========================================================================
-   Utility Classes & States
-   ========================================================================== */
+/* ------------------------ Utility Classes & States ------------------------ */
 
-#workspace { 
-    min-height: 0; 
+#workspace {
+    min-height: 0;
 }
 
 /* disable transitions during mode switching */
@@ -1151,9 +1118,7 @@ html.mode-switching *::after {
     animation:  none !important;
 }
 
-/* ==========================================================================
-   Footer
-   ========================================================================== */
+/* ------------------------ Footer ------------------------ */
 
 .footer {
     text-align: center;
