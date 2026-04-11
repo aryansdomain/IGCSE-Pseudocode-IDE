@@ -3,9 +3,10 @@ export function initExamples({
     openBtn,
     closeBtn,
     overlayEl = null,
-    editorApis = null
+    editor = null
 } = {}) {
     // ------------------------ Open and Close ------------------------
+
     function open() {
         panelEl.style.display = 'flex';
         overlayEl?.classList.add('show');
@@ -23,15 +24,15 @@ export function initExamples({
         if (e.target === overlayEl) close(); // close if clicking on backdrop
     });
 
-    // ------------------------ Buttons --------------------------
+    // ------------------------ Buttons ------------------------
 
     // variables
     const varsConstsDTsBtn = panelEl.querySelector('#varsConstsDTsExampleBtn');
-    if (varsConstsDTsBtn && editorApis) {
+    if (varsConstsDTsBtn && editor) {
         varsConstsDTsBtn.addEventListener('click', () => {
             const code = `// Variables, Constants, and Data Types
 
-CONSTANT Pi <- 3.1415
+CONSTANT Pi <- 3.1416
 
 DECLARE Age : INTEGER
 DECLARE Height : REAL
@@ -40,8 +41,8 @@ DECLARE Name : STRING
 DECLARE IsStudent : BOOLEAN
 
 // Assign values
-Age <- 20
-Height <- 1.75
+Age <- 15
+Height <- 1.60
 Sex <- 'F'
 Name <- "Clara"
 IsStudent <- TRUE
@@ -55,18 +56,18 @@ Height <- Height + 0.05
 OUTPUT "Name: ", Name
 OUTPUT "Sex: ", Sex
 OUTPUT "Age: ", Age
-OUTPUT "Height: ", Height
+OUTPUT "Height: ", Height, "m"
 OUTPUT "Is a student? ", IsStudent
 OUTPUT "Pi = ", Pi
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // input/output
     const iOBtn = panelEl.querySelector('#iOExampleBtn');
-    if (iOBtn && editorApis) {
+    if (iOBtn && editor) {
         iOBtn.addEventListener('click', () => {
             const code = `// Input & Output
 
@@ -81,14 +82,14 @@ INPUT Age
 OUTPUT "Hello ", Name, "!"
 OUTPUT "You are ", Age, " years old."
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // arithmetic operations
     const arithOpsBtn = panelEl.querySelector('#arithOpsExampleBtn');
-    if (arithOpsBtn && editorApis) {
+    if (arithOpsBtn && editor) {
         arithOpsBtn.addEventListener('click', () => {
             const code = `// Arithmetic Operations
 
@@ -100,46 +101,46 @@ OUTPUT "Enter B (integer, not 0): "
 INPUT B
 
 OUTPUT ""
-OUTPUT "Sum = ", A + B
-OUTPUT "Difference = ", A - B
-OUTPUT "Product = ", A * B
-OUTPUT "Quotient = ", A / B
-OUTPUT "Power = ", A ^ B
-OUTPUT "A = ", DIV(A, B), "*B + ", MOD(A, B)
-OUTPUT "Average of A and B = ", (A + B) / 2
-OUTPUT "Rounded average = ", ROUND((A+B)/2, 0)
-OUTPUT "Random number (0 to 1): ", RANDOM()
+OUTPUT "Sum                    = ", A + B
+OUTPUT "Difference             = ", A - B
+OUTPUT "Product                = ", A * B
+OUTPUT "Quotient               = ", A / B
+OUTPUT "Power                  = ", A ^ B
+OUTPUT "A                      = ", DIV(A, B), " * B + ", MOD(A, B)
+OUTPUT "Average of A and B     = ", (A + B) / 2
+OUTPUT "Rounded average        = ", ROUND((A + B) / 2, 0)
+OUTPUT "Random number (0 to 1) = ", RANDOM()
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // string operations
     const strOpsBtn = panelEl.querySelector('#strOpsExampleBtn');
-    if (strOpsBtn && editorApis) {
+    if (strOpsBtn && editor) {
         strOpsBtn.addEventListener('click', () => {
             const code = `// String Operations
 
 DECLARE Name, LowerCaseName, UpperCaseName, Part : STRING
 DECLARE LengthOfName : INTEGER
 
-OUTPUT "Enter your name (>= 3 characters): "
+OUTPUT "Enter your name (>= 2 characters): "
 INPUT Name
 
 OUTPUT "Your name's length is ", LENGTH(Name)
 OUTPUT "Your name in lower case is ", LCASE(Name)
 OUTPUT "Your name in upper case is ", UCASE(Name)
-OUTPUT "The first three characters of your name are ", SUBSTRING(Name, 1, 3)
+OUTPUT "The first two characters of your name are ", SUBSTRING(Name, 1, 2)
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // logical operations
     const logicOpsBtn = panelEl.querySelector('#logicOpsExampleBtn');
-    if (logicOpsBtn && editorApis) {
+    if (logicOpsBtn && editor) {
         logicOpsBtn.addEventListener('click', () => {
             const code = `// Logical Operations
 
@@ -167,21 +168,21 @@ OUTPUT "Enter B (integer): "
 INPUT B
 
 OUTPUT ""
-OUTPUT "A = B? ", A = B
+OUTPUT "A = B?            ", A = B
 OUTPUT "A not equal to B? ", A <> B
-OUTPUT "A > B? ", A > B
-OUTPUT "A < B? ", A < B
-OUTPUT "A >= B? ", A >= B
-OUTPUT "A <= B? ", A <= B
+OUTPUT "A > B?            ", A > B
+OUTPUT "A < B?            ", A < B
+OUTPUT "A >= B?           ", A >= B
+OUTPUT "A <= B?           ", A <= B
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // conditionals
     const conditionalsBtn = panelEl.querySelector('#conditionalsExampleBtn');
-    if (conditionalsBtn && editorApis) {
+    if (conditionalsBtn && editor) {
         conditionalsBtn.addEventListener('click', () => {
             const code = `// Conditionals
 
@@ -192,19 +193,24 @@ DECLARE Result : STRING
 OUTPUT "Enter your exam grade (0-100): "
 INPUT Grade
 
-IF Grade >= 85
+IF Grade < 0 OR Grade > 100
   THEN
-    Result <- "passed with high marks"
+    OUTPUT "Invalid grade."
   ELSE
-    IF Grade >= 60
+    IF Grade >= 85
       THEN
-        Result <- "passed"
+        Result <- "passed with high marks"
       ELSE
-        Result <- "failed"
+        IF Grade >= 60
+          THEN
+            Result <- "passed"
+          ELSE
+            Result <- "failed"
+        ENDIF
     ENDIF
-ENDIF
 
-OUTPUT "You ", Result, "."
+    OUTPUT "You ", Result, "."
+ENDIF
 
 // CASE OF
 DECLARE Choice : CHAR
@@ -220,14 +226,14 @@ CASE OF Choice
   OTHERWISE OUTPUT "Invalid command."
 ENDCASE
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // loops
     const loopsBtn = panelEl.querySelector('#loopsExampleBtn');
-    if (loopsBtn && editorApis) {
+    if (loopsBtn && editor) {
         loopsBtn.addEventListener('click', () => {
             const code = `// Loops
 
@@ -256,19 +262,20 @@ WHILE Counter <= 5 DO
 ENDWHILE
 OUTPUT "The sum of numbers 1 to 5 is ", Total
 `;
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
     // arrays
     const arraysBtn = panelEl.querySelector('#arraysExampleBtn');
-    if (arraysBtn && editorApis) {
+    if (arraysBtn && editor) {
         arraysBtn.addEventListener('click', () => {
             const code = `// Arrays
 
-DECLARE Temp : INTEGER
+DECLARE Temp : REAL
 DECLARE Len, i, j : INTEGER
+DECLARE Swapped : BOOLEAN
 
 Len <- 0
 WHILE Len < 2 OR Len > 10 DO
@@ -277,23 +284,25 @@ WHILE Len < 2 OR Len > 10 DO
 ENDWHILE
 
 // Input
-DECLARE Numbers : ARRAY[1:Len] OF INTEGER
+DECLARE Numbers : ARRAY[1:Len] OF REAL
 FOR i <- 1 TO Len
     OUTPUT "Enter number ", i, ": "
     INPUT Numbers[i]
 NEXT i
 
 // Bubble Sort
-FOR i <- 1 TO Len - 1
-    FOR j <- 1 TO Len - i
+REPEAT
+    Swapped <- FALSE
+    FOR j <- 1 TO Len - 1
         IF Numbers[j] > Numbers[j + 1]
           THEN
             Temp <- Numbers[j]
             Numbers[j] <- Numbers[j + 1]
             Numbers[j + 1] <- Temp
+            Swapped <- TRUE
         ENDIF
     NEXT j
-NEXT i
+UNTIL NOT Swapped
 
 OUTPUT ""
 OUTPUT "Numbers in ascending order:"
@@ -302,14 +311,14 @@ FOR i <- 1 TO Len
 NEXT i
 `;
 
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
 
-    // Functions & Procedures
+    // functions & procedures
     const funcsProcsBtn = panelEl.querySelector('#funcsProcsExampleBtn');
-    if (funcsProcsBtn && editorApis) {
+    if (funcsProcsBtn && editor) {
         funcsProcsBtn.addEventListener('click', () => {
             const code = `// Functions and Procedures
 
@@ -327,8 +336,8 @@ PROCEDURE Welcome
     OUTPUT "Welcome to this demo!"
 ENDPROCEDURE
 
+DECLARE Sum : INTEGER
 PROCEDURE DisplaySum(X : INTEGER, Y : INTEGER)
-    DECLARE Sum : INTEGER
     Sum <- X + Y
     OUTPUT "The sum of ", X, " and ", Y, " is ", Sum
 ENDPROCEDURE
@@ -348,7 +357,7 @@ OUTPUT "Sum of squares = ", Square(A) + Square(B)
 OUTPUT "Random percentage = ", RandomPercentage(), "%"
 `;
 
-            editorApis.setCode?.(code, true);
+            editor.setCode?.(code, true);
             close();
         });
     }
