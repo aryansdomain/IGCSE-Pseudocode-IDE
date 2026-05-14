@@ -571,7 +571,6 @@ export async function runCode(scope, code, allowReturn = false) {
             let count = 0;
             const dN = getDeclaredName( scope, name);
             const dS = getDeclaredScope(scope, name) || scope;
-
             for (dS[dN] = start;   (step > 0) ? dS[dN] <= end : dS[dN] >= end;   dS[dN] += step) {
                 const forScope = Object.create(scope); addProperties(forScope); // create a scope
                 await runCode(forScope, forBlock, allowReturn);
@@ -1016,18 +1015,9 @@ export async function runCode(scope, code, allowReturn = false) {
                          lineNum, pos.col, pos.len);
             }
 
-            // get arguments of return
             const valText = r[1];
             const valCol = findPos(lineWithComments, valText).col;
-            const valItems = splitList(valText, valCol);
-            if (valItems.length !== 1) {
-                throwErr('SyntaxError',
-                         'invalid return value',
-                         lineNum, valCol, valText.length,
-                         'Return a single expression.');
-            }
-
-            const val = await evalExpr(scope, valItems[0].item, valItems[0].col, lineWithComments);
+            const val = await evalExpr(scope, valText, valCol, lineWithComments);
 
             throw { isReturn: true, val, valText, line: lineWithComments }; // return is in the form of an error
         }
