@@ -969,7 +969,7 @@ export async function evalExpr(scope, expr, baseCol = undefined, sourceLine = un
     try {
         // rewrite to JS
         const textJS = rewriteToJS(text, baseCol);
-        console.log(text + ' => ' + textJS); // debug // TODO: comment for production
+        // console.log(text + ' => ' + textJS); // debug
 
         // run evaluation
         const runner = Function(
