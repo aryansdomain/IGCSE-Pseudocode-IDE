@@ -42,6 +42,7 @@ Following are some guidelines that the interpreter uses, that do not directly fo
 * Procedures and Functions
     * Procedures and functions do not have to be declared at the start of the program.
     * They can only be declared in the global scope, not in sub-scopes like conditionals or loops.
+    * Parameters can share a name with a global variable, and the parameter takes precedence inside the procedure/function body.
 * Other
     * The assignment arrow can either be `<-`, `<--`, or `←`.
 
@@ -49,13 +50,13 @@ Following are some guidelines that the interpreter uses, that do not directly fo
 [ACE Editor](https://ace.c9.io/) (BSD license) is used in the IDE. It features automatic highlighting and auto-suggesting for keywords, declared identifiers, numbers, and more. It saves code on your device using localStorage, so you never lose it.
 
 ### Formatting
-The formatter, available via the Format button or by typing 'format' into the console, automatically arranges the code so that it follows IGCSE guidelines, including capitalizing keywords, fixing indentation, and more.
+The formatter, available via the Format button or by typing 'format' into the console, automatically arranges the code so that it follows IGCSE guidelines including capitalizing keywords, fixing indentation, and more.
 Try pasting:
 ```
 function Greet(name:string) returns string
 if name="" then
-output "Hello, stranger!"
-else output "Hello, ",name,"!"
+return "Hello, stranger!"
+else return "Hello, ",name,"!"
 endif
 endfunction
 
@@ -76,7 +77,6 @@ and see how it works.
 * __mode:__ Toggle the mode
 * __theme__ Change the editor theme
 * __help:__ Print a dialog containing the list of commands
-
 
 ## Splitter and Resizing
 The splitter is a handle in between the editor and the console that allows you to resize them. Double click the splitter to reset to a 50-50 ratio.
