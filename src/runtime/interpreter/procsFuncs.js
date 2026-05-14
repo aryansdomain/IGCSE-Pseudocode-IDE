@@ -201,7 +201,7 @@ export async function setArgs(scope, callScope, declaredParams, calledArgsText, 
 
         // declare and initialize
         const lower = String(name).toLowerCase();
-        if ((Object.prototype.hasOwnProperty.call(scope,  'decl') && isDeclared(scope, name)) || // already declared
+        if ((scope.decl && scope.decl.has(lower)) || // already declared in this scope
              Object.prototype.hasOwnProperty.call(consts, lower) ||
              Object.prototype.hasOwnProperty.call(procs,  lower) ||
              Object.prototype.hasOwnProperty.call(funcs,  lower)) {
@@ -210,7 +210,10 @@ export async function setArgs(scope, callScope, declaredParams, calledArgsText, 
                      `name ${name} already declared`,
                      declLineNum, pos.col, pos.len);
         }
-        setDeclared(scope, name);
+        // declare
+        scope.decl.add(lower);
+        scope.case[lower] = String(name);
+        scope.init[lower] = false;
         scope[getDeclaredName(scope, name)] = calledArg;
         setInitialized(scope, name);
     }
