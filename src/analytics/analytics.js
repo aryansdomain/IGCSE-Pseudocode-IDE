@@ -2,13 +2,13 @@ function code_executed({
     code_executed_method,
     code_executed_runtime,
     code_executed_size,
-    code_executed_success,
+    code_executed_success
 } = {}) {
     gtag('event', 'code_executed', {
         code_executed_method,
         code_executed_runtime: Math.round(code_executed_runtime),
         code_executed_size,
-        code_executed_success,
+        code_executed_success
     });
 }
 
@@ -25,13 +25,13 @@ function theme_changed({
     theme_changed_from,
     theme_changed_from_mode,
     theme_changed_to,
-    theme_changed_to_mode,
+    theme_changed_to_mode
 } = {}) {
     gtag('event', 'theme_changed', {
         theme_changed_from,
         theme_changed_from_mode,
         theme_changed_to,
-        theme_changed_to_mode,
+        theme_changed_to_mode
     });
 }
 
@@ -58,40 +58,40 @@ function console_downloaded({ console_downloaded_size } = {}) {
 
 function code_formatted({
     code_formatted_old_size,
-    code_formatted_new_size,
+    code_formatted_new_size
 } = {}) {
     gtag('event', 'code_formatted', {
         code_formatted_old_size,
-        code_formatted_new_size,
+        code_formatted_new_size
     });
 }
 
 function font_size_changed({
     font_size_changed_from,
-    font_size_changed_to,
+    font_size_changed_to
 } = {}) {
     gtag('event', 'font_size_changed', {
         font_size_changed_from,
-        font_size_changed_to,
+        font_size_changed_to
     });
 }
 function font_family_changed({
     font_family_changed_from,
-    font_family_changed_to,
+    font_family_changed_to
 } = {}) {
     gtag('event', 'font_family_changed', {
         font_family_changed_from,
-        font_family_changed_to,
+        font_family_changed_to
     });
 }
 
 function tab_spaces_changed({
     tab_spaces_changed_from,
-    tab_spaces_changed_to,
+    tab_spaces_changed_to
 } = {}) {
     gtag('event', 'tab_spaces_changed', {
         tab_spaces_changed_from,
-        tab_spaces_changed_to,
+        tab_spaces_changed_to
     });
 }
 

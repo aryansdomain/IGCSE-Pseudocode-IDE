@@ -82,7 +82,7 @@ const WORKER_URL = 'https://igcse-issue-worker.aryansdomain.workers.dev';
         attachBtn:        $('attachBtn'),
         textareaWrap: body.closest('.textarea-wrap'),
         showError,
-        workerUrl: WORKER_URL,
+        workerUrl: WORKER_URL
     });
 
     // init mode control
@@ -172,7 +172,7 @@ const WORKER_URL = 'https://igcse-issue-worker.aryansdomain.workers.dev';
                 body: JSON.stringify({
                     title: title.value,
                     body: newBody,
-                    labels: ['issue'],
+                    labels: ['issue']
                 })
             });
 

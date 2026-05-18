@@ -7,7 +7,7 @@ export function initFont({
     max = 48,
     step = 1,
     defaultSize = 14,
-    defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Courier New\', monospace',
+    defaultFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Courier New\', monospace'
 } = {}) {
 
     const STORAGE_KEY = 'igcse_ide_editor_font';

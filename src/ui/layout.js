@@ -1,7 +1,7 @@
 export function initLayout({
     workspace,
     layoutBtn,
-    initialLayout = 'vertical',
+    initialLayout = 'vertical'
 } = {}) {
 
     const STORAGE_KEY = 'igcse_ide_layout';
@@ -43,6 +43,6 @@ export function initLayout({
 
     return {
         getLayout: () => layout,
-        toggleLayout,
+        toggleLayout
     };
 }

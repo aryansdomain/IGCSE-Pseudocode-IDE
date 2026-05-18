@@ -18,7 +18,6 @@ export function initSettings({
         mode:       '#modeSelect'
     }
 } = {}) {
-    function isOpen() { return panelEl.style.display !== 'none'; }
     function open() {
         panelEl.style.display = 'flex';
         overlayEl?.classList.add('show');
@@ -32,7 +31,6 @@ export function initSettings({
         document.body.style.overflow = '';
         openBtn?.focus();
     }
-    function toggle() { isOpen() ? close() : open(); }
 
     openBtn.addEventListener('click', open);
     closeBtn.addEventListener('click', close);
@@ -108,10 +106,9 @@ export function initSettings({
             if (font_size && fontCtrl?.getFont) font_size.value = fontCtrl.getFont().size;
         } catch {}
         try {
-            if (tab_spaces && spacingCtrl?.getTabSpaces) tab_spaces.value = spacingCtrl.getTabSpaces();
+            if (tab_spaces && spacingCtrl?.getTabSizeSpaces) tab_spaces.value = spacingCtrl.getTabSizeSpaces();
         } catch {}
     }
     refresh();
 
-    return { open, close, toggle, refresh };
 }

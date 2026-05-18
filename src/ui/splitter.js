@@ -246,18 +246,7 @@ export function initSplitter({
     updateButtons();
 
     return {
-        setRatio(r) {
-            const minRatio = minA / Math.max(1, free);
-            const maxRatio = minB / Math.max(1, free);
-            ratio = clamp(Number(r) || initialRatio, minRatio, maxRatio);
-            applySizes();
-        },
         getRatio()  { return ratio; },
-        collapseA,
-        collapseB,
-        expandA()   { ratio = 1; applySizes(); },
-        expandB()   { ratio = 0; applySizes(); },
-        reset,
         destroy() {
             handle.removeEventListener('pointerdown', startDrag);
             window.removeEventListener('pointermove', moveDrag);

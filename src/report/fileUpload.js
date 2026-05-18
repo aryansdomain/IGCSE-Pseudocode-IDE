@@ -28,7 +28,7 @@ export function initFileUpload(options = {}) {
             '.jpg', '.jpeg', '.png', '.gif', '.webp',
             '.pdf',
             '.txt', '.md',
-            '.json',
+            '.json'
         ];
 
         // check if file extension is allowed
@@ -269,7 +269,7 @@ export function initFileUpload(options = {}) {
         return urls.map((url, idx) => ({
             url,
             name: selectedFiles[idx]?.name || `attachment-${idx + 1}`,
-            type: selectedFiles[idx]?.type || '',
+            type: selectedFiles[idx]?.type || ''
         }));
     }
 

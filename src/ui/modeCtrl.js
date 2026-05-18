@@ -4,7 +4,7 @@ export function initMode({
     themeCtrl = null,
     modeBtn,
     defaultMode = 'dark',
-    page = 'ide',
+    page = 'ide'
 } = {}) {
     const STORAGE_KEY = 'igcse_ide_mode';
     let currentThemeCtrl = themeCtrl;
@@ -86,6 +86,6 @@ export function initMode({
         isLightMode,
         setThemeCtrl(themeCtrl) {
             currentThemeCtrl = themeCtrl;
-        },
+        }
     };
 }

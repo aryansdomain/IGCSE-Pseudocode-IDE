@@ -31,6 +31,4 @@ export function initUpload({ uploadBtn, fileInput, setCode, consoleOutput }) {
     });
 
     fileInput.addEventListener('change', handleFileUpload);
-
-    return { handleFileUpload };
 }

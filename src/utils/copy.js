@@ -68,6 +68,4 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
 
     editorCopyBtn.disabled = false;
     editorCopyBtn.addEventListener('click', copyEditor);
-
-    return { copyConsole, copyEditor };
 }

@@ -62,6 +62,4 @@ export function initDownload({
 
     editorDownloadBtn.disabled = false;
     editorDownloadBtn.addEventListener('click', downloadEditor);
-
-    return { downloadConsole, downloadEditor, };
 }

@@ -12,7 +12,7 @@ export function initTheme({
         'Idle Fingers','KR Theme','Merbivore','Monokai','Nord Dark','One Dark','Pastel on Dark',
         'Solarized Dark','Terminal','Tomorrow Night','Tomorrow Night Blue','Tomorrow Night Bright',
         'Tomorrow Night Eighties','Twilight','Vibrant Ink'
-    ],
+    ]
 }) {
     const STORAGE_KEY = 'igcse_ide_theme';
 
@@ -115,7 +115,7 @@ export function initTheme({
                     theme_changed_from: previousTheme,
                     theme_changed_from_mode: previousInfo.kind,
                     theme_changed_to: getTheme(),
-                    theme_changed_to_mode: newInfo.kind,
+                    theme_changed_to_mode: newInfo.kind
                 });
             } catch {}
         }
@@ -154,7 +154,6 @@ export function initTheme({
 
     return {
         setTheme,
-        getTheme,
         updateConsoleTheme,
         updateElements,
         themeInfo,

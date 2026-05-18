@@ -62,7 +62,7 @@
     const STEPS = [
         {
             title: 'Welcome!',
-            intro: 'Welcome to the IGCSE IDE! Here\'s a quick tour that\'ll show you around.',
+            intro: 'Welcome to the IGCSE IDE! Here\'s a quick tour that\'ll show you around.'
         }, {
             element: '#code .ace_scroller',
             title: 'Editor',
@@ -70,51 +70,51 @@
         }, {
             element: '#consoleViewport',
             title: 'Console',
-            intro: 'Input and output for the program is here.',
+            intro: 'Input and output for the program is here.'
         }, {
             element: '#consoleViewport',
             title: 'Console',
-            intro: 'Press the up arrow to bring back the last command ran, and the down arrow to go to the next command.',
+            intro: 'Press the up arrow to bring back the last command ran, and the down arrow to go to the next command.'
         }, {
             element: '#splitter',
             title: 'Splitter',
-            intro: 'Drag the handle to resize the editor and the console. Double-clicking resets to the default position.',
+            intro: 'Drag the handle to resize the editor and the console. Double-clicking resets to the default position.'
         }, {
             element: '#formatBtn',
             title: 'Format',
-            intro: 'Auto-indent, capitalize keywords, and make your code look better.',
+            intro: 'Auto-indent, capitalize keywords, and make your code look better.'
         }, {
             element: '#settingsBtn',
             title: 'Settings',
-            intro: 'Change font size, the theme of the editor, and more. A list of more editor settings can be shown by focusing on the editor and pressing Cmd/Ctrl + ,',
+            intro: 'Change font size, the theme of the editor, and more. A list of more editor settings can be shown by focusing on the editor and pressing Cmd/Ctrl + ,'
         }, {
             element: '#layoutBtn',
             title: 'Layout',
-            intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor left, console right).',
+            intro: 'Switch from vertical (editor top, console bottom), to horizontal (editor left, console right).'
         }, {
             element: '#filesBar',
             title: 'Files',
-            intro: 'You can create up to 7 different files, each able to store seperate code.',
+            intro: 'You can create up to 7 different files, each able to store seperate code.'
         }, {
             element: '#filesBar',
             title: 'Files',
-            intro: 'Undoing/redoing works here too, and press return when focused on a file to rename it.',
+            intro: 'Undoing/redoing works here too, and press return when focused on a file to rename it.'
         }, {
             element: '#examplesBtn',
             title: 'Examples',
-            intro: 'Access example code snippets that showcase what the language can do.',
+            intro: 'Access example code snippets that showcase what the language can do.'
         }, {
             element: '#infoBtn',
             title: 'Documentation',
-            intro: 'View the official IGCSE documentation and learn about the pseudocode syntax.',
+            intro: 'View the official IGCSE documentation and learn about the pseudocode syntax.'
         }, {
             element: '#issueReportBtn',
             title: 'Report an issue',
-            intro: 'To report a bug, or if you feel there\'s something we can improve, use this button.',
+            intro: 'To report a bug, or if you feel there\'s something we can improve, use this button.'
         }, {
-            intro: 'If you ever want to see this tour again, the button is in the settings panel.',
+            intro: 'If you ever want to see this tour again, the button is in the settings panel.'
         }, {
-            intro: 'To get started, type \'help\' in the console for a list of commands!',
+            intro: 'To get started, type \'help\' in the console for a list of commands!'
         }
     ];
     const SELECTORS = STEPS.filter(s => s.element).map(s => s.element);

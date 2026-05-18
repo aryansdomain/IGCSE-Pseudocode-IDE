@@ -56,6 +56,6 @@ export function initUI() {
 
         // info
         lineColInfo:        document.getElementById('lineColInfo'),
-        tabSpacesInfo:      document.getElementById('tabSpacesInfo'),
+        tabSpacesInfo:      document.getElementById('tabSpacesInfo')
     };
 }

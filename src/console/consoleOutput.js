@@ -57,6 +57,6 @@ export function initConsoleOutput(console) {
             else if (cursorPos > n) write('\x1b[' + (cursorPos - n) + 'D');
         },
 
-        writePrompt,
+        writePrompt
     };
 }

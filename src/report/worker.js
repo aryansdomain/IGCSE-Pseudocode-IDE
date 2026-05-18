@@ -15,7 +15,7 @@ export default {
             'Access-Control-Allow-Origin': allow,
             'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
             'Access-Control-Allow-Headers': 'Content-Type',
-            'Vary': 'Origin',
+            'Vary': 'Origin'
         };
 
         // ------------------------ Methods of Request ------------------------
@@ -203,7 +203,7 @@ export default {
                     'Accept': 'application/vnd.github+json',
                     'User-Agent': 'cloudflare-worker',
                     'X-GitHub-Api-Version': '2022-11-28',
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ title, body: newBody, labels })
             });
