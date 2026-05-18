@@ -187,7 +187,7 @@ OUTPUT Greet(Name)
         const id = Object.keys(files).find(k => files[k].name === oldName); // find oldName
         if (!id) return { ok: false, error: `File ${oldName} not found` };
 
-        if (!isValidName(newName)) return { ok: false, error: `Invalid name ${newName} \r\nName must be <1-16 chars, letters, numbers, or hyphens>.<psc|txt>, 1-16 chars` };
+        if (!isValidName(newName)) return { ok: false, error: `Invalid name ${newName} \r\nName must be <letters, numbers, hyphens>.<psc|txt>, 1-16 chars` };
         if (Object.values(files).some(f => f.name === newName)) return { ok: false, error: `Name ${newName} already exists` };
         renameFileInternal(id, newName);
         return { ok: true };
@@ -220,7 +220,7 @@ OUTPUT Greet(Name)
             const newName = input.value.trim();
             const oldName = file.name;
             input.replaceWith(nameSpan);
-            if (!newName || !isValidName(newName) || newName === oldName) return;
+            if (!newName || newName === oldName) return;
             if (onRename) setTimeout(() => onRename(oldName, newName), 0);
             else renameFileInternal(id, newName);
             if (file.name !== newName) nameSpan.textContent = file.name; // revert on failure
