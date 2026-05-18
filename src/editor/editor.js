@@ -3,7 +3,7 @@ import { format } from '../format/format.js';
 export function initEditor({
     container,
     tabSize = 4,
-    theme = 'monokai',
+    theme = 'monokai'
 } = {}) {
     const aceEditor = ace.edit(container);
 
@@ -18,19 +18,21 @@ export function initEditor({
 
     // ------------------------ Helpers ------------------------
 
-    function getCode() { return aceEditor.getValue(); }
-    function setCode(src, moveCursorToStart = false) {
-        aceEditor.setValue(String(src), moveCursorToStart ? -1 : 1);
-    }
+    function getCode()     { return aceEditor.getValue();                 }
+    function setCode(code) {        aceEditor.setValue(String(code), -1); }
 
     function setTab(n = 4) {
         const size = Math.max(0, parseInt(n, 10) || 4);
         aceEditor.session.setTabSize(size);
     }
-    function formatCode() {
-        setCode(format(getCode()));
+    function getTabSize() {
+        return aceEditor.session.getTabSize();
     }
 
-    const editor = { getCode, setCode, setTab, formatCode };
+    function formatCode() {
+        setCode(format(getCode(), getTabSize()));
+    }
+
+    const editor = { getCode, setCode, setTab, getTabSize, formatCode };
     return { aceEditor, editor };
 }

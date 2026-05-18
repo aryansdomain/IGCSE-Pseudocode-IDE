@@ -1,541 +1,360 @@
-let __fmtEditor = null;
-
-export function initFormatter({ editor, getCode, setCode, formatBtn }) {
-    __fmtEditor = editor || __fmtEditor;
-
-    if (formatBtn && !formatBtn.__formatterBound) {
-        formatBtn.__formatterBound = true;
+export function initFormatter({ getCode, setCode, formatBtn, getTabSize }) {
+    if (formatBtn) {
         formatBtn.addEventListener('click', () => {
-            const before = getCode()
-            const after  = format(before);
-            setCode(after, true);
-            
-            // track code formatting analytics
-            try {
-                window.code_formatted && window.code_formatted({
-                    code_formatted_old_size: before.length,
-                    code_formatted_new_size: after.length
-                });
-            } catch {}
+            setCode(format(getCode(), getTabSize()));
         });
     }
 }
 
-// ------------------------ Formatting ------------------------
-function format(src) {
-    let prev = String(src);
+export function format(code, tabSize) {
+    let prev, next = String(code);
 
-    // repeat formatting 15 times until no changes made
-    for (let i = 0; i < 15; i++) {
-        const next = formatOnce(prev);
-        if (next === prev) return next;
+    // repeat until nothing is changed
+    do {
         prev = next;
-    }
-    return prev;
+        next = formatOnce(prev, tabSize);
+    } while (next !== prev);
+    return next;
 }
 
-// one formatting pass (done 15 times)
-function formatOnce(src) {
-    if (typeof src !== 'string') return '';
+// ------------------------ Utilities ------------------------
 
-    // protect literals
-    const lit = [];
-    const protect = s => s.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,
-        m => { lit.push(m); return `\uE000${lit.length - 1}\uE001`; });
-    const restore = s => s.replace(/\uE000(\d+)\uE001/g, (_, i) => lit[+i]);
-
-    // split off trailing // comments, but keep strings intact
-    const splitComment = (line) => {
-        const p = protect(line);
-        const idx = p.indexOf('//');
-        if (idx >= 0) {
-            const leftProt = p.slice(0, idx);
-            const leftRest = restore(leftProt);
-            const cut = leftRest.length;
-            return { code: line.slice(0, cut), comment: line.slice(cut) };
-        }
+// split line into code and comment
+function splitLine(line) {
+    const prot = replace(line);
+    const commentCol = prot.indexOf('//');
+    if (commentCol >= 0) {
+        const code    = unreplace(prot.slice(0, commentCol));
+        const comment = unreplace(prot.slice(   commentCol));
+        return { code, comment };
+    } else {
         return { code: line, comment: '' };
-    };
+    }
+}
+
+// split a protected line at a trailing block-end token into separate lines
+function splitTerminator(prot, outArr, kwRegex) {
+    const PATTERNS = [
+        /\b(ENDWHILE)\b/i,
+        /\b(ENDFUNCTION)\b/i,
+        /\b(ENDPROCEDURE)\b/i,
+        /\b(ENDCASE)\b/i,
+        /\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9_]*)?)\b/i,
+        /\b(UNTIL\b\s*[^]+)$/i
+    ];
+    let r;
+    for (const re of PATTERNS) {
+        if (r = prot.match(new RegExp(`^(.*?)(?:\\s*)${re.source}\\s*(.*)$`, re.flags))) {
+            const left  = r[1].trim();
+            const token = r[r.length - 2];
+            const right = r[r.length - 1].trim();
+            if (left) outArr.push({ code: left, comment: '' });
+
+            let tokenOut = token.toUpperCase();
+
+            //          NEXT   ?----var----
+            const rNext = token.match(/^next(\s+)([A-Za-z][A-Za-z0-9_]*)$/i);
+            if (rNext) tokenOut = 'NEXT' + rNext[1] + rNext[2];
+
+            //          UNTIL   ----cond----
+            const rUntil = token.match(/^until\b([\s\S]*)$/i);
+            if (rUntil) {
+                const condition = rUntil[1].replace(kwRegex, t => t.toUpperCase());
+                tokenOut = 'UNTIL' + condition;
+            }
+
+            outArr.push({ code: tokenOut, comment: '' });
+            if (right) outArr.push({ code: right, comment: '' });
+            return true;
+        }
+    }
+    return false;
+}
+
+const reStartsWithKeyword = new RegExp(
+    '^\\s*(?:' +
+    'ARRAY|CALL|CASE|CONSTANT|DECLARE|DO|ELSE|' +
+    'ENDCASE|ENDFUNCTION|ENDIF|ENDPROCEDURE|ENDWHILE|' +
+    'FOR|FUNCTION|IF|INPUT|NEXT|OF|OTHERWISE|' +
+    'OUTPUT|PROCEDURE|REPEAT|RETURN|RETURNS|STEP|' +
+    'THEN|TO|UNTIL|WHILE' +
+    ')\\b', 'i'
+);
+
+// ------------------------ Replacing ------------------------
+
+const LITERAL_START = '\uE000';
+const LITERAL_END   = '\uE001';
+
+let replaced = [];
+
+// protect strings temporarily so they are not affected by operations
+function replace(text) {
+    return String(text).replace(/"[^"]*"|'[^']*'/g, (str) => {
+        replaced.push(str);
+        return `${LITERAL_START}${replaced.length - 1}${LITERAL_END}`;
+    });
+}
+// unprotect them
+function unreplace(text) {
+    return String(text).replace(
+        new RegExp(`${LITERAL_START}(\\d+)${LITERAL_END}`, 'g'), (_, i) => replaced[+i]
+    );
+}
+
+// ------------------------ One Formatting Pass ------------------------
+
+function formatOnce(code, tabSize = 4) {
+    const lines = code.replace(/\r\n?/g, '\n').split('\n');
+    const tab = ' '.repeat(tabSize);
+
+    replaced = [];
 
     // keywords/types uppercasing
-    const kwRegex = new RegExp(
-        String.raw`\b(?:PROCEDURE|FUNCTION|RETURNS|ENDPROCEDURE|ENDFUNCTION|DECLARE|CONSTANT|ARRAY|OF|INPUT|OUTPUT|CALL|IF|THEN|ELSE|ENDIF|CASE|ENDCASE|FOR|TO|STEP|NEXT|WHILE|DO|ENDWHILE|REPEAT|UNTIL|RETURN|TRUE|FALSE|DIV|MOD|AND|OR|NOT|INTEGER|REAL|BOOLEAN|CHAR|STRING)\b`,
-        'gi'
-    );
+    const kwRegex = new RegExp('\\b(?:' +
+        'AND|ARRAY|BOOLEAN|CALL|CASE|CHAR|CONSTANT|' +
+        'DECLARE|DIV|DO|ELSE|ENDFUNCTION|ENDCASE|' +
+        'ENDPROCEDURE|ENDIF|ENDWHILE|FALSE|FOR|FUNCTION|IF|' +
+        'INPUT|INTEGER|LCASE|LENGTH|MOD|NEXT|NOT|OF|' +
+        'OR|OTHERWISE|OUTPUT|PROCEDURE|RANDOM|REAL|REPEAT|' +
+        'RETURNS|RETURN|ROUND|STEP|STRING|SUBSTRING|THEN|' +
+        'TO|TRUE|UNTIL|UCASE|WHILE' +
+    ')\\b', 'gi');
 
-    const getTabSize = () => {
-        const h = (__fmtEditor && __fmtEditor.session)
-            ? __fmtEditor
-            : (window.editor && window.editor.session ? window.editor : null);
-        return h ? h.session.getTabSize() : 4;
-    };
-    const tabSize   = getTabSize();
-    const indentUnit = ' '.repeat(tabSize);
+    // ------------------------ Normalizing ------------------------
 
-    let lines = src.replace(/\r\n?/g, '\n').split('\n');
-
-    // -------- First pass: normalize & split (on PROTECTED text) --------
     const normalized = [];
-
-    // helper: does a protected snippet *start* with a statement keyword?
-    const startsWithKeyword = (prot) =>
-        /^\s*(OUTPUT|INPUT|DECLARE|IF|THEN|ELSE|ENDIF|FOR|WHILE|REPEAT|CASE|CALL|RETURN|CONSTANT|PROCEDURE|FUNCTION|NEXT|ENDWHILE|ENDFUNCTION|ENDPROCEDURE|ENDCASE|UNTIL)\b/i
-            .test(prot);
-
-    // helper: split a protected line at a trailing block *end* token into separate lines
-    function splitTrailingTerminators(prot, outArr) {
-        // order matters: grab the *first* end token we see from left to right
-        const PATTERNS = [
-            /\b(ENDWHILE)\b/i,
-            /\b(ENDFUNCTION)\b/i,
-            /\b(ENDPROCEDURE)\b/i,
-            /\b(ENDCASE)\b/i,
-            /\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9_]*)?)\b/i, // NEXT or NEXT i
-            /\b(UNTIL\b\s*[^]+)$/i                      // UNTIL cond...
-        ];
-        for (const re of PATTERNS) {
-            const m = prot.match(new RegExp(`^(.*?)(?:\\s*)${re.source}\\s*(.*)$`, re.flags));
-            if (m) {
-                const left  = m[1].trim();
-                const token = m[m.length - 2]; // the captured end token text
-                const right = m[m.length - 1].trim();
-                if (left) outArr.push({ code: left, comment: '' });
-                
-                let tokenOut = token.toUpperCase();
-                
-                // Preserve loop variable after NEXT
-                const mNext = token.match(/^next(\s+)([A-Za-z][A-Za-z0-9_]*)$/i);
-                if (mNext) tokenOut = 'NEXT' + mNext[1] + mNext[2];
-                
-                // Preserve the condition after UNTIL
-                const mUntil = token.match(/^until\b([\s\S]*)$/i);
-                if (mUntil) {
-                    // apply capitalization to condition part
-                    const condition = mUntil[1].replace(kwRegex, t => t.toUpperCase());
-                    tokenOut = 'UNTIL' + condition;
-                }
-                
-                outArr.push({ code: tokenOut, comment: '' });
-
-                if (right) outArr.push({ code: right, comment: '' });
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // split a one-line WHILE/DO header + body
-    function splitWhileHeaderLineProtected(prot) {
-        const m = prot.match(/^\s*(WHILE\b[^]*?\bDO)\b\s*(.+)\s*$/i);
-        if (!m) return [prot];
-        const header = m[1];
-        const tail   = m[2];
-        
-        // everything after DO goes on a new line
-        return [header, tail];
-    }
-
-    // split a one-line FOR header + body
-    function splitForHeaderLineProtected(prot) {
-        const m = prot.match(/^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9_]*\s*(?:←|<-)\s*[^]*?\bTO\b\s*[^]*?(?:\s+STEP\s*[^]*?)?)\s+(.+)\s*$/i);
-        if (!m) return [prot];
-        const header = m[1];
-        const tail   = m[2];
-        if (startsWithKeyword(tail)) return [header, tail];
-        return [prot];
-    }
-
-    // split a PROCEDURE header + trailing code (always split after the param list)
-    function splitProcedureHeaderProtected(prot) {
-        // PROCEDURE <name> ( <params>? )   [ tail... ]
-        const m = prot.match(/^\s*(PROCEDURE\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?)\s+(.+)\s*$/i);
-        if (!m) return [prot];
-        const header = m[1];
-        const tail   = m[2];
-        return [header, tail];
-    }
-
-    // split a FUNCTION header + trailing code (stop at RETURNS <TYPE>)
-    function splitFunctionHeaderProtected(prot) {
-        // FUNCTION <name>(...) RETURNS <TYPE>   [ tail... ]
-        const m = prot.match(/^\s*(FUNCTION\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?\s+RETURNS\s+[A-Za-z]+)\s+(.+)\s*$/i);
-        if (!m) return [prot];
-        const header = m[1];
-        const tail   = m[2];
-        return [header, tail];
-    }
-
-    for (let raw of lines) {
-        let { code, comment } = splitComment(raw);
-        const hadComment = !!comment;
-
-        code = code.replace(/\t/g, ' ');
-        code = protect(code);
-
-        // --- 1) If some statement precedes a FOR/WHILE/PROC/FUNC, split it off ---
-        // a) split " ... FOR ..."
+    const headerSplits = [
         {
-            const m = code.match(/^(.*\S)\s+\bFOR\b\s*(.*)$/i);
-            if (m) {
-                let leftProt  = m[1];
-                let rightProt = 'FOR ' + m[2].trim();
+            re: /^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9_]*\s*(?:←|<-|<--)\s*[^]*?\bTO\b\s*[^]*?(?:\s+STEP\s*[^]*?)?)\s+(.+)\s*$/i,
+            tailStartsWithKeyword: true
+        },
+        { re: /^\s*(WHILE\b[^]*?\bDO)\b\s*(.+)\s*$/i },
+        { re: /^\s*(PROCEDURE\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?)\s+(.+)\s*$/i },
+        { re: /^\s*(FUNCTION\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?\s+RETURNS\s+[A-Za-z]+)\s+(.+)\s*$/i }
+    ];
 
-                leftProt = leftProt
-                    .replace(/\s*,\s*/g, ', ')
-                    .replace(/\s*(←|<-)\s*/g, ' $1 ')
-                    .replace(/\s*:\s*/g, ' : ')
-                    .trim();
-                leftProt = leftProt.replace(kwRegex, t => t.toUpperCase());
-
-                normalized.push({ code: leftProt, comment: '' });
-                code = rightProt;
-            }
-        }
-        // b) split " ... WHILE ..."
-        {
-            const m = code.match(/^(.*\S)\s+\bWHILE\b\s*(.*)$/i);
-            if (m) {
-                let leftProt  = m[1];
-                let rightProt = 'WHILE ' + m[2].trim();
-                leftProt = leftProt.replace(/\s*,\s*/g, ', ')
-                                   .replace(/\s*(←|<-)\s*/g, ' $1 ')
-                                   .replace(/\s*:\s*/g, ' : ')
-                                   .trim();
-                leftProt = leftProt.replace(kwRegex, t => t.toUpperCase());
-                normalized.push({ code: leftProt, comment: '' });
-                code = rightProt;
-            }
-        }
-        // c) split " ... PROCEDURE ..." / " ... FUNCTION ..."
-        {
-            const m = code.match(/^(.*\S)\s+\b(PROCEDURE|FUNCTION)\b\s*(.*)$/i);
-            if (m) {
-                let leftProt  = m[1];
-                let rightProt = m[2].toUpperCase() + ' ' + m[3].trim();
-                leftProt = leftProt.replace(/\s*,\s*/g, ', ')
-                                   .replace(/\s*(←|<-)\s*/g, ' $1 ')
-                                   .replace(/\s*:\s*/g, ' : ')
-                                   .trim();
-                leftProt = leftProt.replace(kwRegex, t => t.toUpperCase());
-                normalized.push({ code: leftProt, comment: '' });
-                code = rightProt;
-            }
-        }
-
-        // --- 2) Split "IF ... THEN ..." into two lines ---
-        if (/^\s*IF\b/i.test(code) && /\bTHEN\b/i.test(code)) {
-            const m = code.match(/^\s*IF\s+(.+?)\s*\bTHEN\b\s*(.*)$/i);
-            if (m) {
-                const condProt  = m[1].trim();
-                const afterProt = m[2].trim();
-                normalized.push({ code: 'IF ' + condProt, comment: '' });
-                normalized.push({ code: 'THEN', comment: '' });
-                if (afterProt) normalized.push({ code: afterProt, comment: '' });
-                continue;
-            }
-        }
-
-        // --- 3) Ensure "THEN ..." becomes its own line ---
-        {
-            const m = code.match(/^\s*THEN\b\s*(.*)$/i);
-            if (m) {
-                const restProt = m[1].trim();
-                normalized.push({ code: 'THEN', comment: '' });
-                if (restProt) normalized.push({ code: restProt, comment: '' });
-                continue;
-            }
-        }
-
-        // --- 4) Ensure "ELSE ..." becomes its own line ---
-        {
-            const m = code.match(/^\s*ELSE\b\s*(.*)$/i);
-            if (m) {
-                const restProt = m[1].trim();
-                normalized.push({ code: 'ELSE', comment: '' });
-                if (restProt) normalized.push({ code: restProt, comment: '' });
-                continue;
-            }
-        }
-
-        // --- 5) Split inline ELSE/ENDIF/NEXT/END*/UNTIL that appear after a statement ---
-        // (We’re still on PROTECTED text, so strings are safe.)
-        if (/\bELSE\b/i.test(code) && !/^\s*ELSE\b/i.test(code)) {
-            const m = code.match(/^(.*?)(?:\s*)\bELSE\b\s*(.*)$/i);
-            if (m) {
-                const left  = m[1].trim();
-                const right = m[2].trim();
-                if (left) normalized.push({ code: left, comment: '' });
-                normalized.push({ code: 'ELSE', comment: '' });
-                if (right) code = right; else continue;
-            }
-        }
-        if (/\bENDIF\b/i.test(code) && !/^\s*ENDIF\s*$/i.test(code)) {
-            const m = code.match(/^(.*?)(?:\s*)\bENDIF\b\s*(.*)$/i);
-            if (m) {
-                const left  = m[1].trim();
-                const right = m[2].trim();
-                if (left)  normalized.push({ code: left,  comment: '' });
-                normalized.push({ code: 'ENDIF', comment: '' });
-                if (right) normalized.push({ code: right, comment: '' });
-                continue;
-            }
-        }
-        // put REPEAT on its own line if there's code after it
-        {
-            const m = code.match(/^\s*REPEAT\b\s*(.*)$/i);
-            if (m) {
-            const tail = m[1].trim();
-            normalized.push({ code: 'REPEAT', comment: '' });
-            if (tail) normalized.push({ code: tail, comment: '' });
-            continue;
-            }
-        }
-        // NEW: split other terminators if they appear after code
-        {
+    for (let i = 0; i < lines.length; i++) {
+        let r;
+        let { code, comment } = splitLine(lines[i]);
+        const push = (text, lineComment = '') => normalized.push({ code: text, comment: lineComment });
+        const preserveTrailingComment = () => {
+            if (!comment || normalized.length === 0) return;
+            const last = normalized[normalized.length - 1];
+            if (!last.comment) last.comment = comment;
+        };
+        const pushTail = (tail) => {
+            const trimmed = tail.trim();
+            if (!trimmed) return;
+ 
             const tmp = [];
-            if (splitTrailingTerminators(code, tmp)) {
+            if (splitTerminator(trimmed, tmp, kwRegex)) {
                 normalized.push(...tmp);
-                continue;
+            } else {
+                push(trimmed);
             }
+        };
+
+        code = code.replace(/\t/g, tab);
+        code = replace(code);
+
+        // split off anything before a block-opening keyword
+        //                   -left-     --------------------keyword------------------     rest
+        if (r = code.match(/^(.*\S)\s+\b(IF|FOR|WHILE|REPEAT|CASE|PROCEDURE|FUNCTION)\b\s*(.*)$/i)) {
+            push(r[1]);
+            code = r[2] + ' ' + r[3].trim();
+        } 
+
+        // split single-line IF into IF / THEN / body
+        //                      IF   -cond     THEN     aft.
+        if (r = code.match(/^\s*IF\s+(.+?)\s*\bTHEN\b\s*(.*)$/i)) {
+            const cond  = r[1].trim();
+            const after = r[2].trim();
+
+            push('IF ' + cond);
+            push('THEN');
+            pushTail(after);
+
+            preserveTrailingComment();
+            continue;
         }
 
-        // --- 6) Split one-line FOR/WHILE headers from bodies ---
-        {
-            const parts = splitForHeaderLineProtected(code);
-            if (parts.length > 1) {
-                normalized.push({ code: parts[0], comment: '' });
-                // The remainder might still have NEXT/END..., split again
-                let rest = parts[1];
-                const tmp = [];
-                if (!splitTrailingTerminators(rest, tmp)) {
-                    normalized.push({ code: rest, comment: '' });
-                } else {
-                    normalized.push(...tmp);
-                }
-                continue;
-            }
-        }
-        {
-            const parts = splitWhileHeaderLineProtected(code);
-            if (parts.length > 1) {
-                normalized.push({ code: parts[0], comment: '' });
-                let rest = parts[1];
-                const tmp = [];
-                if (!splitTrailingTerminators(rest, tmp)) {
-                    normalized.push({ code: rest, comment: '' });
-                } else {
-                    normalized.push(...tmp);
-                }
-                continue;
-            }
-        }
-        {
-            const parts = splitProcedureHeaderProtected(code);
-            if (parts.length > 1) {
-              normalized.push({ code: parts[0], comment: '' });
-              let rest = parts[1];
-              const tmp = [];
-              if (!splitTrailingTerminators(rest, tmp)) {
-                normalized.push({ code: rest, comment: '' });
-              } else {
-                normalized.push(...tmp);
-              }
-              continue;
-            }
-        }
-        {
-            const parts = splitFunctionHeaderProtected(code);
-            if (parts.length > 1) {
-                normalized.push({ code: parts[0], comment: '' });
-                normalized.push({ code: parts[1], comment: '' });
-                continue;
-            }
+        // put simple block keywords on their own line
+        //                   THEN|ELSE|REPEAT   aft.
+        if (r = code.match(/^\s*(THEN|ELSE|REPEAT)\b\s*(.*)$/i)) {
+            const after = r[2].trim();
+
+            push(r[1]);
+            pushTail(after);
+            preserveTrailingComment();
+            continue;
         }
 
-        // protect assignment arrows
-        code = code.replace(/\s*(?:←|<--|<-)\s*/g, '\uE100');
+        // split inline ELSE/ENDIF after preceding code
+        //                   left     ELSE|ENDIF   right
+        if ((r = code.match(/^(.*?)\s+\b(ELSE|ENDIF)\b\s*(.*)$/i)) && r[1].trim()) {
+            push(r[1].trim());
+            push(r[2]);
+            pushTail(r[3]);
+            preserveTrailingComment();
+            continue;
+        }
 
-        // normalize spacing between operators and other tokens
-        code = code
-            .replace(/\s*,\s*/g, ', ') // |1  ,3|becomes |1, 3|
-            .replace(/\s*:\s*/g, ' : ') // |1  :3|becomes |1: 3|
+        // split trailing END*/NEXT/UNTIL terminators
+        const tmp = [];
+        if (splitTerminator(code, tmp, kwRegex)) {
+            normalized.push(...tmp);
+            preserveTrailingComment();
+            continue;
+        }
 
-            //  +  *  /  ^ (not - )
-            .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ') // |1  +3| becomes |1 + 3|
-            //                  -
-            .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // |1  -3| becomes |1 - 3|
-            
-            .trim();
+        // split one-line block headers from their body
+        let headerMatch = null;
+        for (const { re, tailStartsWithKeyword } of headerSplits) {
+            const match = code.match(re);
+            if (match && (!tailStartsWithKeyword || reStartsWithKeyword.test(match[2]))) {
+                headerMatch = match;
+                break;
+            }
+        }
+        if (headerMatch) {
+            push(headerMatch[1]);
+            pushTail(headerMatch[2]);
+            preserveTrailingComment();
+            continue;
+        }
 
-        // combine split relational operators
-        code = code.replace(/<\s*=/g, '<=') // |< =|  becomes |<=|
-                   .replace(/>\s*=/g, '>=') // |> =|  becomes |>=|
-                   .replace(/<\s*>/g, '<>'); // |< >|  becomes |<>|
+        push(code, comment);
+    }
 
-        // protect combined operators (assign to private characters)
-        code = code.replace(/<=/g, '\uE201')
-                   .replace(/>=/g, '\uE202')
-                   .replace(/<>/g, '\uE203');
+    // ------------------------ General Replacing ------------------------
 
-        code = code.replace(/\s*(=|<|>)\s*/g, ' $1 ') // |  =  |becomes | = |
+    for (let i = 0; i < normalized.length; i++) {
+        let line = String(normalized[i].code).trim();
 
-        // unprotect combined operators
-        code = code.replace(/\uE201/g, '<=')
-                   .replace(/\uE202/g, '>=')
-                   .replace(/\uE203/g, '<>')
+        // protect arrows
+        line = line.replace(/\s*(?:←|<--|<-)\s*/g, ' <- ');
+        line = line.replace(/\s*(?:<-)\s*/g,       ''); // protect
 
-        code = code.replace(/\s*(<>|<=|>=)\s*/g, ' $1 '); // |  <>  |becomes | <> |
-
-        code = code.replace(/\b(NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 ('); // |NOT( <...>| or |NOT   (<...>| becomes |NOT (<...>|
-
-        // brackets/calls 
-        code = code.replace(/\b(FUNCTION|PROCEDURE)\s+([A-Za-z][A-Za-z0-9_]*)\s+\(/gi, '$1 $2(') // |FUNCTION <name>  ()| becomes |FUNCTION <name>()|
-                   .replace(/\(\s+/g, '(') // (  <...> becomes (<...>
-                   .replace(/\s+\)/g, ')') // <...>  ) becomes <...>)
-                   .replace(/\s+\[\s+/g, '[') //ARRAY <...>  [  1:3 becomes ARRAY <...>[1:3
-                   .replace(/\s+\]/g, ']'); // <...>  ] becomes <...>]
-
-        code = code.replace(/\bSTEP\s*-\s+(?=[0-9.])/gi, 'STEP -') // STEP - 0.5 -> STEP -0.5
-                   .replace(/\bTO\s*-\s+(?=[0-9.])/gi, 'TO -')
-
-        // |[1 : 5]| becomes |[1:5]|
-        code = code.replace(/\[([^\[\]]+)\]/g, (_, inner) => {
-            const t = inner.replace(/\s*,\s*/g, ', ')
-                           .replace(/\s*:\s*/g, ':')
-                           .trim();
-            return '[' + t + ']';
-        });
+        line = line.replace(kwRegex, keyword => keyword.toUpperCase()) // keywords
+                   .replace(/\s*,\s*/g, ', ')  // comma spacing
+                   .replace(/\s*:\s*/g, ' : ') // colon spacing
+                   .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ') // +*/^ spacing
+                   .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // -    spacing
+                   .replace(/<\s*=|>\s*=|<\s*>/g, m => m.replace(/\s/g, '')) // split comparison operators
+                   .replace(/\s*(<>|<=|>=|(?<![<>])=|<(?![=>])|(?<![<=])>(?!=))\s*/g, ' $1 ')
+                   .replace(/\b(AND|OR|NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (')
+                   .replace(/\b(FUNCTION|PROCEDURE)\s+([A-Za-z][A-Za-z0-9_]*)\s+\(/gi, '$1 $2(')
+                   .replace(/\(\s+/g, '(')    // spaces after        opening paren
+                   .replace(/\s+\)/g, ')')    // spaces       before closing paren
+                   .replace(/\s+\[\s+/g, '[') // spaces after/before opening bracket
+                   .replace(/\s+\]/g, ']')    // spaces       before closing brcaket
+                   .replace(/\b(STEP|TO)\s*-\s+(?=[0-9.])/gi, '$1 -')
+                   .replace(/\[([^\[\]]+)\]/g, (_, s) => '[' + s.replace(/\s*,\s*/g, ', ').replace(/\s*:\s*/g, ':').trim() + ']')
+                   .replace(/ {2,}/g, ' ')
+                   .replace(/(^|\(|,|=)\s*-\s+(?=[0-9.])/gi, p1 => p1 + '-');
 
         // unprotect arrows
-        code = code.replace(/\uE100/g, ' <- ') // one space around <-
+        line = line.replace(//g, ' <- ');
 
-        // normalize multiple spaces
-        code = code.replace(/ {2,}/g, ' '); // |     |  becomes | |
-        code = code.replace(/(^|\(|,|=)\s*-\s+(?=[0-9.])/gi, p1 => p1 + '-'); // |(- 3| becomes |(-3|
-
-        // change keywords/types to uppercase
-        code = code.replace(kwRegex, t => t.toUpperCase());
-
-        normalized.push({ code, comment: hadComment ? comment : '' });
+        normalized[i].code = line.trim();
     }
 
-    // ------------------------ Canon-ization ------------------------
+    // ------------------------ Declared-name normalization ------------------------
 
-    // if the variable was declared as AbCd, instances of ABcd, aBcD, etc. get replaced with AbCd
-    const canonMap = Object.create(null);
-    function addCanon(name) {
+    const declaredNameMap = Object.create(null);
+    function addDeclaredName(name) {
         const n = String(name);
         const lower = n.toLowerCase();
-        if (!canonMap[lower]) canonMap[lower] = n;
+        if (!declaredNameMap[lower]) declaredNameMap[lower] = n;
     }
-    function recordCanonFromLine(prot) {
-        const line = prot;
-        let m;
-        
-        // DECLARE
-        if ((m = line.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)\s*:/i))) {
-            m[1].split(',').map(s => s.trim()).forEach(addCanon);
+    function recordDeclaredNames(prot) {
+        let r;
+
+        //          DECLARE   ----names----   :
+        if (r = prot.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)\s*:/i)) {
+            r[1].split(',').map(s => s.trim()).forEach(addDeclaredName);
             return;
         }
-        // CONSTANT
-        if ((m = line.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)\b/i))) {
-            addCanon(m[1]);
+        //          CONSTANT   ----name----
+        if (r = prot.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)\b/i)) {
+            addDeclaredName(r[1]);
             return;
         }
-        // PROCEDURE
-        if ((m = line.match(/^\s*PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?/i))) {
-            addCanon(m[1]);
-            const params = (m[2] || '').trim();
+        //          PROCEDURE   ----name----   ?----params----
+        if (r = prot.match(/^\s*PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?/i)) {
+            addDeclaredName(r[1]);
+            const params = (r[2] || '').trim();
             if (params) params.split(',').forEach(p => {
                 const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
-                if (pm) addCanon(pm[1]);
+                if (pm) addDeclaredName(pm[1]);
             });
             return;
         }
-        // FUNCTION
-        if ((m = line.match(/^\s*FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?\s+RETURNS\b/i))) {
-            addCanon(m[1]);
-            const params = (m[2] || '').trim();
+        //          FUNCTION   ----name----   ?----params----   RETURNS
+        if (r = prot.match(/^\s*FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?\s+RETURNS\b/i)) {
+            addDeclaredName(r[1]);
+            const params = (r[2] || '').trim();
             if (params) params.split(',').forEach(p => {
                 const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
-                if (pm) addCanon(pm[1]);
+                if (pm) addDeclaredName(pm[1]);
             });
             return;
         }
     }
-    function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
-    function applyCanonToLine(prot) {
+    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function applyDeclaredNames(prot) {
         let out = prot;
-        for (const lower in canonMap) {
-            const canon = canonMap[lower];
+        for (const lower in declaredNameMap) {
+            const declaredName = declaredNameMap[lower];
             const re = new RegExp(`\\b${escapeRegExp(lower)}\\b`, 'gi');
-            out = out.replace(re, canon);
+            out = out.replace(re, declaredName);
         }
         return out;
     }
 
-    // collect canon names from lines
-    normalized.forEach(({ code }) => recordCanonFromLine(code));
-    // canonize every line
+    // collect declared names
+    normalized.forEach(({ code }) => recordDeclaredNames(code));
+    // normalize every line
     for (let i = 0; i < normalized.length; i++) {
-        normalized[i].code = applyCanonToLine(normalized[i].code);
+        normalized[i].code = applyDeclaredNames(normalized[i].code);
     }
 
     // ------------------------ Indentation ------------------------
+
     let indent = 0;
     const out = [];
 
-    const reThen       = /^\s*THEN\s*$/i;
-    const reElse       = /^\s*ELSE\s*$/i;
-    const reEndIf      = /^\s*ENDIF\s*$/i;
-    const reEndWhile   = /^\s*ENDWHILE\s*$/i;
-    const reEndProc    = /^\s*ENDPROCEDURE\s*$/i;
-    const reEndFunc    = /^\s*ENDFUNCTION\s*$/i;
-    const reEndCase    = /^\s*ENDCASE\s*$/i;
-    const reUntil      = /^\s*UNTIL\b/i;
-    const reNext       = /^\s*NEXT(\b|$)/i;
-
-    const reProc       = /^\s*PROCEDURE\b/i;
-    const reFunc       = /^\s*FUNCTION\b/i;
-    const reWhileDo    = /^\s*WHILE\b.*\bDO\s*$/i;
-    const reFor        = /^\s*FOR\b/i;
-    const reRepeat     = /^\s*REPEAT\s*$/i;
-    const reCase       = /^\s*CASE\s+OF\b/i;
-    const reCaseOption =
-        /^\s*(?:[A-Za-z][A-Za-z0-9_]*|[+-]?(?:\d+(?:\.\d*)?|\.\d+)|\uE000\d+\uE001|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[^A-Za-z0-9\s:])\s*:\s*/i;
-    const reOtherwise  = /^\s*OTHERWISE\b/i;
-
     for (let i = 0; i < normalized.length; i++) {
-        let codeProt = normalized[i].code;
-        const comment = normalized[i].comment;
+        const { code, comment } = normalized[i];
 
         // close blocks before printing current line
-        if (reEndIf.test(codeProt)) {
+        if (/^\s*ENDIF\s*$/i.test(code)) {
             indent = Math.max(0, indent - 1);
         } else if (
-            reElse.test(codeProt) ||
-            reEndWhile.test(codeProt) ||
-            reEndProc.test(codeProt) ||
-            reEndFunc.test(codeProt) ||
-            reEndCase.test(codeProt) ||
-            reUntil.test(codeProt) ||
-            reNext.test(codeProt)
+            /^\s*ELSE\s*$/i.test(code)         ||
+            /^\s*ENDWHILE\s*$/i.test(code)     ||
+            /^\s*ENDPROCEDURE\s*$/i.test(code) ||
+            /^\s*ENDFUNCTION\s*$/i.test(code)  ||
+            /^\s*ENDCASE\s*$/i.test(code)      ||
+            /^\s*UNTIL\b/i.test(code)          ||
+            /^\s*NEXT(\b|$)/i.test(code)
         ) {
             indent = Math.max(0, indent - 1);
         }
 
         // restore literals
-        let restored = restore(codeProt);
+        const restored = unreplace(code);
 
         let lineOut;
-        const halfUnit = ' '.repeat(Math.floor(tabSize / 2)); // half the tab size
-        if (reThen.test(codeProt) || reElse.test(codeProt)) {                    // THEN/ELSE
-            lineOut = indentUnit.repeat(indent) + halfUnit + restored;
-        } else if (reCaseOption.test(restored) || reOtherwise.test(restored)) {  // CASE
+        const halfUnit = ' '.repeat(Math.floor(tabSize / 2));
+        if (/^\s*THEN\s*$/i.test(code) || /^\s*ELSE\s*$/i.test(code)) {  // THEN/ELSE
+            lineOut = tab.repeat(indent) + halfUnit + restored;
+        } else if (/^\s*(?:[A-Za-z][A-Za-z0-9_]*|[+-]?(?:\d+(?:\.\d*)?|\.\d+)|\d+|'[^']*'|"[^"]*"|[^A-Za-z0-9\s:])\s*:\s*/i.test(restored) || /^\s*OTHERWISE\b/i.test(restored)) {  // CASE option
             const base = Math.max(0, indent - 1);
-            lineOut = indentUnit.repeat(base) + halfUnit + restored;
+            lineOut = tab.repeat(base) + halfUnit + restored;
         } else {
-            lineOut = indentUnit.repeat(indent) + restored;
+            lineOut = tab.repeat(indent) + restored;
         }
 
         // keep inline comment with a space
@@ -548,20 +367,16 @@ function formatOnce(src) {
 
         // open blocks after printing current line
         if (
-            reThen.test(codeProt) ||
-            reElse.test(codeProt) ||
-            reWhileDo.test(codeProt) ||
-            reFor.test(codeProt) ||
-            reRepeat.test(codeProt) ||
-            reProc.test(codeProt) ||
-            reFunc.test(codeProt) ||
-            reCase.test(codeProt)
-        ) {
-            indent += 1;
-        }
+            /^\s*THEN\s*$/i.test(code)          ||
+            /^\s*ELSE\s*$/i.test(code)          ||
+            /^\s*WHILE\b.*\bDO\s*$/i.test(code) ||
+            /^\s*FOR\b/i.test(code)             ||
+            /^\s*REPEAT\s*$/i.test(code)        ||
+            /^\s*PROCEDURE\b/i.test(code)       ||
+            /^\s*FUNCTION\b/i.test(code)        ||
+            /^\s*CASE\s+OF\b/i.test(code)
+        ) indent += 1;
     }
 
     return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }
-
-export { format };
