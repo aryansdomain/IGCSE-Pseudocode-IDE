@@ -15,9 +15,9 @@ export function initSpacing({ aceEditor, slider, valueEl, infoEl, tickSelector =
         retabDocumentByUnits(session, oldSize, newSize);
 
         // refresh ui
-        if (slider) slider.value = String(newSize);
-        if (valueEl) valueEl.textContent = newSize;
-        if (infoEl) infoEl.textContent  = `Tab Spaces: ${newSize}`;
+        if (slider)  slider.value        =         String(newSize);
+        if (valueEl) valueEl.textContent =                newSize;
+        if (infoEl)   infoEl.textContent = `Tab Spaces: ${newSize}`;
         aceEditor.renderer.updateFull();
 
         // track tab spaces change analytics
