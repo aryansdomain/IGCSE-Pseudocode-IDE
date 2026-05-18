@@ -13,7 +13,8 @@ import { consts, globalScope, addProperties,
 import { evalExpr, splitList, parseVar, getArrIndices, checkSyntax } from './expressions.js';
 import { procs, funcs, setArgs }                                     from './procsFuncs.js';
 import { isArray, arrMake, arrGet, arrSet }                          from './array.js';
-import { formatOutput, output }                                      from './output.js';
+import { formatOutput, formatFileOutput, output }                    from './output.js';
+import { openFile, closeFile, readFile, writeFile }                  from './fileHandling.js';
 
 const LOOP_LIMIT = 1000000; // 1 million
 
@@ -430,8 +431,7 @@ export async function runCode(scope, code, allowReturn = false) {
             const varText = r[1].trim();
             const parsed = parseVar(varText, lineWithComments);
 
-            // ensure declared
-            // don't redeclare array elements
+            // ensure declared, don't redeclare array elements
             if (!parsed.hasIndices && !isDeclared(scope, parsed.name)) {
                 setDeclared(scope, parsed.name);
             }
@@ -493,7 +493,105 @@ export async function runCode(scope, code, allowReturn = false) {
             continue;
         }
 
-        // for (this must be before the assignment check due to the vvvvv)
+        // openfile (before for case due to the vvv)
+        //                   OPENFILE   -file   FOR   ----mode---
+        if (r = line.match(/^OPENFILE\s+(.+?)\s+FOR\s+([A-Za-z]+)\s*$/i)) {
+            const fileText = r[1].trim();
+            const modeText = r[2].toUpperCase();
+
+            if (modeText !== 'READ' && modeText !== 'WRITE') {
+                const pos = findPos(lineWithComments, r[2]);
+                throwErr('SyntaxError',
+                         'Expected READ or WRITE',
+                         lineNum, pos.col, pos.len);
+            }
+
+            const fileCol = findPos(lineWithComments, fileText).col;
+            const file = String(await evalExpr(scope, fileText, fileCol, lineWithComments));
+            await openFile(file, modeText, lineNum); // open
+            continue;
+        }
+
+        // closefile
+        //                   CLOSEFILE   file
+        if (r = line.match(/^CLOSEFILE\s+(.+)$/i)) {
+            const fileText = r[1].trim();
+            const fileCol = findPos(lineWithComments, fileText).col;
+            const file = String(await evalExpr(scope, fileText, fileCol, lineWithComments));
+            closeFile(file, file, lineNum); // close
+            continue;
+        }
+
+        // readfile
+        //                   READFILE   -file   ,   -var
+        if (r = line.match(/^READFILE\s+(.+?)\s*,\s*(.+)$/i)) {
+            const fileText = r[1].trim();
+            const varText  = r[2].trim();
+            const parsed = parseVar(varText, lineWithComments);
+
+            // ensure declared, don't redeclare array elements
+            if (!parsed.hasIndices && !isDeclared(scope, parsed.name)) {
+                setDeclared(scope, parsed.name);
+            }
+
+            // cannot read into arrays
+            if (isArray(scope, parsed.name) && !parsed.hasIndices) {
+                const pos = findPos(lineWithComments, varText);
+                throwErr('SyntaxError',
+                         'arrays cannot be read into directly',
+                         currentLineNum, pos.col, pos.len,
+                         'Read into individual elements instead.');
+            }
+
+            // get file line
+            const fileCol = findPos(lineWithComments, fileText).col;
+            const file = String(await evalExpr(scope, fileText, fileCol, lineWithComments));
+            const fileLine = readFile(file, file, lineNum);
+
+            const obj = await varToObj(scope, varText, lineWithComments);
+
+            // assign
+            assign(scope, obj, fileLine, varText, true, lineWithComments);
+            if (!parsed.hasIndices && !getDeclaredType(scope, obj.name)) {
+                setType(scope, obj.name, getValType(obj.read(), fileLine));
+            }
+            setInitialized(scope, obj.name);
+            continue;
+        }
+
+        // writefile
+        //                   WRITEFILE   -file   ,   vals
+        if (r = line.match(/^WRITEFILE\s+(.+?)\s*,\s*(.+)$/i)) {
+            const fileText = r[1].trim();
+            const valsText = r[2];
+            const valsCol = findPos(lineWithComments, valsText).col;
+            const valsItems = splitList(valsText, valsCol);
+
+            // calculate vals
+            const vals = [];
+            for (const val of valsItems) {
+                vals.push(await evalExpr(scope, val.item, val.col, lineWithComments));
+            }
+
+            // check for arrays and throw error if found
+            for (let k = 0; k < vals.length; k++) {
+                if (Array.isArray(vals[k])) {
+                    const pos = findPos(lineWithComments, valsItems[k].item);
+                    throwErr('TypeError',
+                             'cannot write array to file',
+                             currentLineNum, pos.col, pos.len,
+                             'Arrays cannot be written directly. Write individual elements instead.');
+                }
+            }
+
+            const fileCol = findPos(lineWithComments, fileText).col;
+            const file = String(await evalExpr(scope, fileText, fileCol, lineWithComments));
+            const out = valsItems.map((val, k) => formatFileOutput(scope, val.item, vals[k])).join('');
+            await writeFile(file, file, out, lineNum);
+            continue;
+        }
+
+        // for (this has to be before assignment case due to the vvvvv)
         //                   FOR   ----------var----------   ----arrow---   -val-   TO   -val- ?    STEP   -val
         if (r = line.match(/^FOR\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:←|<-|<--)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i)) {
             const name      = r[1];
@@ -590,6 +688,96 @@ export async function runCode(scope, code, allowReturn = false) {
             continue;
         }
 
+        // while
+        //                   WHILE   cond  ?DO
+        if (r = line.match(/^WHILE\s+(.+?)(?:\s+(DO))?\s*$/i)) {
+            const condText = r[1];
+
+            // no DO
+            if (!r[2]) {
+                const pos = findPos(lineWithComments, condText);
+                throwErr('SyntaxError',
+                         'missing DO after WHILE condition',
+                         lineNum, pos.col + pos.len, 0);
+            }
+
+            const condCol = findPos(lineWithComments, condText).col;
+
+            // read while block
+            const { block: whileBlock, nextLineNum } = readLines(code, i + 1, 'WHILE',    /^\bWHILE\b/i,
+                                                                              'ENDWHILE', /^\bENDWHILE\b/i,
+                                                                              lineWithComments, true);
+            i = nextLineNum;
+
+            // execute
+            let count = 0;
+            while (true) {
+                setCurrentLineNum(code[i].lineNum);
+                const cond = await evalExpr(scope, condText, condCol, lineWithComments);
+                assertBool('WHILE condition', cond, condText, lineWithComments);
+                if (!cond) break;
+
+                const whileScope = Object.create(scope); addProperties(whileScope); // create a scope
+                await runCode(whileScope, whileBlock, allowReturn);
+                count++;
+
+                // too many loops
+                if (count > LOOP_LIMIT) {
+                    const pos = findPos(lineWithComments, 'WHILE');
+                    throwErr('RuntimeError',
+                             'maximum iteration limit exceeded',
+                             lineNum, pos.col, pos.len,
+                             'A maximum of 1 million iterations is allowed for loops.');
+                }
+            }
+            continue;
+        }
+
+        // repeat
+        //                   REPEAT
+        if (r = line.match(/^REPEAT$/i)) {
+            // read repeat block
+            const { block: repeatBlock, nextLineNum } = readLines(code, i + 1, 'REPEAT', /^\bREPEAT\b/i,
+                                                                               'UNTIL',  /^\bUNTIL\b/i,
+                                                                               lineWithComments, true);
+            i = nextLineNum;
+
+            const untilLine = removeComments(code[i].text).trim();
+            const untilMatch = untilLine.match(/^UNTIL\s+(.+)$/i);
+            if (!untilMatch) { // no condition
+                const pos = findPos(untilLine, 'UNTIL');
+                throwErr('SyntaxError',
+                         'missing UNTIL condition',
+                         code[i].lineNum, pos.col, pos.len);
+            }
+
+            const condText = untilMatch[1].trim();
+            const condCol = findPos(untilLine, condText).col;
+
+            // execute
+            let count = 0;
+            do {
+                const repeatScope = Object.create(scope); addProperties(repeatScope); // create a scope
+                await runCode(repeatScope, repeatBlock, allowReturn);
+                count++;
+
+                setCurrentLineNum(code[i].lineNum);
+                const cond = await evalExpr(scope, condText, condCol, untilLine);
+                assertBool('UNTIL condition', cond, condText, untilLine);
+                if (cond) break;
+
+                // too many loops
+                if (count > LOOP_LIMIT) {
+                    const pos = findPos(lineWithComments, 'REPEAT');
+                    throwErr('RuntimeError',
+                             'maximum iteration limit exceeded',
+                             lineNum, pos.col, pos.len,
+                             'A maximum of 1 million iterations is allowed for loops.');
+                }
+            } while (true);
+            continue;
+        }
+
         // assignment
         //                   -var-   ----arrow---   -val
         if (r = line.match(/^(.+?)\s*(?:←|<--|<-)\s*(.+)$/)) {
@@ -629,24 +817,16 @@ export async function runCode(scope, code, allowReturn = false) {
             // assign
             assign(scope, obj, val, valText, false, lineWithComments);
             if (!isArray(scope, parsed.name) && !getDeclaredType(scope, obj.name)) { // assigned for the first time
-                if (scope != globalScope) { // cannot be initialized in nonglobal scopes
-                    const pos = findPos(lineWithComments, varText);
-                    throwErr('NameError',
-                             `variables cannot be initialized for the first time in non-global scopes`,
-                             lineNum, pos.col, pos.len,
-                             `Initialize the variable or declare it outside of the block it is in.`);
-                }
-
                 let valType;
-                const identName = valText.match(/^([A-Za-z][A-Za-z0-9_]*)/)[1];
+                const identName = valText.match(/^([A-Za-z][A-Za-z0-9_]*)/)?.[1];
                 if (/^[A-Za-z][A-Za-z0-9_]*$/.test(valText)) {
-                    // simple variable — inherit its declared type
+                    // simple variable — get its declared type
                     valType = getDeclaredType(scope, valText);
                 } else if (identName && /^[A-Za-z][A-Za-z0-9_]*\s*\(/.test(valText)) {
-                    // function call — inherit the function's return type
+                    // function call — get the function's return type
                     valType = funcs[identName.toLowerCase()]?.returns;
                 } else if (identName && /^[A-Za-z][A-Za-z0-9_]*\s*\[/.test(valText)) {
-                    // array element — inherit the array's element type
+                    // array element — get the array's element type
                     const arrType = getDeclaredType(scope, identName);
                     valType = arrType?.replace(/^ARRAY\s+OF\s+/i, '').trim() || undefined;
                 }
@@ -880,96 +1060,6 @@ export async function runCode(scope, code, allowReturn = false) {
             const caseScope = Object.create(scope); addProperties(caseScope); // create a scope
             if (matched)        await runCode(caseScope, matched.block,   allowReturn);
             else if (otherwise) await runCode(caseScope, otherwise.block, allowReturn);
-            continue;
-        }
-
-        // while
-        //                   WHILE   cond  ?DO
-        if (r = line.match(/^WHILE\s+(.+?)(?:\s+(DO))?\s*$/i)) {
-            const condText = r[1];
-
-            // no DO
-            if (!r[2]) {
-                const pos = findPos(lineWithComments, condText);
-                throwErr('SyntaxError',
-                         'missing DO after WHILE condition',
-                         lineNum, pos.col + pos.len, 0);
-            }
-
-            const condCol = findPos(lineWithComments, condText).col;
-
-            // read while block
-            const { block: whileBlock, nextLineNum } = readLines(code, i + 1, 'WHILE',    /^\bWHILE\b/i,
-                                                                              'ENDWHILE', /^\bENDWHILE\b/i,
-                                                                              lineWithComments, true);
-            i = nextLineNum;
-
-            // execute
-            let count = 0;
-            while (true) {
-                setCurrentLineNum(code[i].lineNum);
-                const cond = await evalExpr(scope, condText, condCol, lineWithComments);
-                assertBool('WHILE condition', cond, condText, lineWithComments);
-                if (!cond) break;
-
-                const whileScope = Object.create(scope); addProperties(whileScope); // create a scope
-                await runCode(whileScope, whileBlock, allowReturn);
-                count++;
-
-                // too many loops
-                if (count > LOOP_LIMIT) {
-                    const pos = findPos(lineWithComments, 'WHILE');
-                    throwErr('RuntimeError',
-                             'maximum iteration limit exceeded',
-                             lineNum, pos.col, pos.len,
-                             'A maximum of 1 million iterations is allowed for loops.');
-                }
-            }
-            continue;
-        }
-
-        // repeat
-        //                   REPEAT
-        if (r = line.match(/^REPEAT$/i)) {
-            // read repeat block
-            const { block: repeatBlock, nextLineNum } = readLines(code, i + 1, 'REPEAT', /^\bREPEAT\b/i,
-                                                                               'UNTIL',  /^\bUNTIL\b/i,
-                                                                               lineWithComments, true);
-            i = nextLineNum;
-
-            const untilLine = removeComments(code[i].text).trim();
-            const untilMatch = untilLine.match(/^UNTIL\s+(.+)$/i);
-            if (!untilMatch) { // no condition
-                const pos = findPos(untilLine, 'UNTIL');
-                throwErr('SyntaxError',
-                         'missing UNTIL condition',
-                         code[i].lineNum, pos.col, pos.len);
-            }
-
-            const condText = untilMatch[1].trim();
-            const condCol = findPos(untilLine, condText).col;
-
-            // execute
-            let count = 0;
-            do {
-                const repeatScope = Object.create(scope); addProperties(repeatScope); // create a scope
-                await runCode(repeatScope, repeatBlock, allowReturn);
-                count++;
-
-                setCurrentLineNum(code[i].lineNum);
-                const cond = await evalExpr(scope, condText, condCol, untilLine);
-                assertBool('UNTIL condition', cond, condText, untilLine);
-                if (cond) break;
-
-                // too many loops
-                if (count > LOOP_LIMIT) {
-                    const pos = findPos(lineWithComments, 'REPEAT');
-                    throwErr('RuntimeError',
-                             'maximum iteration limit exceeded',
-                             lineNum, pos.col, pos.len,
-                             'A maximum of 1 million iterations is allowed for loops.');
-                }
-            } while (true);
             continue;
         }
 

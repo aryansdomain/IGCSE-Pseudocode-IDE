@@ -11,11 +11,11 @@ const LITERAL_START = '\uE000';
 const LITERAL_END   = '\uE001';
 
 const KEYWORDS_NOT_ALLOWED_IN_EXPRESSION = new Set([
-    'ARRAY', 'CALL', 'CASE', 'CONSTANT', 'DECLARE', 'DO', 'ELSE',
+    'ARRAY', 'CALL', 'CASE', 'CLOSEFILE', 'CONSTANT', 'DECLARE', 'DO', 'ELSE',
     'ENDCASE', 'ENDFUNCTION', 'ENDIF', 'ENDPROCEDURE', 'ENDWHILE',
-    'FOR', 'FUNCTION', 'IF', 'INPUT', 'NEXT', 'OF', 'OTHERWISE',
-    'OUTPUT', 'PROCEDURE', 'REPEAT', 'RETURN', 'RETURNS', 'STEP',
-    'THEN', 'TO', 'UNTIL', 'WHILE'
+    'FOR', 'FUNCTION', 'IF', 'INPUT', 'NEXT', 'OF', 'OPENFILE', 'OTHERWISE',
+    'OUTPUT', 'PROCEDURE', 'READ', 'READFILE', 'REPEAT', 'RETURN', 'RETURNS',
+    'STEP', 'THEN', 'TO', 'UNTIL', 'WHILE', 'WRITE', 'WRITEFILE'
 ]);
 
 // ------------------------ Replacing ------------------------

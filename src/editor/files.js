@@ -1,30 +1,6 @@
-export function initFiles({codeEl, filesEl}) {
-
+export function initFiles({codeEl, filesEl, onRename = null}) {
     const STORAGE_KEY = 'igcse_ide_files';
-
-    // ------------------------ State ------------------------
-
-    let editor, saveTimeout = null;
-    let fileCounter = 0;
-
-    let order = []; // array of ids
-    let activeFileID = null;
-    let files = {};
-
-    // ------------------------ Utilities ------------------------
-
-    function nextFilename() {
-        const names = new Set(Object.values(files).map(f => f.name));
-
-        let i = 1;
-        let test = `file${i}`;
-        while (names.has(test)) {
-            i++;
-            test = `file${i}`;
-        }
-        return test;
-    }
-
+    const HIST_LIMIT = 50;
     const DEFAULT_CODE = `// Type your code here!
 
 DECLARE Name : STRING
@@ -37,6 +13,37 @@ OUTPUT "Enter your name: "
 INPUT Name
 OUTPUT Greet(Name)
 `;
+
+    let editor, saveTimeout = null;
+    let fileCounter = 0;
+
+    let activeFileID = null;
+    let files = {};
+
+    function ids() { return Object.keys(files); } // list of ids
+
+    // ------------------------ Utilities ------------------------
+
+    function nextFilename() {
+        const names = new Set(Object.values(files).map(f => f.name));
+        let i = 1;
+        while (names.has(`file${i}.psc`)) i++;
+        return `file${i}.psc`;
+    }
+
+    function isValidName(name) {
+        // position of dot
+        const dot = name.indexOf('.');
+        if (dot < 1 || dot !== name.lastIndexOf('.')) return false; // more than one, or zero
+
+        const left  = name.slice(0, dot);
+        const right = name.slice(   dot + 1);
+        return /^[A-Za-z0-9_-]{1,16}$/.test(left) && (right === 'psc' || right === 'txt');
+    }
+
+    function modeForName(name) {
+        return name.endsWith('.txt') ? 'ace/mode/text' : 'ace/mode/pseudocode';
+    }
 
     // ------------------------ Session Management ------------------------
 
@@ -65,20 +72,30 @@ OUTPUT Greet(Name)
         if (!file) return;
 
         editor.setSession(file.session);
+        const isText = file.mode === 'ace/mode/text';
+        editor.setOptions({
+            enableBasicAutocompletion: !isText,
+            enableLiveAutocompletion:  !isText
+        });
     }
 
     // ------------------------ File Management ------------------------
 
-    function isValidName(name) {
-        return /^[A-Za-z0-9_-]{1,16}$/.test(name);
+    function setActiveFile(name) {
+        const file = Object.values(files).find(f => f.name === name);
+        activeFileID = file.id;
+        setSession();
+        save();
+        renderFiles();
     }
 
-    function addFileInternal({ id, name, content = '', setActive }) {
-        const session = createSession(id, content, 'ace/mode/pseudocode');
+    // add without history
+    function addFileInternal(id, name, content = '', setActive) {
+        const mode = modeForName(name);
+        const session = createSession(id, content, mode);
 
-        files[id] = { id, name, mode: 'ace/mode/pseudocode', session };
+        files[id] = { id, name, mode, session };
 
-        if (!order.includes(id)) order.push(id);
         if (setActive) activeFileID = id;
 
         setSession();
@@ -87,20 +104,18 @@ OUTPUT Greet(Name)
         renderFiles();
     }
     function addFile() {
-        const id = 'f_' + (++fileCounter);
+        const id = String(++fileCounter);
         addToHistory(
-            () => { addFileInternal({ id, name: nextFilename(), content: '', setActive: true }); },
+            () => { addFileInternal(id, nextFilename(), '', true); },
             () => { removeFileInternal(id); }
         );
     }
 
     // close without history
     function removeFileInternal(id) {
-        if (order.length === 1) return; // keep at least one
+        if (ids().length === 1) return; // keep at least one
 
-        const index = order.indexOf(id);
-        if (index >= 0) order.splice(index, 1);
-
+        const index = ids().indexOf(id);
         const f = files[id];
         delete files[id];
 
@@ -111,7 +126,8 @@ OUTPUT Greet(Name)
 
         // set the active file to something new
         if (activeFileID === id) {
-            const next = order[Math.max(0, index - 1)] || order[0] || null;
+            const all = ids();
+            const next = all[Math.max(0, index - 1)] || all[0] || null;
             activeFileID = next;
             setSession();
         }
@@ -122,9 +138,8 @@ OUTPUT Greet(Name)
     function removeFile(id) {
         if (!id) id = activeFileID;
         if (!id) return;
-        if (order.length === 1) return;
+        if (ids().length === 1) return;
 
-        const index = order.indexOf(id);
         const f = files[id];
         if (!f) return;
         const snapshot = {
@@ -136,22 +151,46 @@ OUTPUT Greet(Name)
 
         addToHistory(
             () => { removeFileInternal(id); save(); setPreferWorkspace(); },
-            () => { restoreClosedFile(snapshot, index); }
+            () => { restoreClosedFile(snapshot); }
         );
     }
 
-    function renameFile(id, newName) {
+    function renameFileInternal(id, newName) {
         const file = files[id];
         if (!file) return;
 
-        const name = String(newName).trim();
-        if (!name || !isValidName(name) || name === file.name) return;
-        const old = file.name;
+        newName = String(newName).trim();
+        if (!isValidName(newName) || newName === file.name) return;
+        if (Object.values(files).some(f => f !== file && f.name === newName)) return;
+        const oldName = file.name;
+        const oldMode = file.mode;
 
         addToHistory(
-            () => { file.name = name; save(); renderFiles(); setPreferWorkspace(); },
-            () => { file.name = old;  save(); renderFiles(); }
+            () => {
+                const newMode = modeForName(newName);
+                file.name = newName;
+                file.mode = newMode;
+                file.session.setMode(newMode);
+                if (id === activeFileID) setSession();
+                save(); renderFiles(); setPreferWorkspace();
+            },
+            () => {
+                file.name = oldName;
+                file.mode = oldMode;
+                file.session.setMode(oldMode);
+                if (id === activeFileID) setSession();
+                save(); renderFiles();
+            }
         );
+    }
+    function renameFile(oldName, newName) {
+        const id = Object.keys(files).find(k => files[k].name === oldName); // find oldName
+        if (!id) return { ok: false, error: `File ${oldName} not found` };
+
+        if (!isValidName(newName)) return { ok: false, error: `Invalid name ${newName} \r\nName must be <1-16 chars, letters, numbers, or hyphens>.<psc|txt>, 1-16 chars` };
+        if (Object.values(files).some(f => f.name === newName)) return { ok: false, error: `Name ${newName} already exists` };
+        renameFileInternal(id, newName);
+        return { ok: true };
     }
 
     function startRename(id, btn) {
@@ -160,60 +199,47 @@ OUTPUT Greet(Name)
         const nameSpan = btn.querySelector('.name');
         if (!nameSpan) return;
 
-        const cleanup = () => {
-            nameSpan.contentEditable = 'false';
-            nameSpan.removeEventListener('blur', handleBlur);
-            nameSpan.removeEventListener('keydown', handleKeydown);
+        const input = document.createElement('input');
+        input.className = 'name-input';
+        input.value = file.name;
+        input.spellcheck = false;
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('autocapitalize', 'off');
+        input.style.width = nameSpan.getBoundingClientRect().width + 'px';
+
+        nameSpan.replaceWith(input);
+        input.focus();
+        input.select();
+
+        let done = false;
+
+        const finish = () => {
+            if (done) return;
+            done = true;
+            const newName = input.value.trim();
+            const oldName = file.name;
+            input.replaceWith(nameSpan);
+            if (!newName || !isValidName(newName) || newName === oldName) return;
+            if (onRename) setTimeout(() => onRename(oldName, newName), 0);
+            else renameFileInternal(id, newName);
+            if (file.name !== newName) nameSpan.textContent = file.name; // revert on failure
         };
 
-        const revert = () => {
-            nameSpan.textContent = file.name;
+        const stop = () => {
+            if (done) return;
+            done = true;
+            input.replaceWith(nameSpan);
         };
 
-        const handleBlur = () => {
-            const newName = nameSpan.textContent.trim();
-            if (!newName || !isValidName(newName)) {
-                revert();
-                return;
-            }
-            if (newName !== file.name) {
-                renameFile(id, newName);
-            } else {
-                revert();
-            }
-
-            cleanup();
-        };
-
-        const handleKeydown = (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                nameSpan.blur();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                revert();
-                cleanup();
-            }
-        };
-
-        // highlight, make editable
-        if (nameSpan.isConnected) {
-            try {
-                const range = document.createRange();
-                range.selectNodeContents(nameSpan);
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(range);
-            } catch {}
-        }
-
-        nameSpan.contentEditable = 'true';
-        nameSpan.focus();
-        nameSpan.addEventListener('blur', handleBlur);
-        nameSpan.addEventListener('keydown', handleKeydown);
+        input.addEventListener('blur', finish);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+            else if (e.key === 'Escape') { e.preventDefault(); stop(); }
+        });
     }
 
-    // ------------------------ Saving to localStorage ------------------------
+    // ------------------------ localStorage ------------------------
 
     function save() {
         clearTimeout(saveTimeout);
@@ -221,17 +247,16 @@ OUTPUT Greet(Name)
         // save after 300ms
         saveTimeout = setTimeout(() => {
             const payload = {
-                order: [...order],
-                activeFileID: activeFileID,
-                files: {},
+                activeFileID,
+                files: {}
             };
-            for (const id of order) {
+            for (const id of ids()) {
                 const file = files[id];
                 payload.files[id] = {
-                    id: file.id,
-                    name: file.name,
-                    mode: file.mode,
-                    content: file.session.getValue(),
+                    id:      file.id,
+                    name:    file.name,
+                    mode:    file.mode,
+                    content: file.session.getValue()
                 };
             }
             try {
@@ -245,16 +270,15 @@ OUTPUT Greet(Name)
         if (raw) {
             try {
                 const data = JSON.parse(raw);
-                order = Array.isArray(data.order) ? data.order.slice() : [];
-                activeFileID = data.activeFileID || null;
+                activeFileID = data.activeFileID != null ? String(data.activeFileID) : null;
                 files = {};
 
                 let maxCounter = 0;
-                for (const id of order) {
+                for (const id of Object.keys(data.files || {})) {
                     const file = data.files[id];
                     if (!file) continue;
 
-                    const match = id.match(/^f_(\d+)$/);
+                    const match = id.match(/^(\d+)$/);
                     if (match) {
                         const num = parseInt(match[1], 10);
                         if (num > maxCounter) maxCounter = num;
@@ -262,15 +286,15 @@ OUTPUT Greet(Name)
 
                     const session = createSession(id, file.content || '', file.mode);
                     files[id] = {
-                        id: file.id,
+                        id,
                         name: file.name,
                         mode: file.mode,
-                        session,
+                        session
                     };
                 }
                 fileCounter = maxCounter;
 
-                if (!activeFileID && order.length) activeFileID = order[0];
+                if (!activeFileID && ids().length) activeFileID = ids()[0];
                 return;
             } catch {}
         }
@@ -281,7 +305,7 @@ OUTPUT Greet(Name)
     function renderFiles() {
         const frag = document.createDocumentFragment();
 
-        for (const id of order) {
+        for (const id of ids()) {
             const file = files[id];
             const btn = document.createElement('button');
 
@@ -298,7 +322,7 @@ OUTPUT Greet(Name)
             btn.appendChild(nameSpan);
 
             // show close button if more than one file
-            if (order.length > 1) {
+            if (ids().length > 1) {
                 const closeIcon = document.createElement('i');
                 closeIcon.className = 'fa-solid fa-xmark close';
                 closeIcon.title = 'Close';
@@ -308,8 +332,8 @@ OUTPUT Greet(Name)
             frag.appendChild(btn);
         }
 
-        // show add button if 5 or fewer files (6 max)
-        if (order.length <= 6) {
+        // show add button if 6 or fewer files (7 max)
+        if (ids().length <= 6) {
             const addBtn = document.createElement('button');
             addBtn.className = 'file add';
             addBtn.setAttribute('data-add', '1');
@@ -323,7 +347,6 @@ OUTPUT Greet(Name)
 
     // ------------------------ Undo/Redo & History ------------------------
 
-    const HIST_LIMIT = 50;
     let hist = [];
     let histIndex = -1;
     let preferUntil = 0;
@@ -363,16 +386,13 @@ OUTPUT Greet(Name)
         return true;
     }
 
-    function restoreClosedFile(snapshot, index) {
-        if (!snapshot || !snapshot.id) return;
-        const { id, name, mode, content } = snapshot;
+    function restoreClosedFile(file) {
+        if (!file || !file.id) return;
+        const { id, name, mode, content } = file;
         const session = createSession(id, content || '', mode || 'ace/mode/pseudocode');
         files[id] = { id, name, mode: mode || 'ace/mode/pseudocode', session };
 
-        if (index < 0 || index > order.length) index = order.length;
-        order.splice(index, 0, id);
-
-        const match = id.match(/^f_(\d+)$/);
+        const match = id.match(/^(\d+)$/);
         if (match) {
             const num = parseInt(match[1], 10);
             if (!Number.isNaN(num) && num > fileCounter) fileCounter = num;
@@ -390,15 +410,14 @@ OUTPUT Greet(Name)
     load();
 
     // make a new file if none exist
-    if (!order.length) {
-        addFileInternal({ id: 'f_1', name: 'file1', content: DEFAULT_CODE, setActive: true });
+    if (!ids().length) {
+        addFileInternal('1', 'file1.psc', DEFAULT_CODE, true);
         fileCounter = 1;
         save();
     }
 
     renderFiles();
     setSession();
-
 
     // select active file, add or delete
     filesEl.addEventListener('click', (e) => {
@@ -474,9 +493,29 @@ OUTPUT Greet(Name)
         }
     }, { capture: true });
 
+    function getLines(name) {
+        const file = Object.values(files).find(f => f.name === name);
+        if (!file) return null;
+        return file.session.getValue().split('\n');
+    }
+    function addLine(name, line) {
+        const file = Object.values(files).find(f => f.name === name);
+        const val = file.session.getValue();
+        if (val === '') file.session.setValue(             line);
+        else            file.session.setValue(val + '\n' + line);
+    }
+    function clearFile(name) {
+        const file = Object.values(files).find(f => f.name === name);
+        file.session.setValue('');
+    }
+
     return {
         addFile,
-        removeFile,
+        renameFile,
+        setActiveFile,
         getActiveFileName: () => files[activeFileID].name,
+        getLines,
+        addLine,
+        clearFile
     };
 }

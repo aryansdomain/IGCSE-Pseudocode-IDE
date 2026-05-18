@@ -161,6 +161,12 @@ function(require, exports, module) {
                 {name: 'ENDFUNCTION',  value: 'ENDFUNCTION',  score: 1000, meta: 'keyword'},
                 {name: 'INPUT',        value: 'INPUT',        score: 1000, meta: 'keyword'},
                 {name: 'OUTPUT',       value: 'OUTPUT',       score: 1000, meta: 'keyword'},
+                {name: 'OPENFILE',     value: 'OPENFILE',     score: 1000, meta: 'keyword'},
+                {name: 'READFILE',     value: 'READFILE',     score: 1000, meta: 'keyword'},
+                {name: 'WRITEFILE',    value: 'WRITEFILE',    score: 1000, meta: 'keyword'},
+                {name: 'CLOSEFILE',    value: 'CLOSEFILE',    score: 1000, meta: 'keyword'},
+                {name: 'READ',         value: 'READ',         score: 1000, meta: 'keyword'},
+                {name: 'WRITE',        value: 'WRITE',        score: 1000, meta: 'keyword'},
                 {name: 'DECLARE',      value: 'DECLARE',      score: 1000, meta: 'keyword'},
                 {name: 'CONSTANT',     value: 'CONSTANT',     score: 1000, meta: 'keyword'},
                 {name: 'TRUE',         value: 'TRUE',         score: 1000, meta: 'keyword'},
@@ -229,7 +235,7 @@ function(require, exports, module) {
             /^IF\b/i,
             /^CASE\s+OF\b/i,
             /^THEN\b/i,
-            /^ELSE\b/i,
+            /^ELSE\b/i
         ];
 
         if (fullIndentOpeners.some(r => r.test(trimmed))) {

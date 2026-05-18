@@ -18,7 +18,7 @@ function getOutputType(scope, text, val) {
     } catch {}
 
     const tempScope = Object.create(scope || null); addProperties(tempScope);
-    const tempName = '__TEMPVAR';                   setDeclared(tempScope, tempName);
+    const tempName = 'TEMPVAR';                     setDeclared(tempScope, tempName);
 
     // make object that can be written to
     const tempObj = {
@@ -42,6 +42,17 @@ export function formatOutput(scope, text, val) {
 
     if (type === 'CHAR') {
         return "'" + val + "'";
+    }
+
+    return toString(val);
+}
+
+// like formatOutput but CHAR is written bare (no quotes) for file round-trip
+export function formatFileOutput(scope, text, val) {
+    const type = getOutputType(scope, text, val);
+
+    if (typeof val === 'number' && Number.isInteger(val) && type === 'REAL') {
+        return val.toFixed(1);
     }
 
     return toString(val);

@@ -3,7 +3,8 @@ export function initExamples({
     openBtn,
     closeBtn,
     overlayEl = null,
-    editor = null
+    editor = null,
+    files  = null
 } = {}) {
     // ------------------------ Open and Close ------------------------
 
@@ -139,9 +140,9 @@ OUTPUT "The first two characters of your name are ", SUBSTRING(Name, 1, 2)
     }
 
     // logical operations
-    const logicOpsBtn = panelEl.querySelector('#logicOpsExampleBtn');
-    if (logicOpsBtn && editor) {
-        logicOpsBtn.addEventListener('click', () => {
+    const logOpsBtn = panelEl.querySelector('#logicOpsExampleBtn');
+    if (logOpsBtn && editor) {
+        logOpsBtn.addEventListener('click', () => {
             const code = `// Logical Operations
 
 DECLARE A, B : INTEGER
@@ -358,6 +359,55 @@ OUTPUT "Random percentage = ", RandomPercentage(), "%"
 `;
 
             editor.setCode?.(code, true);
+            close();
+        });
+    }
+
+    // file handling
+    const fileHandlingBtn = panelEl.querySelector('#fileHandlingExampleBtn');
+    if (fileHandlingBtn && editor) {
+        fileHandlingBtn.addEventListener('click', () => {
+            const code = `// File Handling
+DECLARE Line, Name, Score : STRING
+DECLARE Student, i, Comma : INTEGER
+
+// Write student scores
+OPENFILE "data.txt" FOR WRITE
+WRITEFILE "data.txt", "Alice, 85"
+WRITEFILE "data.txt", "Bob, 72"
+WRITEFILE "data.txt", "Charlie, 91"
+CLOSEFILE "data.txt"
+
+// Read and parse scores
+OUTPUT "Student scores:"
+OPENFILE "data.txt" FOR READ
+FOR Student <- 1 TO 3
+    READFILE "data.txt", Line
+
+    Comma <- 0 // Position of the comma in string
+    FOR i <- 1 TO LENGTH(Line)
+        IF SUBSTRING(Line, i, 1) = ","
+          THEN
+            Comma <- i
+        ENDIF
+    NEXT i
+
+    Name  <- SUBSTRING(Line, 1, Comma - 1)
+    Score <- SUBSTRING(Line, Comma + 2, LENGTH(Line) - Comma) // + 2 because there is a space after the comma
+    OUTPUT Name, " scored ", Score
+NEXT Student
+CLOSEFILE "data.txt"
+`;
+            const prevFile = files?.getActiveFileName();
+            editor.setCode?.(code, true);
+
+            // add data.txt
+            if (files?.getLines('data.txt') === null) {
+                files.addFile();
+                files.renameFile(files.getActiveFileName(), 'data.txt');
+            }
+
+            files.setActiveFile(prevFile); // set focus to previous file
             close();
         });
     }

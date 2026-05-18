@@ -4,16 +4,17 @@ function(require, exports, module) {
     const TextHighlightRules = require('ace/mode/text_highlight_rules').TextHighlightRules;
 
     const KEYWORDS = ([
-        'IF','THEN','ELSE','ENDIF','CASE','OF','OTHERWISE','ENDCASE',                  // conditionals
-        'FOR','TO','STEP','NEXT','WHILE','DO','ENDWHILE','REPEAT','UNTIL',             // iteration
-        'PROCEDURE','FUNCTION','RETURNS','RETURN','CALL','ENDPROCEDURE','ENDFUNCTION', // functions and procedures
-        'INPUT','OUTPUT',                                                              // input/output
-        'DECLARE','CONSTANT','OF',                                                     // declarations
-        'TRUE','FALSE',                                                                // boolean
-        'AND','OR','NOT',                                                              // logical operators
+        'IF', 'THEN', 'ELSE', 'ENDIF', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE',                 // conditionals
+        'FOR', 'TO', 'STEP',' NEXT', 'WHILE', 'DO', 'ENDWHILE', 'REPEAT', 'UNTIL',           // iteration
+        'PROCEDURE', 'FUNCTION', 'RETURNS', 'RETURN', 'CALL', 'ENDPROCEDURE', 'ENDFUNCTION', // functions and procedures
+        'INPUT', 'OUTPUT',                                                                   // input/output
+        'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE',                                    // file handling
+        'DECLARE', 'CONSTANT', 'OF',                                                         // declarations
+        'TRUE', 'FALSE',                                                                     // boolean
+        'AND', 'OR', 'NOT'
     ].join('|'));
 
-    const TYPES    = (['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING', 'ARRAY'                 ].join('|'));
+    const TYPES    = (['INTEGER', 'REAL', 'BOOLEAN', 'CHAR', 'STRING', 'ARRAY', 'READ', 'WRITE'].join('|'));
     const BUILTINS = (['ROUND', 'RANDOM', 'LENGTH', 'LCASE', 'UCASE', 'SUBSTRING', 'DIV', 'MOD'].join('|'));
 
     class LangHighlightRules extends TextHighlightRules {
@@ -22,26 +23,25 @@ function(require, exports, module) {
             const keywordMapper = this.createKeywordMapper({
                 'keyword.control': KEYWORDS,
                 'storage.type': TYPES,
-                'support.function': BUILTINS,
+                'support.function': BUILTINS
             }, 'identifier', true, '');
 
             this.$rules = {
                 start: [
-                    { token: 'comment.line.double-slash', regex: /\/\/.*$/ },                      // comments
-                    { token: 'string.quoted.single', regex: /'[^']*'/ },                           // char (single quotes)
-                    { token: 'string.quoted.double', regex: '"', next: 'string_dq' },              // strings (double quotes)
-                    { token: 'constant.numeric', regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ }, // integer, real, scientific notation
-                    { token: 'keyword.operator', regex: /<-|<--|←/ },                              // assignment
-                    { token: 'keyword.operator', regex: /<=|>=|<>|<|>|=/ },                        // comparison
-                    { token: 'keyword.operator', regex: /\+|\-|\*|\/|\^/ },                        // arithmetic
-                    { token: 'keyword.operator', regex: /\b(?:AND|OR|NOT)\b/i },                   // logical
-                    { token: keywordMapper, regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },                  // identifiers and keywords
-                    { token: 'punctuation.operator', regex: /[,:]/ },                              // , :
-                    { token: 'paren.lparen', regex: /[\[(]/ },                                     // [ and (
-                    { token: 'paren.rparen', regex: /[\])]/ },                                     // ] and )
+                    { token: 'comment.line.double-slash', regex: /\/\/.*$/ },                               // comments
+                    { token: 'string.quoted.single',      regex: /'[^']*'/ },                               // char (single quotes)
+                    { token: 'string.quoted.double',      regex: '"', next: 'string_dq' },                  // strings (double quotes)
+                    { token: 'constant.numeric',          regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ }, // integer, real, scientific notation
+                    { token: 'keyword.operator',          regex: /<-|<--|←/ },                              // assignment
+                    { token: 'keyword.operator',          regex: /<=|>=|<>|<|>|=/ },                        // comparison
+                    { token: 'keyword.operator',          regex: /\+|\-|\*|\/|\^/ },                        // arithmetic
+                    { token: 'keyword.operator',          regex: /\b(?:AND|OR|NOT)\b/i },                   // logical
+                    { token: keywordMapper,               regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },             // identifiers and keywords
+                    { token: 'punctuation.operator',      regex: /[,:]/ },                                  // , :
+                    { token: 'paren.lparen',              regex: /[\[(]/ },                                 // [ and (
+                    { token: 'paren.rparen',              regex: /[\])]/ },                                 // ] and )
                     // func/proc declarations
-                    { token: 'keyword.control', regex: '\\b(?:FUNCTION|PROCEDURE)\\b',
-                        caseInsensitive: true, next: 'function_name' },
+                    { token: 'keyword.control', regex: '\\b(?:FUNCTION|PROCEDURE)\\b', caseInsensitive: true, next: 'function_name' }
                 ],
 
                 // double quotes

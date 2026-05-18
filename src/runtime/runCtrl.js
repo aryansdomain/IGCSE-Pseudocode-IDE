@@ -2,10 +2,11 @@ export function initRun({
     console, consoleOutput, cursor,
     getline, getCode,
     workerPath = 'runner.js',
+    files = null,
     onInputRequested = () => {},
     onInputEnd       = () => {},
     onStateChange    = () => {},
-    onLoadingChange  = () => {},
+    onLoadingChange  = () => {}
 } = {}) {
 
     // ------------------------ Analytics Vars ------------------------
@@ -55,7 +56,7 @@ export function initRun({
                 code_executed_method,
                 code_executed_runtime,
                 code_executed_size,
-                code_executed_success,
+                code_executed_success
             });
         } catch {}
     }
@@ -64,11 +65,13 @@ export function initRun({
         let line = getline().replace(/\s+$/, '');
         if (line.length > 0) consoleOutput.newline();
 
-        const lines = String(formatted).split('\n');
+        const lines = String(formatted).trimEnd().split('\n');
         lines.forEach((line, index) => {
             if (index !== lines.length - 1) consoleOutput.errln(line);
             else                            consoleOutput.err(line);
         });
+
+        try { window.__lastIDEError = String(formatted).trimEnd(); } catch {}
     }
 
     // process execution results
@@ -76,7 +79,7 @@ export function initRun({
         worker.onmessage = async (e) => {
             const { type } = e.data;
 
-            if (type === 'output') {
+                   if (type === 'output') {
                 alreadyOutput = true;
 
                 const s = String(e.data.text ?? '');
@@ -102,6 +105,15 @@ export function initRun({
 
                 consoleLocked = false;
 
+            } else if (type === 'file_get_lines') {
+                worker.postMessage({ type: 'file_lines', lines: files.getLines(e.data.name) });
+
+            } else if (type === 'file_clear') {
+                files.clearFile(e.data.name);
+
+            } else if (type === 'file_write') {
+                files.addLine(e.data.file, e.data.line);
+
             // stops the program
             } else if (type === 'done' || type === 'error') {
                 consoleOutput.newline();
@@ -113,6 +125,7 @@ export function initRun({
                 // output error
                 if (type === 'error') {
                     outputError(e.data.formatted || e.data.error || 'Unknown error');
+                    consoleOutput.newline();
                 }
 
                 finishRun(localRunId);

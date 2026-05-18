@@ -8,9 +8,10 @@ export const KEYWORDS = new Set([
     'DECLARE', 'DIV', 'DO', 'ELSE', 'ENDFUNCTION', 'ENDCASE',
     'ENDPROCEDURE', 'ENDIF', 'ENDWHILE', 'FALSE', 'FOR', 'FUNCTION', 'IF',
     'INPUT', 'INTEGER', 'LCASE', 'LENGTH', 'MOD', 'NEXT', 'NOT', 'OF',
-    'OR', 'OTHERWISE', 'OUTPUT', 'PROCEDURE', 'RANDOM', 'REAL', 'REPEAT',
-    'RETURNS', 'RETURN', 'ROUND', 'STEP', 'STRING', 'SUBSTRING', 'THEN',
-    'TO', 'TRUE', 'UNTIL', 'UCASE', 'WHILE'
+    'OPENFILE', 'OR', 'OTHERWISE', 'OUTPUT', 'PROCEDURE', 'RANDOM', 'READ',
+    'READFILE', 'REAL', 'REPEAT', 'RETURNS', 'RETURN', 'ROUND', 'STEP',
+    'STRING', 'SUBSTRING', 'THEN', 'TO', 'TRUE', 'UNTIL', 'UCASE', 'WHILE',
+    'CLOSEFILE', 'WRITE', 'WRITEFILE'
 ]);
 
 export function initError(linesWithComments) {

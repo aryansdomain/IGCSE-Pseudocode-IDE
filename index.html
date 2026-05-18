@@ -30,11 +30,11 @@
                 if (e instanceof ErrorEvent) {
                     window.__lastError = {
                         type: 'runtime',
-                        message: e.message,
+                        message:  e.message,
                         filename: e.filename,
-                        lineno: e.lineno,
-                        colno: e.colno,
-                        stack: e.error && e.error.stack ? e.error.stack : null
+                        lineno:   e.lineno,
+                        colno:    e.colno,
+                        stack:    e.error && e.error.stack ? e.error.stack : null
                     };
                 }
             }, true);
@@ -161,7 +161,7 @@
                     <div id="code"></div>
                 </div>
 
-                <div class="bottombar" role="bottombar" id="bottomBar" aria-live="polite">
+                <div class="bottombar" id="bottomBar" aria-live="polite">
                     <div class="info">
                         <span id="lineColInfo">Ln 1, Col 1</span>
                         <span id="tabSpacesInfo">Tab Spaces: 4</span>
@@ -364,6 +364,9 @@
                     </button>
                     <button class="btn example-btn" type="button" id="funcsProcsExampleBtn">
                         <span>Functions & Procedures</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="fileHandlingExampleBtn">
+                        <span>File Handling</span>
                     </button>
                 </div>
             </div>

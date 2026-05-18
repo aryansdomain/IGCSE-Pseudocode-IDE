@@ -1,24 +1,24 @@
 (async function () {
     // import modules
-    const { initConsole }       = await import('./src/console/console.js');
+    const { initConsole }       = await import('./src/console/console.js'      );
     const { initConsoleOutput } = await import('./src/console/consoleOutput.js');
-    const { initCursor }        = await import('./src/console/cursor.js');
-    const { initEditor }        = await import('./src/editor/editor.js');
-    const { initFiles }         = await import('./src/editor/files.js');
-    const { initFont }          = await import('./src/editor/font.js');
-    const { initSpacing }       = await import('./src/editor/spacing.js');
-    const { initFormatter }     = await import('./src/format/format.js');
-    const { initRun }           = await import('./src/runtime/runCtrl.js');
-    const { initLayout }        = await import('./src/ui/layout.js');
-    const { initMode }          = await import('./src/ui/modeCtrl.js');
-    const { initSettings }      = await import('./src/ui/settings.js');
-    const { initSplitter }      = await import('./src/ui/splitter.js');
-    const { initTheme }         = await import('./src/ui/themeCtrl.js');
-    const { initUI }            = await import('./src/ui/ui.js');
-    const { initCopy }          = await import('./src/utils/copy.js');
-    const { initDownload }      = await import('./src/utils/download.js');
-    const { initExamples }      = await import('./src/utils/examples.js');
-    const { initUpload }        = await import('./src/utils/upload.js');
+    const { initCursor }        = await import('./src/console/cursor.js'       );
+    const { initEditor }        = await import('./src/editor/editor.js'        );
+    const { initFiles }         = await import('./src/editor/files.js'         );
+    const { initFont }          = await import('./src/editor/font.js'          );
+    const { initSpacing }       = await import('./src/editor/spacing.js'       );
+    const { initFormatter }     = await import('./src/format/format.js'        );
+    const { initRun }           = await import('./src/runtime/runCtrl.js'      );
+    const { initLayout }        = await import('./src/ui/layout.js'            );
+    const { initMode }          = await import('./src/ui/modeCtrl.js'          );
+    const { initSettings }      = await import('./src/ui/settings.js'          );
+    const { initSplitter }      = await import('./src/ui/splitter.js'          );
+    const { initTheme }         = await import('./src/ui/themeCtrl.js'         );
+    const { initUI }            = await import('./src/ui/ui.js'                );
+    const { initCopy }          = await import('./src/utils/copy.js'           );
+    const { initDownload }      = await import('./src/utils/download.js'       );
+    const { initExamples }      = await import('./src/utils/examples.js'       );
+    const { initUpload }        = await import('./src/utils/upload.js'         );
 
     const UI = initUI(); // object to access UI elements from
 
@@ -26,21 +26,21 @@
     const { aceEditor, editor } = initEditor({
         container: UI.code,
         tabSize: 4,
-        theme: 'monokai',
+        theme: 'monokai'
     });
     window.editor = aceEditor;
 
     // font controls
     const fontCtrl = initFont({
         editor: aceEditor,
-        sizeInput: UI.fontSizeSlider,
-        sizeValueEl: UI.fontSizeValue,
+        sizeInput:    UI.fontSizeSlider,
+        sizeValueEl:  UI.fontSizeValue,
         familySelect: UI.fontFamilySelect,
         min: 6,
         max: 38,
         step: 1,
         defaultSize: 14,
-        defaultFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Courier New\', monospace',
+        defaultFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, \'Courier New\', monospace'
     });
     editor.setFontSize = (n) => fontCtrl.setFontSize(n);
 
@@ -51,9 +51,9 @@
 
     // format functionality
     initFormatter({
-        editor: aceEditor,
-        getCode: editor.getCode,
-        setCode: editor.setCode,
+        getCode:    editor.getCode,
+        setCode:    editor.setCode,
+        getTabSize: editor.getTabSize,
         formatBtn: UI.formatBtn
     });
 
@@ -63,10 +63,10 @@
 
         spacingCtrl = initSpacing({
             aceEditor,
-            slider: UI.tabSpacesSlider,
+            slider:  UI.tabSpacesSlider,
             valueEl: UI.tabSpacesValue,
-            infoEl: UI.tabSpacesInfo,
-            tickSelector: '#tabSpacesSlider + .slider-ticks.tab-ticks .tick',
+            infoEl:  UI.tabSpacesInfo,
+            tickSelector: '#tabSpacesSlider + .slider-ticks.tab-ticks .tick'
         });
 
         // override builtin function
@@ -88,7 +88,7 @@
         enableLiveAutocompletion:  completers,
         enableSnippets: false,
         highlightActiveLine: false,
-        fixedWidthGutter: true,
+        fixedWidthGutter: true
     });
 
     langTools.setCompleters(completers);
@@ -141,7 +141,7 @@
         cursorStyle: 'block',
         onAwaitingInputChange: () => {
             syncClearBtnDisabled();
-        },
+        }
     });
 
     // console output
@@ -155,7 +155,7 @@
         themeCtrl: null,
         modeBtn: UI.modeBtn,
         defaultMode: 'dark',
-        page: 'ide',
+        page: 'ide'
     });
 
     // theme controls
@@ -163,7 +163,7 @@
         editor: aceEditor,
         console,
         modeCtrl: modeCtrl,
-        editorThemeSelect: UI.editorThemeSelect,
+        editorThemeSelect: UI.editorThemeSelect
     });
     themeCtrl.updateConsoleTheme();
 
@@ -174,6 +174,7 @@
     const files = initFiles({
         codeEl: UI.code,
         filesEl: UI.files,
+        onRename: (oldName, newName) => execCommand(`rename ${oldName} ${newName}`)
     });
 
     // settings panel
@@ -188,13 +189,13 @@
         modeCtrl,
         editor,
         selectors: {
-            fontSize: '#fontSizeSlider',
+            fontSize:   '#fontSizeSlider',
             fontFamily: '#fontFamilySelect',
-            tabSpaces: '#tabSpacesSlider',
-            softWrap: '#softWrap',
-            readOnly: '#readOnly',
-            theme: '#editorThemeSelect',
-            mode: '#modeSelect'
+            tabSpaces:  '#tabSpacesSlider',
+            softWrap:   '#softWrap',
+            readOnly:   '#readOnly',
+            theme:      '#editorThemeSelect',
+            mode:       '#modeSelect'
         }
     });
 
@@ -204,14 +205,15 @@
         openBtn:   UI.examplesBtn,
         closeBtn:  UI.closeExamples,
         overlayEl: UI.examplesOverlay,
-        editor
+        editor,
+        files
     });
 
     // layout controls
     const layoutControls = initLayout({
         workspace: UI.workspace,
         layoutBtn: UI.layoutBtn,
-        initialLayout: 'vertical',
+        initialLayout: 'vertical'
     });
 
     // splitter
@@ -225,16 +227,16 @@
 
         splitter = initSplitter({
             container: UI.workspace,
-            handle: UI.splitter,
-            paneA: UI.editorPane,
-            paneB: UI.consolePane,
-            btnA: UI.editorExpandBtn,
-            btnB: UI.expandConsoleBtn,
+            handle:    UI.splitter,
+            paneA:     UI.editorPane,
+            paneB:     UI.consolePane,
+            btnA:      UI.editorExpandBtn,
+            btnB:      UI.expandConsoleBtn,
             axis: layout,
             minA: 0,
             minB: 0,
             barHeight: 45,
-            snapInPx: 35,
+            snapInPx:  35,
             snapOutPx: 50,
             initialRatio,
             onResize: () => {
@@ -246,7 +248,7 @@
     reInitSplitter(layoutControls.getLayout());
 
     // reinit splitter when layout changes
-    layoutBtn.addEventListener('click', toggleLayout = () => {
+    UI.layoutBtn.addEventListener('click', toggleLayout = () => {
         layoutControls.toggleLayout();
         reInitSplitter(layoutControls.getLayout());
     });
@@ -262,6 +264,7 @@
         cursor,
         consoleOutput,
         console,
+        files,
         getline,
         getCode: editor.getCode,
         workerPath: new URL('./src/runtime/runner.js', window.location.href).toString(),
@@ -298,7 +301,7 @@
     syncClearBtnDisabled();
 
     // set dependencies for console
-    setDeps({ consoleOutput, runCtrl, editor, themeCtrl, modeCtrl, cursor });
+    setDeps({ consoleOutput, runCtrl, editor, themeCtrl, modeCtrl, cursor, files });
 
     // run/stop button
     UI.runBtn.addEventListener('click', () => {

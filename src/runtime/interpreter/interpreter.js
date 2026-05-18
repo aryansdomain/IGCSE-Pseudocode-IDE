@@ -1,7 +1,8 @@
+import { files, initFileHandling } from './fileHandling.js';
 import { runCode, removeComments } from './execute.js';
 import { globalScope, initScope }  from './scope.js';
+import { initError, throwErr }     from './error.js';
 import { getProcFuncs }            from './procsFuncs.js';
-import { initError }               from './error.js';
 
 export async function interpret(code) {
     // init
@@ -12,8 +13,16 @@ export async function interpret(code) {
 
     initError(linesWithComments); // error.js
     initScope();                  // scope.js
+    initFileHandling()            // fileHandling.js
 
     // run
     getProcFuncs(lines); // extract proc/func bodies
     await runCode(globalScope, lines, false);
+
+    // check for unclosed files
+    for (const file of Object.values(files)) {
+        const lastLine = linesWithComments.length;
+        throwErr('FileError',
+                 `file ${file.name} was not closed`);
+    }
 }

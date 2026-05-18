@@ -4,7 +4,7 @@ export function initConsole({
     fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
     cursorBlink = true,
     cursorStyle = 'block',
-    onAwaitingInputChange = () => {},
+    onAwaitingInputChange = () => {}
 } = {}) {
 
     // initialize xterm
@@ -29,6 +29,7 @@ export function initConsole({
         themeCtrl:     undefined,
         modeCtrl:      undefined,
         cursor:        undefined,
+        files:         undefined
     };
     function setDeps(next) { deps = { ...deps, ...next }; }
 
@@ -52,7 +53,7 @@ export function initConsole({
     // ------------------------ Command Execution ------------------------
 
     async function execCommand(line) {
-        const { consoleOutput, runCtrl, editor, themeCtrl, modeCtrl } = deps;
+        const { consoleOutput, runCtrl, editor, themeCtrl, modeCtrl, files } = deps;
         if (!consoleOutput) return; // not ready yet
 
         if (!line || !line.trim()) return; // no content
@@ -72,14 +73,15 @@ export function initConsole({
         switch (cmd) {
             case 'help': {
                 const output =
-                    '\x1b[32mrun              \x1b[0m  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
-                    '\x1b[32mclear            \x1b[0m  Clear console\r\n' +
-                    '\x1b[32mformat           \x1b[0m  Format the editor code\r\n' +
-                    '\x1b[32mtab <n>          \x1b[0m  Set editor tab size (0-8 spaces)\r\n' +
-                    '\x1b[32mfont <px>        \x1b[0m  Set editor font size (6-38 px)\r\n' +
-                    '\x1b[32mmode <light|dark>\x1b[0m  Switch overall UI between light and dark modes\r\n' +
-                    '\x1b[32mtheme <name>     \x1b[0m  Change the editor color theme\r\n' +
-                    '\x1b[32mhelp             \x1b[0m  Print this list\r\n';
+                    '\x1b[32mrun               \x1b[0m  Execute the code in the editor. If the program needs input, type and press Enter.\r\n' +
+                    '\x1b[32mclear             \x1b[0m  Clear console                                                                    \r\n' +
+                    '\x1b[32mformat            \x1b[0m  Format the editor code                                                           \r\n' +
+                    '\x1b[32mtab <n>           \x1b[0m  Set editor tab size (0-8 spaces)                                                 \r\n' +
+                    '\x1b[32mfont <px>         \x1b[0m  Set editor font size (6-38 px)                                                   \r\n' +
+                    '\x1b[32mmode <light|dark> \x1b[0m  Switch overall UI between light and dark modes                                   \r\n' +
+                    '\x1b[32mtheme <name>      \x1b[0m  Change the editor color theme                                                    \r\n' +
+                    '\x1b[32mrename <old> <new>\x1b[0m  Rename a file                                                                    \r\n' +
+                    '\x1b[32mhelp              \x1b[0m  Print this list                                                                  \r\n';
                 consoleOutput.lnprintln('Commands:', 1); // bold
                 consoleOutput.println(output);
                 break;
@@ -135,8 +137,6 @@ export function initConsole({
                 if (mode === 'light' || mode === 'dark') {
                     if (modeCtrl && typeof modeCtrl.setMode === 'function') modeCtrl.setMode(mode);
                     else if (editor?.setMode) editor.setMode(mode);
-
-                    consoleOutput.println(`Mode: ${mode}`);
                 } else {
                     consoleOutput.errln('Usage: mode <light|dark>');
                     if (themeCtrl.themeInfo(mode).ok) consoleOutput.errln(`Did you mean 'theme ${mode}'?`);
@@ -157,7 +157,18 @@ export function initConsole({
                 }
 
                 await themeCtrl.setTheme(themeResult.bare);
-                consoleOutput.println(`Theme: ${themeResult.name}`);
+                break;
+            }
+
+            case 'rename': {
+                const parts = arg.split(/\s+/);
+                if (parts.length !== 2) {
+                    consoleOutput.errln('Usage: rename <old> <new>');
+                    break;
+                }
+
+                const result = files?.renameFile(parts[0], parts[1]); // rename
+                if (!result.ok) { consoleOutput.errln(result.error); break; } // error
                 break;
             }
 
@@ -194,7 +205,7 @@ export function initConsole({
                 cursor.reset();
                 histLoc = -1;
 
-            } else if (data === '\u0003') {                            // ctrl-c, abort program
+            } else if (data === '\u0003') {                            // ctrl-c, stop program
                 consoleOutput.newline();
                 runCtrl.stop();
             } else if (data === '\u007F') cursor.deleteChar();         // backspace
@@ -212,7 +223,7 @@ export function initConsole({
                 await cursor.setLine('');
 
                 await execCommand(origLine);
-            } else if (data === '\u0003') {                            // ctrl-c, abort program
+            } else if (data === '\u0003') {                            // ctrl-c, stop program
                 if (runCtrl.isRunning()) {
                     consoleOutput.newline();
                     runCtrl.stop();
@@ -289,10 +300,8 @@ export function initConsole({
         console: xterm,
         getline, getConsoleText,
         refit: () => { if (fitAddon) fitAddon.fit(); },
-        dispose: () => { xterm.dispose(); },
         execCommand,
         setDeps,
-        setAwaitingInput, isAwaitingInput,
-        history: { get: () => hist.slice(), clear() { hist = []; histLoc = -1; } }
+        setAwaitingInput, isAwaitingInput
     };
 }

@@ -325,6 +325,23 @@ body.dragging {
     color: var(--line-num-color);
 }
 
+.filelist .file .name-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-size: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+    color: var(--line-num-color);
+    min-width: 2ch;
+    max-width: 180px;
+}
+.filelist .file.active .name-input {
+    color: var(--keyword-color);
+}
+
 .filelist .file .close {
     margin-left: 6px;
     color: var(--muted);
