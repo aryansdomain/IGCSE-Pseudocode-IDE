@@ -4,9 +4,7 @@ import { getProcFuncs }            from './procsFuncs.js';
 import { initError }               from './error.js';
 
 export async function interpret(code) {
-
-    // ------------------------ Init ------------------------
-
+    // init
     const linesWithComments = code
         .split(/\r?\n/)                                                                // split by newlines
         .map((text, i) => ({ lineNum: i + 1, text: text.trim() }));                    // add line number
@@ -15,8 +13,7 @@ export async function interpret(code) {
     initError(linesWithComments); // error.js
     initScope();                  // scope.js
 
-    // ------------------------ Execute ------------------------
-
+    // run
     getProcFuncs(lines); // extract proc/func bodies
     await runCode(globalScope, lines, false);
 }

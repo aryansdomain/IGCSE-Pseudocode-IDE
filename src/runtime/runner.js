@@ -1,6 +1,6 @@
 self.window = self;
 
-import { interpret } from './interpreter/interpret.js';
+import { interpret } from './interpreter/interpreter.js';
 
 let currentResolve = null;
 self.readInput = () => {
