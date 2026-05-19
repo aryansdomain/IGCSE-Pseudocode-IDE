@@ -33,11 +33,11 @@ OUTPUT Greet(Name)
 
     function isValidName(name) {
         // position of dot
-        const dot = name.indexOf('.');
-        if (dot < 1 || dot !== name.lastIndexOf('.')) return false; // more than one, or zero
+        const dotCol = name.indexOf('.');
+        if (dotCol < 1 || dotCol !== name.lastIndexOf('.')) return false; // more than one, or zero
 
-        const left  = name.slice(0, dot);
-        const right = name.slice(   dot + 1);
+        const left  = name.slice(0, dotCol);
+        const right = name.slice(   dotCol + 1);
         return /^[A-Za-z0-9_-]{1,16}$/.test(left) && (right === 'psc' || right === 'txt');
     }
 
@@ -111,7 +111,7 @@ OUTPUT Greet(Name)
         );
     }
 
-    // close without history
+    // remove without history
     function removeFileInternal(id) {
         if (ids().length === 1) return; // keep at least one
 
@@ -185,10 +185,20 @@ OUTPUT Greet(Name)
     }
     function renameFile(oldName, newName) {
         const id = Object.keys(files).find(k => files[k].name === oldName); // find oldName
-        if (!id) return { ok: false, error: `File ${oldName} not found` };
 
-        if (!isValidName(newName)) return { ok: false, error: `Invalid name ${newName} \r\nName must be <letters, numbers, hyphens>.<psc|txt>, 1-16 chars` };
-        if (Object.values(files).some(f => f.name === newName)) return { ok: false, error: `Name ${newName} already exists` };
+        if (!id)                                                return { ok: false, error: `File ${oldName} not found`                                                 }; // file not found
+        if (Object.values(files).some(f => f.name === newName)) return { ok: false, error: `Name ${newName} already exists`                                            }; // file already exists
+
+        const dotCol = newName.indexOf('.');
+        if (dotCol < 1)                                         return { ok: false, error: `Name must have an extension (.psc or .txt)`                                }; // no extension
+        if (dotCol !== newName.lastIndexOf('.'))                return { ok: false, error: `Name must have exactly one dot`                                            };
+
+        const ext  = newName.slice(   dotCol);
+        const name = newName.slice(0, dotCol);
+        if (ext !== '.psc' && ext !== '.txt')                   return { ok: false, error: `Invalid extension ${ext} (.psc or .txt)`                                   };
+        if (name.length > 16)                                   return { ok: false, error: `Name too long (max 16 characters)`                                         };
+        if (!/^[A-Za-z0-9_-]+$/.test(name))                     return { ok: false, error: `Invalid character in name (use letters, numbers, underscores, or hyphens)` };
+
         renameFileInternal(id, newName);
         return { ok: true };
     }
@@ -510,12 +520,8 @@ OUTPUT Greet(Name)
     }
 
     return {
-        addFile,
-        renameFile,
-        setActiveFile,
-        getActiveFileName: () => files[activeFileID].name,
-        getLines,
-        addLine,
-        clearFile
+        addFile, renameFile, clearFile,
+        setActiveFile, getActiveFileName: () => files[activeFileID].name,
+        getLines, addLine
     };
 }
