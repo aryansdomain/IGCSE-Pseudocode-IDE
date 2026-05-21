@@ -20,7 +20,7 @@ export function initConsoleOutput(console) {
 
     // functions
     return {
-        newline: () => write('\r\n'),
+        ln: () => write('\r\n'),
 
         // print
         print:     (t = '', color = null) => write(t, color),

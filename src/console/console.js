@@ -206,7 +206,7 @@ export function initConsole({
                 histLoc = -1;
 
             } else if (data === '\u0003') {                            // ctrl-c, stop program
-                consoleOutput.newline();
+                consoleOutput.ln();
                 runCtrl.stop();
             } else if (data === '\u007F') cursor.deleteChar();         // backspace
               else if (data === '\u001b[C') cursor.moveCursorRight();  // right arrow
@@ -225,11 +225,11 @@ export function initConsole({
                 await execCommand(origLine);
             } else if (data === '\u0003') {                            // ctrl-c, stop program
                 if (runCtrl.isRunning()) {
-                    consoleOutput.newline();
+                    consoleOutput.ln();
                     runCtrl.stop();
                 } else {
                     consoleOutput.hideCursor();
-                    consoleOutput.newline();
+                    consoleOutput.ln();
                     consoleOutput.writePrompt();
                     consoleOutput.showCursor();
                 }

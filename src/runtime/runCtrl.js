@@ -47,7 +47,7 @@ export function initRun({
         try { worker && worker.terminate(); } catch {}
         worker = null;
 
-        consoleOutput.newline();
+        consoleOutput.ln();
         consoleOutput.writePrompt();
 
         // record analytics
@@ -63,7 +63,7 @@ export function initRun({
 
     function outputError(formatted) {
         let line = getline().replace(/\s+$/, '');
-        if (line.length > 0) consoleOutput.newline();
+        if (line.length > 0) consoleOutput.ln();
 
         const lines = String(formatted).trimEnd().split('\n');
         lines.forEach((line, index) => {
@@ -116,7 +116,7 @@ export function initRun({
 
             // stops the program
             } else if (type === 'done' || type === 'error') {
-                consoleOutput.newline();
+                consoleOutput.ln();
 
                 // set analytics vars
                 code_executed_runtime = performance.now() - startTime;
@@ -125,7 +125,7 @@ export function initRun({
                 // output error
                 if (type === 'error') {
                     outputError(e.data.formatted || e.data.error || 'Unknown error');
-                    consoleOutput.newline();
+                    consoleOutput.ln();
                 }
 
                 finishRun(localRunId);
@@ -145,6 +145,16 @@ export function initRun({
 
     function run(method = 'button') {
         if (isRunning) return;
+
+        // ensure .txt files cannot run
+        if (files && files.getActiveFileName().endsWith('.txt')) {
+            outputError('RunError: cannot run a .txt file');
+            consoleOutput.ln();
+            consoleOutput.ln();
+            consoleOutput.writePrompt();
+            return;
+        }
+
         isRunning = true;
         consoleLocked = true;
 
@@ -173,7 +183,7 @@ export function initRun({
         if (!isRunning || !worker) return;
 
         outputError('Execution stopped');
-        consoleOutput.newline();
+        consoleOutput.ln();
 
         // stop worker
         try { worker.terminate(); } catch {}
