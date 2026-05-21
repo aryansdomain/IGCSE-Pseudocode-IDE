@@ -1146,7 +1146,7 @@ html.mode-switching *::after {
     z-index: 0;
 }
 .footer i.fa-heart {
-    color: var(--red);
+    color: var(--keyword-color);
 }
 .footer i {
     vertical-align: middle;
