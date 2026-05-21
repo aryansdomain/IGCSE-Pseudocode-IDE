@@ -5,21 +5,15 @@ export function initUpload({ uploadBtn, fileInput, setCode, consoleOutput }) {
         const file = event.target.files[0];
         if (!file) return;
 
-        try {
-            const text = await file.text();
-            setCode(text);
+        const text = await file.text();
+        setCode(text);
 
-            // track upload analytics
-            window.file_uploaded && window.file_uploaded({
-                file_uploaded_name: file.name,
-                file_uploaded_size: text.length,
-                file_uploaded_type: file.type
-            });
-
-        } catch (err) {
-            consoleOutput.lnerrln(`Failed to upload file ${file.name}: ${err.message}`);
-            consoleOutput.writePrompt();
-        }
+        // track upload analytics
+        window.file_uploaded && window.file_uploaded({
+            file_uploaded_name: file.name,
+            file_uploaded_size: text.length,
+            file_uploaded_type: file.type
+        });
 
         // reset file input so same file can be selected again
         event.target.value = '';

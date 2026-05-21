@@ -27,39 +27,26 @@ export function initCopy({ consoleCopyBtn, editorCopyBtn, getCode, getConsoleTex
 
     // copy console content
     const copyConsole = async () => {
-        try {
-            const text = getConsoleText({ trim: true });
-            await navigator.clipboard.writeText(text);
+        const text = getConsoleText({ trim: true });
+        await navigator.clipboard.writeText(text);
 
-            // show success checkmark
-            showCopySuccess(consoleCopyBtn);
+        // show success checkmark
+        showCopySuccess(consoleCopyBtn);
 
-            // track copy analytics
-            window.console_copied && window.console_copied({ console_copied_size: text.length });
-
-        } catch (err) {
-            consoleOutput.newline();
-            consoleOutput.lnerrln('Failed to copy console content: ' + err + '. Please reload the page or report this issue.');
-            consoleOutput.newline();
-            consoleOutput.writePrompt();
-        }
+        // track copy analytics
+        window.console_copied && window.console_copied({ console_copied_size: text.length });
     };
 
     // copy editor content
     const copyEditor = async () => {
-        try {
-            const code = getCode();
-            await navigator.clipboard.writeText(code);
+        const code = getCode();
+        await navigator.clipboard.writeText(code);
 
-            // show success checkmark
-            showCopySuccess(editorCopyBtn);
+        // show success checkmark
+        showCopySuccess(editorCopyBtn);
 
-            // track copy analytics
-            window.code_copied && window.code_copied({ code_copied_size: code.length });
-
-        } catch (err) {
-            consoleOutput.errln('Failed to copy editor content: ' + err + '. Please reload the page or report this issue.');
-        }
+        // track copy analytics
+        window.code_copied && window.code_copied({ code_copied_size: code.length });
     };
 
     // wire buttons
