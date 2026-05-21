@@ -5,7 +5,7 @@ function(require, exports, module) {
 
     const KEYWORDS = ([
         'IF', 'THEN', 'ELSE', 'ENDIF', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE',                 // conditionals
-        'FOR', 'TO', 'STEP',' NEXT', 'WHILE', 'DO', 'ENDWHILE', 'REPEAT', 'UNTIL',           // iteration
+        'FOR', 'TO', 'STEP', 'NEXT', 'WHILE', 'DO', 'ENDWHILE', 'REPEAT', 'UNTIL',           // iteration
         'PROCEDURE', 'FUNCTION', 'RETURNS', 'RETURN', 'CALL', 'ENDPROCEDURE', 'ENDFUNCTION', // functions and procedures
         'INPUT', 'OUTPUT',                                                                   // input/output
         'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE',                                    // file handling
@@ -36,7 +36,7 @@ function(require, exports, module) {
                     { token: 'keyword.operator',          regex: /<=|>=|<>|<|>|=/ },                        // comparison
                     { token: 'keyword.operator',          regex: /\+|\-|\*|\/|\^/ },                        // arithmetic
                     { token: 'keyword.operator',          regex: /\b(?:AND|OR|NOT)\b/i },                   // logical
-                    { token: keywordMapper,               regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },             // identifiers and keywords
+                    { token:  keywordMapper,              regex: /\b[A-Za-z][A-Za-z0-9_]*\b/ },             // identifiers and keywords
                     { token: 'punctuation.operator',      regex: /[,:]/ },                                  // , :
                     { token: 'paren.lparen',              regex: /[\[(]/ },                                 // [ and (
                     { token: 'paren.rparen',              regex: /[\])]/ },                                 // ] and )
@@ -61,4 +61,7 @@ function(require, exports, module) {
         }
     }
     exports.LangHighlightRules = LangHighlightRules;
+    exports.KEYWORDS = KEYWORDS;
+    exports.TYPES    = TYPES;
+    exports.BUILTINS = BUILTINS;
 });

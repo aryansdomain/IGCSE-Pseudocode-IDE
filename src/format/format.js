@@ -9,7 +9,6 @@ export function initFormatter({ getCode, setCode, formatBtn, getTabSize }) {
 export function format(code, tabSize) {
     let prev, next = String(code);
 
-    // repeat until nothing is changed
     do {
         prev = next;
         next = formatOnce(prev, tabSize);
@@ -17,80 +16,102 @@ export function format(code, tabSize) {
     return next;
 }
 
+// ------------------------ Regexes ------------------------
+
+// end of a block statements, but with something before/after 
+const badEndRegexes = [
+    /^(.*?)\s*\b(ENDWHILE)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(ENDFUNCTION)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(ENDPROCEDURE)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(ENDCASE)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(ENDIF)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9_]*)?)\b\s*(.*)$/i,
+    /^(.*?)\s*\b(UNTIL\b\s*[^]+)\s*(.*)$/i
+];
+
+const startsWithKeywordRegex = new RegExp(
+    '^\\s*(?:' +
+        'ARRAY|CALL|CASE|CONSTANT|DECLARE|DO|ELSE|' +
+        'ENDCASE|ENDFUNCTION|ENDIF|ENDPROCEDURE|ENDWHILE|' +
+        'FOR|FUNCTION|IF|INPUT|NEXT|OF|OTHERWISE|' +
+        'OUTPUT|PROCEDURE|REPEAT|RETURN|RETURNS|STEP|' +
+        'THEN|TO|UNTIL|WHILE' +
+    ')\\b', 'i'
+);
+
+
+const { KEYWORDS, TYPES, BUILTINS } = ace.require('ace/mode/rules');
+const keywordRegex = new RegExp(`\\b(?:${KEYWORDS}|${TYPES}|${BUILTINS})\\b`, 'gi');
+
 // ------------------------ Utilities ------------------------
 
-// split line into code and comment
+// seperate line into code and comment
 function splitLine(line) {
-    const prot = replace(line);
-    const commentCol = prot.indexOf('//');
+    const replaced = replace(line);
+    const commentCol = replaced.indexOf('//');
     if (commentCol >= 0) {
-        const code    = unreplace(prot.slice(0, commentCol));
-        const comment = unreplace(prot.slice(   commentCol));
+        const code    = unreplace(replaced.slice(0, commentCol));
+        const comment = unreplace(replaced.slice(   commentCol));
         return { code, comment };
-    } else {
-        return { code: line, comment: '' };
     }
+    return { code: line, comment: '' };
 }
 
-// split a protected line at a trailing block-end token into separate lines
-function splitTerminator(prot, outArr, kwRegex) {
-    const PATTERNS = [
-        /\b(ENDWHILE)\b/i,
-        /\b(ENDFUNCTION)\b/i,
-        /\b(ENDPROCEDURE)\b/i,
-        /\b(ENDCASE)\b/i,
-        /\b(NEXT(?:\s+[A-Za-z][A-Za-z0-9_]*)?)\b/i,
-        /\b(UNTIL\b\s*[^]+)$/i
-    ];
+
+// split starting keyword in a line with text after
+function seperateStartKeyword(line) {
     let r;
-    for (const re of PATTERNS) {
-        if (r = prot.match(new RegExp(`^(.*?)(?:\\s*)${re.source}\\s*(.*)$`, re.flags))) {
+    // while, proc/func, for
+    if (r = line.match(/^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9_]*\s*(?:←|<-|<--)\s*.*?\bTO\b\s+(?:(?!\s+STEP\b).)*?(?:\s+STEP\s+\S.*?)?)\s+(?!STEP\b)(.+)/i)
+         || line.match(/^\s*(WHILE\b.*?\bDO)\s+(.+)/i)
+         || line.match(/^\s*(CASE\b.*?\bOF)\s+(.+)/i)
+         || line.match(/^\s*(PROCEDURE\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?)\s+(.+)/i)
+         || line.match(/^\s*(FUNCTION\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?\s+RETURNS\s+[A-Za-z]+)\s+(.+)/i))
+        return [r[1].trim(), r[2]];
+    return null;
+}
+
+// split ending keyword in a line with text before or after
+function seperateEndKeyword(line, out) {
+    let r; // regex match result
+
+    for (const regex of badEndRegexes) {
+        if (r = line.match(regex)) {
             const left  = r[1].trim();
-            const token = r[r.length - 2];
-            const right = r[r.length - 1].trim();
-            if (left) outArr.push({ code: left, comment: '' });
+            const right = r[3].trim();
 
-            let tokenOut = token.toUpperCase();
-
-            //          NEXT   ?----var----
-            const rNext = token.match(/^next(\s+)([A-Za-z][A-Za-z0-9_]*)$/i);
-            if (rNext) tokenOut = 'NEXT' + rNext[1] + rNext[2];
-
-            //          UNTIL   ----cond----
-            const rUntil = token.match(/^until\b([\s\S]*)$/i);
-            if (rUntil) {
-                const condition = rUntil[1].replace(kwRegex, t => t.toUpperCase());
-                tokenOut = 'UNTIL' + condition;
-            }
-
-            outArr.push({ code: tokenOut, comment: '' });
-            if (right) outArr.push({ code: right, comment: '' });
+            if (left)  out.push({ code: left,  comment: '' }); // push before on prev line
+                       out.push({ code: r[2],  comment: '' }); // push ending block text
+            if (right) out.push({ code: right, comment: '' }); // bush after  on next line
             return true;
         }
     }
     return false;
 }
 
-const reStartsWithKeyword = new RegExp(
-    '^\\s*(?:' +
-    'ARRAY|CALL|CASE|CONSTANT|DECLARE|DO|ELSE|' +
-    'ENDCASE|ENDFUNCTION|ENDIF|ENDPROCEDURE|ENDWHILE|' +
-    'FOR|FUNCTION|IF|INPUT|NEXT|OF|OTHERWISE|' +
-    'OUTPUT|PROCEDURE|REPEAT|RETURN|RETURNS|STEP|' +
-    'THEN|TO|UNTIL|WHILE' +
-    ')\\b', 'i'
-);
+
+// check if a line is a case label
+function hasCaseLabel(line) {
+    if (startsWithKeywordRegex.test(line)) return false;
+    let depth = 0;
+    for (const c of line) {
+             if (c === '[' || c === '(') depth++;
+        else if (c === ']' || c === ')') depth--;
+        else if (c === ':' && depth === 0) return true; // has : outside of [()]
+    }
+    return false;
+}
 
 // ------------------------ Replacing ------------------------
 
-const LITERAL_START = '\uE000';
-const LITERAL_END   = '\uE001';
+const LITERAL_START = ''; // U+E000
+const LITERAL_END   = ''; // U+E001
 
 let replaced = [];
 
-// protect strings temporarily so they are not affected by operations
+// protect strings temporarily so they are not affected by formatting
 function replace(text) {
-    return String(text).replace(/"[^"]*"|'[^']*'/g, (str) => {
+    return String(text).replace(/"[^"]*"|'[^']*'/g, str => {
         replaced.push(str);
         return `${LITERAL_START}${replaced.length - 1}${LITERAL_END}`;
     });
@@ -106,277 +127,202 @@ function unreplace(text) {
 
 function formatOnce(code, tabSize = 4) {
     const lines = code.replace(/\r\n?/g, '\n').split('\n');
-    const tab = ' '.repeat(tabSize);
+    const tab  = ' '.repeat(           tabSize     );
+    const half = ' '.repeat(Math.floor(tabSize / 2));
 
     replaced = [];
 
-    // keywords/types uppercasing
-    const kwRegex = new RegExp('\\b(?:' +
-        'AND|ARRAY|BOOLEAN|CALL|CASE|CHAR|CONSTANT|' +
-        'DECLARE|DIV|DO|ELSE|ENDFUNCTION|ENDCASE|' +
-        'ENDPROCEDURE|ENDIF|ENDWHILE|FALSE|FOR|FUNCTION|IF|' +
-        'INPUT|INTEGER|LCASE|LENGTH|MOD|NEXT|NOT|OF|' +
-        'OR|OTHERWISE|OUTPUT|PROCEDURE|RANDOM|REAL|REPEAT|' +
-        'RETURNS|RETURN|ROUND|STEP|STRING|SUBSTRING|THEN|' +
-        'TO|TRUE|UNTIL|UCASE|WHILE' +
-    ')\\b', 'gi');
-
-    // ------------------------ Normalizing ------------------------
-
-    const normalized = [];
-    const headerSplits = [
-        {
-            re: /^\s*(FOR\b\s+[A-Za-z][A-Za-z0-9_]*\s*(?:←|<-|<--)\s*[^]*?\bTO\b\s*[^]*?(?:\s+STEP\s*[^]*?)?)\s+(.+)\s*$/i,
-            tailStartsWithKeyword: true
-        },
-        { re: /^\s*(WHILE\b[^]*?\bDO)\b\s*(.+)\s*$/i },
-        { re: /^\s*(PROCEDURE\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?)\s+(.+)\s*$/i },
-        { re: /^\s*(FUNCTION\s+[A-Za-z][A-Za-z0-9_]*\s*(?:\([^()]*\))?\s+RETURNS\s+[A-Za-z]+)\s+(.+)\s*$/i }
-    ];
-
+    // protect strings, normalize tabs
     for (let i = 0; i < lines.length; i++) {
-        let r;
         let { code, comment } = splitLine(lines[i]);
-        const push = (text, lineComment = '') => normalized.push({ code: text, comment: lineComment });
-        const preserveTrailingComment = () => {
-            if (!comment || normalized.length === 0) return;
-            const last = normalized[normalized.length - 1];
-            if (!last.comment) last.comment = comment;
-        };
-        const pushTail = (tail) => {
-            const trimmed = tail.trim();
-            if (!trimmed) return;
- 
-            const tmp = [];
-            if (splitTerminator(trimmed, tmp, kwRegex)) {
-                normalized.push(...tmp);
-            } else {
-                push(trimmed);
-            }
-        };
-
-        code = code.replace(/\t/g, tab);
-        code = replace(code);
-
-        // split off anything before a block-opening keyword
-        //                   -left-     --------------------keyword------------------     rest
-        if (r = code.match(/^(.*\S)\s+\b(IF|FOR|WHILE|REPEAT|CASE|PROCEDURE|FUNCTION)\b\s*(.*)$/i)) {
-            push(r[1]);
-            code = r[2] + ' ' + r[3].trim();
-        } 
-
-        // split single-line IF into IF / THEN / body
-        //                      IF   -cond     THEN     aft.
-        if (r = code.match(/^\s*IF\s+(.+?)\s*\bTHEN\b\s*(.*)$/i)) {
-            const cond  = r[1].trim();
-            const after = r[2].trim();
-
-            push('IF ' + cond);
-            push('THEN');
-            pushTail(after);
-
-            preserveTrailingComment();
-            continue;
-        }
-
-        // put simple block keywords on their own line
-        //                   THEN|ELSE|REPEAT   aft.
-        if (r = code.match(/^\s*(THEN|ELSE|REPEAT)\b\s*(.*)$/i)) {
-            const after = r[2].trim();
-
-            push(r[1]);
-            pushTail(after);
-            preserveTrailingComment();
-            continue;
-        }
-
-        // split inline ELSE/ENDIF after preceding code
-        //                   left     ELSE|ENDIF   right
-        if ((r = code.match(/^(.*?)\s+\b(ELSE|ENDIF)\b\s*(.*)$/i)) && r[1].trim()) {
-            push(r[1].trim());
-            push(r[2]);
-            pushTail(r[3]);
-            preserveTrailingComment();
-            continue;
-        }
-
-        // split trailing END*/NEXT/UNTIL terminators
-        const tmp = [];
-        if (splitTerminator(code, tmp, kwRegex)) {
-            normalized.push(...tmp);
-            preserveTrailingComment();
-            continue;
-        }
-
-        // split one-line block headers from their body
-        let headerMatch = null;
-        for (const { re, tailStartsWithKeyword } of headerSplits) {
-            const match = code.match(re);
-            if (match && (!tailStartsWithKeyword || reStartsWithKeyword.test(match[2]))) {
-                headerMatch = match;
-                break;
-            }
-        }
-        if (headerMatch) {
-            push(headerMatch[1]);
-            pushTail(headerMatch[2]);
-            preserveTrailingComment();
-            continue;
-        }
-
-        push(code, comment);
+        code = replace(code.replace(/\t/g, tab));
+        lines[i] = { code, comment };
     }
 
-    // ------------------------ General Replacing ------------------------
+    // ------------------------ Seperate Multi-Statement Lines ------------------------
 
-    for (let i = 0; i < normalized.length; i++) {
-        let line = String(normalized[i].code).trim();
-
-        // protect arrows
-        line = line.replace(/\s*(?:←|<--|<-)\s*/g, ' <- ');
-        line = line.replace(/\s*(?:<-)\s*/g,       ''); // protect
-
-        line = line.replace(kwRegex, keyword => keyword.toUpperCase()) // keywords
-                   .replace(/\s*,\s*/g, ', ')  // comma spacing
-                   .replace(/\s*:\s*/g, ' : ') // colon spacing
-                   .replace(/\s*(\+|\*|\/|\^)\s*/g, ' $1 ') // +*/^ spacing
-                   .replace(/(?<=\S)\s*-\s*(?=\S)/g, ' - ') // -    spacing
-                   .replace(/<\s*=|>\s*=|<\s*>/g, m => m.replace(/\s/g, '')) // split comparison operators
-                   .replace(/\s*(<>|<=|>=|(?<![<>])=|<(?![=>])|(?<![<=])>(?!=))\s*/g, ' $1 ')
-                   .replace(/\b(AND|OR|NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (')
-                   .replace(/\b(FUNCTION|PROCEDURE)\s+([A-Za-z][A-Za-z0-9_]*)\s+\(/gi, '$1 $2(')
-                   .replace(/\(\s+/g, '(')    // spaces after        opening paren
-                   .replace(/\s+\)/g, ')')    // spaces       before closing paren
-                   .replace(/\s+\[\s+/g, '[') // spaces after/before opening bracket
-                   .replace(/\s+\]/g, ']')    // spaces       before closing brcaket
-                   .replace(/\b(STEP|TO)\s*-\s+(?=[0-9.])/gi, '$1 -')
-                   .replace(/\[([^\[\]]+)\]/g, (_, s) => '[' + s.replace(/\s*,\s*/g, ', ').replace(/\s*:\s*/g, ':').trim() + ']')
-                   .replace(/ {2,}/g, ' ')
-                   .replace(/(^|\(|,|=)\s*-\s+(?=[0-9.])/gi, p1 => p1 + '-');
-
-        // unprotect arrows
-        line = line.replace(//g, ' <- ');
-
-        normalized[i].code = line.trim();
-    }
-
-    // ------------------------ Declared-name normalization ------------------------
-
-    const declaredNameMap = Object.create(null);
-    function addDeclaredName(name) {
-        const n = String(name);
-        const lower = n.toLowerCase();
-        if (!declaredNameMap[lower]) declaredNameMap[lower] = n;
-    }
-    function recordDeclaredNames(prot) {
+    for (let i = 0; i < lines.length; ) {
+        let { code, comment } = lines[i];
         let r;
+        const newLines = [];
 
-        //          DECLARE   ----names----   :
-        if (r = prot.match(/^\s*DECLARE\s+([A-Za-z][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z][A-Za-z0-9_]*)*)\s*:/i)) {
-            r[1].split(',').map(s => s.trim()).forEach(addDeclaredName);
-            return;
+        const pushEnd = (end) => {
+            end = end.trim();
+            if (!end) return;
+            if (!seperateEndKeyword(end, newLines)) newLines.push({ code: end, comment: '' });
+        };
+
+        //                   -left-     -IF|FOR  !      READ|WRITE   )|WHILE|REPEAT|CASE|PROCEDURE|FUNCTION-     rest
+        if (r = code.match(/^(.*\S)\s+\b(IF|FOR(?!\s+(?:READ|WRITE)\b)|WHILE|REPEAT|CASE|PROCEDURE|FUNCTION)\b\s*(.*)$/i)) {
+            newLines.push({ code: r[1], comment: '' });
+            code = r[2] + ' ' + r[3].trim();
         }
-        //          CONSTANT   ----name----
-        if (r = prot.match(/^\s*CONSTANT\s+([A-Za-z][A-Za-z0-9_]*)\b/i)) {
-            addDeclaredName(r[1]);
-            return;
+
+        //                      -IF  cond-   -THEN-     aft.
+        if (r = code.match(/^\s*(IF\s+.+?)\s*(THEN)\b\s*(.*)$/i)) {
+            newLines.push({ code: r[1].trim(), comment: '' });
+            newLines.push({ code: r[2]       , comment: '' });
+            pushEnd(r[3]);
         }
-        //          PROCEDURE   ----name----   ?----params----
-        if (r = prot.match(/^\s*PROCEDURE\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?/i)) {
-            addDeclaredName(r[1]);
-            const params = (r[2] || '').trim();
-            if (params) params.split(',').forEach(p => {
-                const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
-                if (pm) addDeclaredName(pm[1]);
+
+        //                           -THEN|ELSE|REPEAT-     aft.
+        else if (r = code.match(/^\s*(THEN|ELSE|REPEAT)\b\s*(.*)$/i)) {
+            newLines.push({ code: r[1], comment: '' });
+            pushEnd(r[2]);
+        }
+
+        //                         befo.     -ELSE|ENDIF-     aft.
+        else if ((r = code.match(/^(.*?)\s+\b(ELSE|ENDIF)\b\s*(.*)$/i)) && r[1].trim()) {
+            newLines.push({ code: r[1].trim(), comment: '' });
+            newLines.push({ code: r[2]       , comment: '' });
+            pushEnd(r[3]);
+        }
+
+        // seperate start block keyword from a same line block
+        else if (!seperateEndKeyword(code, newLines)) {
+            const split = seperateStartKeyword(code);
+            if (split) { //   split needed
+                newLines.push({ code: split[0], comment: '' }); // start keyword on own line
+                pushEnd(split[1]);                              // trailing text on new lines
+            } else {    // no split needed
+                newLines.push({ code, comment });
+                comment = '';
+            }
+        }
+
+        // add comment
+        if (comment && newLines.length > 0 && !newLines[newLines.length - 1].comment) {
+            newLines[newLines.length - 1].comment = comment;
+        }
+
+        lines.splice(i, 1, ...newLines); // add to lines
+        i += newLines.length;
+    }
+
+    // one-line replacing
+    for (let i = 0; i < lines.length; i++) {
+        let line = String(lines[i].code).trim();
+
+        line = line.replace(/\s*(?:←|<--|<-)\s*/g, ' <- '); // normalize arrows
+        line = line.replace(/\s*(?:<-)\s*/g, '');          // protect   arrows
+        line = line
+            .replace(/\s*,\s*/g, ', ' ) // comma spacing
+            .replace(/\s*:\s*/g, ' : ') // colon spacing
+            .replace(/\s*([*\/\^])\s*/g,                          ' $1 ') // */^ spacing
+            .replace(/(?<![eE])\s*\+\s*/g,                        ' + ' ) // + spacing
+            .replace(/(?<=[A-Za-z0-9_\)\]])(?<![eE])-\s*(?=\S)/g, ' - ' ) // - spacing
+            .replace(/[<>]\s*=|<\s*>/g, m => m.replace(/\s/g, '')) // join <>, <=, >= (so next replace can run)
+            .replace(/\s*(<>|<=|>=|=|<|>)\s*/g, ' $1 ') // spaces next to comp ops
+            .replace(/\b(AND|OR|NOT|IF|WHILE|RETURN)\s*\(/gi, '$1 (') // keywords before (
+            .replace(/\b(FUNCTION|PROCEDURE)\s+([A-Za-z][A-Za-z0-9_]*)\s+\(/gi, '$1 $2(') // func/proc declarations
+            .replace(/\(\s+/g,    '(') // paren   open
+            .replace(/\s+\)/g,    ')') // paren   close
+            .replace(/\s+\[\s+/g, '[') // bracket open
+            .replace(/\s+\]/g,    ']') // bracket close
+            .replace(/\b(STEP|TO)\s*-\s+(?=[0-9.])/gi, '$1 -') // STEP/TO next to minus
+            .replace(/\[([^\[\]]+)\]/g, (_, s) =>'[' + s.replace(/\s*,\s*/g, ', ')
+                                                        .replace(/\s*:\s*/g, ':').trim() + ']') // comma, colon spacing inside brackets
+            .replace(/ {2,}/g,  ' '); // too many spaces
+
+        line = line.replace(//g, ' <- '); // unprotect
+        lines[i].code = line.trim();
+    }
+
+    // ------------------------ Normalize Declared Names ------------------------
+
+    const names = Object.create(null);
+
+    function addName(name) {
+        const lower = name.toLowerCase();
+        if (!names[lower]) names[lower] = name;
+    }
+
+    // get all declared names
+    for (const line of lines) {
+        let r; // regex match result
+
+        //                         ? DECLARE|CONSTANT    names
+        if (r = line.code.match(/^(?:DECLARE|CONSTANT)\s+(.+?)$/i)) {
+            r[1].split(',').forEach(s => {
+                const m = s.trim().match(/^[A-Za-z][A-Za-z0-9_]*/);
+                if (m) addName(m[0]);
             });
-            return;
+            continue;
         }
-        //          FUNCTION   ----name----   ?----params----   RETURNS
-        if (r = prot.match(/^\s*FUNCTION\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:\(([^)]*)\))?\s+RETURNS\b/i)) {
-            addDeclaredName(r[1]);
-            const params = (r[2] || '').trim();
-            if (params) params.split(',').forEach(p => {
-                const pm = p.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
-                if (pm) addDeclaredName(pm[1]);
+
+        //                         ? PROCEDURE|FUNCTION    ----------name---------
+        if (r = line.code.match(/^(?:PROCEDURE|FUNCTION)\s+([A-Za-z][A-Za-z0-9_]*)\b/i)) {
+            addName(r[1]);
+
+            // add params
+            //                               (-params )
+            const params = line.code.match(/\(([^)]*)\)/);
+            if (params) params[1].split(',').forEach(param => {
+                const r = param.match(/^\s*([A-Za-z][A-Za-z0-9_]*)/);
+                if (r) addName(r[1]);
             });
-            return;
+            continue;
         }
     }
-    function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-    function applyDeclaredNames(prot) {
-        let out = prot;
-        for (const lower in declaredNameMap) {
-            const declaredName = declaredNameMap[lower];
-            const re = new RegExp(`\\b${escapeRegExp(lower)}\\b`, 'gi');
-            out = out.replace(re, declaredName);
-        }
-        return out;
+
+    // normalize case (only if keyword is not a declared name)
+    for (const line of lines) {
+        line.code = line.code.replace(/[A-Za-z][A-Za-z0-9_]*/g, word => {
+            const declared = names[word.toLowerCase()];
+            if (declared) return declared;
+            return word.replace(keywordRegex, kw => kw.toUpperCase());
+        });
     }
 
-    // collect declared names
-    normalized.forEach(({ code }) => recordDeclaredNames(code));
-    // normalize every line
-    for (let i = 0; i < normalized.length; i++) {
-        normalized[i].code = applyDeclaredNames(normalized[i].code);
-    }
-
-    // ------------------------ Indentation ------------------------
+    // ------------------------ Final Cleanup & Indentation ------------------------
 
     let indent = 0;
-    const out = [];
+    const formatted = [];
 
-    for (let i = 0; i < normalized.length; i++) {
-        const { code, comment } = normalized[i];
-
-        // close blocks before printing current line
-        if (/^\s*ENDIF\s*$/i.test(code)) {
-            indent = Math.max(0, indent - 1);
-        } else if (
-            /^\s*ELSE\s*$/i.test(code)         ||
-            /^\s*ENDWHILE\s*$/i.test(code)     ||
-            /^\s*ENDPROCEDURE\s*$/i.test(code) ||
-            /^\s*ENDFUNCTION\s*$/i.test(code)  ||
-            /^\s*ENDCASE\s*$/i.test(code)      ||
-            /^\s*UNTIL\b/i.test(code)          ||
-            /^\s*NEXT(\b|$)/i.test(code)
-        ) {
-            indent = Math.max(0, indent - 1);
-        }
-
-        // restore literals
-        const restored = unreplace(code);
-
-        let lineOut;
-        const halfUnit = ' '.repeat(Math.floor(tabSize / 2));
-        if (/^\s*THEN\s*$/i.test(code) || /^\s*ELSE\s*$/i.test(code)) {  // THEN/ELSE
-            lineOut = tab.repeat(indent) + halfUnit + restored;
-        } else if (/^\s*(?:[A-Za-z][A-Za-z0-9_]*|[+-]?(?:\d+(?:\.\d*)?|\.\d+)|\d+|'[^']*'|"[^"]*"|[^A-Za-z0-9\s:])\s*:\s*/i.test(restored) || /^\s*OTHERWISE\b/i.test(restored)) {  // CASE option
-            const base = Math.max(0, indent - 1);
-            lineOut = tab.repeat(base) + halfUnit + restored;
-        } else {
-            lineOut = tab.repeat(indent) + restored;
-        }
-
-        // keep inline comment with a space
-        if (comment) {
-            const needsSpace = lineOut && !/\s$/.test(lineOut);
-            lineOut += (needsSpace ? ' ' : '') + comment.trimStart();
-        }
-
-        out.push(lineOut);
-
-        // open blocks after printing current line
+    for (const { code, comment } of lines) {
+        // end block
         if (
-            /^\s*THEN\s*$/i.test(code)          ||
-            /^\s*ELSE\s*$/i.test(code)          ||
-            /^\s*WHILE\b.*\bDO\s*$/i.test(code) ||
-            /^\s*FOR\b/i.test(code)             ||
-            /^\s*REPEAT\s*$/i.test(code)        ||
-            /^\s*PROCEDURE\b/i.test(code)       ||
-            /^\s*FUNCTION\b/i.test(code)        ||
-            /^\s*CASE\s+OF\b/i.test(code)
-        ) indent += 1;
-    }
+                   /^\s*ENDIF\s*$/i.test(code) ||
+                    /^\s*ELSE\s*$/i.test(code) ||
+                /^\s*ENDWHILE\s*$/i.test(code) ||
+            /^\s*ENDPROCEDURE\s*$/i.test(code) ||
+             /^\s*ENDFUNCTION\s*$/i.test(code) ||
+                 /^\s*ENDCASE\s*$/i.test(code) ||
+                     /^\s*UNTIL\b/i.test(code) ||
+                  /^\s*NEXT(\b|$)/i.test(code)
+        ) indent = Math.max(0, indent - 1);
 
-    return out.join('\n').replace(/\n{3,}/g, '\n\n');
+        const unreplaced = unreplace(code);
+
+        // add indentation
+        let lineOut;
+        if (/^\s*THEN\s*$/i.test(code) || /^\s*ELSE\s*$/i.test(code)) {   // if; half indent
+            lineOut = tab.repeat(indent)                  + half + unreplaced;
+        } else if (hasCaseLabel(code) || /^\s*OTHERWISE\b/i.test(code)) { // case; half indent
+            lineOut = tab.repeat(Math.max(0, indent - 1)) + half + unreplaced;
+        } else {                                                          // regular
+            lineOut = tab.repeat(indent)                         + unreplaced;
+        }
+
+        // add comment
+        if (comment) {
+            if (!lineOut || /\s$/.test(lineOut)) lineOut +=       comment.trimStart(); // empty/whitespace-only line: no space needed
+            else                                 lineOut += ' ' + comment.trimStart(); // code line: add space before comment
+        }
+
+        formatted.push(lineOut);
+
+        // start block
+        if (
+                     /^\s*THEN\s*$/i.test(code) ||
+                     /^\s*ELSE\s*$/i.test(code) ||
+            /^\s*WHILE\b.*\bDO\s*$/i.test(code) ||
+                        /^\s*FOR\b/i.test(code) ||
+                   /^\s*REPEAT\s*$/i.test(code) ||
+                  /^\s*PROCEDURE\b/i.test(code) ||
+                   /^\s*FUNCTION\b/i.test(code) ||
+                  /^\s*CASE\s+OF\b/i.test(code)
+        ) indent++;
+    }
+    return formatted.join('\n');
 }
