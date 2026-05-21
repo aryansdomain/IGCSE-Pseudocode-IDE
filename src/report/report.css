@@ -6,9 +6,8 @@
     --elev: #272823;
     --text: #e6edf3;
     --muted: #8b949e;
-    --intense-muted: #272825;
     --border: #2b313b;
-    --green-accent: #22c55e;
+    --green: #22c55e;
     --red: #ff7b72;
 
     --radius: 14px;
@@ -23,9 +22,8 @@
     --elev: #ffffff;
     --text: #24292f;
     --muted: #57606a;
-    --intense-muted: #e2e3e8;
     --border: #d0d7de;
-    --green-accent: #1a7f37;
+    --green: #1a7f37;
     --red: #e14353;
 }
 
@@ -262,7 +260,7 @@ html.mode-switching *::after {
     align-items: center;
     justify-content: center;
     font-size: 12px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     z-index: 10;
 }
 .file-preview .remove-btn:hover {
@@ -278,7 +276,7 @@ html.mode-switching *::after {
     color: var(--text);
     padding: 8px 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 /* mode button */
@@ -288,7 +286,7 @@ html.mode-switching *::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     position: relative;
     font-size: 18px;
     padding-right: 40px;
@@ -303,7 +301,7 @@ html.mode-switching *::after {
     color: var(--muted);
     cursor: pointer;
     padding: 8px;
-    transition: background 0.2s;
+    transition: transform 0.2s ease;
 }
 
 .btn.mode:hover i,
@@ -324,15 +322,15 @@ html.mode-switching *::after {
 
 /* primary */
 .btn.primary {
-    border: 2px solid var(--green-accent);
+    border: 2px solid var(--green);
     background: var(--panel);
-    color: var(--green-accent);
+    color: var(--green);
     font-weight: 600;
     padding: 8px 16px;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
 }
 .btn.primary:hover {
-    background: var(--green-accent);
+    background: var(--green);
     color: white;
 }
 
@@ -340,14 +338,14 @@ html.mode-switching *::after {
 .btn.secondary {
     border: 1px solid var(--border);
     background: var(--panel);
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
 }
 .btn.secondary:hover {
-    background: var(--intense-muted);
+    background: var(--border);
 }
 
 /* actions row (the two buttons) */
