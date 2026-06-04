@@ -62,12 +62,12 @@
     </script>
 
     <!-- Loading icon -->
-    <script src="src/utils/loading.js"></script>
+    <script type="module" src="src/utils/loading.js"></script>
 
     <!-- Tour -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js/minified/introjs.min.css">
     <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
-    <script src="src/tour/tour.js" defer></script>
+    <script type="module" src="src/tour/tour.js"></script>
     <link rel="stylesheet" href="src/tour/tour.css">
 
     <!-- Load font families -->
@@ -134,22 +134,22 @@
             <div id="editorPane">
                 <div class="topbar" role="toolbar" id="topBar" aria-label="Top Bar">
                     <div class="controls">
-                        <button class="btn expand-console"  type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
+                        <button class="btn expand-console" type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
                             <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
                         </button>
-                        <button class="btn format"  type="button"  title="Format code" id="formatBtn">
+                        <button class="btn format"         type="button"  title="Format code"                      id="formatBtn">
                             <span>Format</span>
                         </button>
-                        <button class="btn copy"  type="button"  title="Copy code" id="editorCopyBtn">
+                        <button class="btn copy"           type="button"  title="Copy code"                        id="editorCopyBtn">
                             <i class="fas fa-clone"></i>
                         </button>
-                        <button class="btn download"  type="button"  title="Download code" id="editorDownloadBtn">
+                        <button class="btn download"       type="button"  title="Download code"                    id="editorDownloadBtn">
                             <i class="fas fa-download"></i>
                         </button>
-                        <button class="btn upload"  type="button"  title="Upload text file" id="uploadBtn">
+                        <button class="btn upload"         type="button"  title="Upload text file"                 id="uploadBtn">
                             <i class="fas fa-upload"></i>
                         </button>
-                        <input type="file" id="fileInput" accept=".txt,.js,.py,.java,.cpp,.c,.h,.css,.html,.json,.xml,.md" style="display: none;">
+                        <input                             type="file"                                             id="fileInput" accept=".txt,.js,.py,.java,.cpp,.c,.h,.css,.html,.json,.xml,.md" style="display: none;">
                     </div>
 
                     <div class="files-bar" id="filesBar" role="tablist" aria-label="Editor files">
@@ -208,13 +208,12 @@
         <!-- Settings Overlay -->
         <div id="settingsOverlay" class="settings-overlay" style="display: none;">
             <div class="settings-panel">
-                <div class="settings-header">
-                    <h3>Settings</h3>
-                    <button class="btn close" type="button" id="closeSettings"><i class="fa-solid fa-xmark"></i></button>
-                </div>
                 <div class="settings-content">
                     <div class="setting-group">
-                        <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
+                        <div class="settings-top-row">
+                            <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
+                            <button class="btn close" type="button" id="closeSettings"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
                         <div class="slider-container">
                             <input type="range" id="tabSpacesSlider" min="0" max="8" value="4" step="1" />
                             <div class="slider-ticks tab-ticks">
@@ -305,19 +304,19 @@
                         <label for="fontFamilySelect">Font Family:</label>
                         <select id="fontFamilySelect" class="font-select">
                             <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace" selected>ACE Monospace</option>
-                            <option value="'Courier New', Courier, monospace">Courier New</option>
-                            <option value="'Lucida Console', Monaco, monospace">Lucida Console</option>
-                            <option value="'Consolas', 'Courier New', monospace">Consolas</option>
-                            <option value="'Monaco', 'Menlo', monospace">Monaco</option>
-                            <option value="'Source Code Pro', monospace">Source Code Pro</option>
-                            <option value="'Fira Code', monospace">Fira Code</option>
-                            <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
-                            <option value="'Roboto Mono', monospace">Roboto Mono</option>
-                            <option value="'Ubuntu Mono', monospace">Ubuntu Mono</option>
-                            <option value="'Inconsolata', monospace">Inconsolata</option>
-                            <option value="'PT Mono', monospace">PT Mono</option>
-                            <option value="'Space Mono', monospace">Space Mono</option>
-                            <option value="'Hack', monospace">Hack</option>
+                            <option value="'Courier New', Courier,                                               monospace"         >Courier New</option>
+                            <option value="'Lucida Console', Monaco,                                             monospace"         >Lucida Console</option>
+                            <option value="'Consolas', 'Courier New',                                            monospace"         >Consolas</option>
+                            <option value="'Monaco', 'Menlo',                                                    monospace"         >Monaco</option>
+                            <option value="'Source Code Pro',                                                    monospace"         >Source Code Pro</option>
+                            <option value="'Fira Code',                                                          monospace"         >Fira Code</option>
+                            <option value="'JetBrains Mono',                                                     monospace"         >JetBrains Mono</option>
+                            <option value="'Roboto Mono',                                                        monospace"         >Roboto Mono</option>
+                            <option value="'Ubuntu Mono',                                                        monospace"         >Ubuntu Mono</option>
+                            <option value="'Inconsolata',                                                        monospace"         >Inconsolata</option>
+                            <option value="'PT Mono',                                                            monospace"         >PT Mono</option>
+                            <option value="'Space Mono',                                                         monospace"         >Space Mono</option>
+                            <option value="'Hack',                                                               monospace"         >Hack</option>
                         </select>
                     </div>
                     <div class="setting-group">
@@ -333,11 +332,8 @@
         <!-- Examples Overlay -->
         <div id="examplesOverlay" class="examples-overlay" style="display: none;">
             <div class="examples-panel">
-                <div class="examples-header">
-                    <h3>Examples</h3>
-                    <button class="btn close" type="button" id="closeExamples"><i class="fa-solid fa-xmark"></i></button>
-                </div>
                 <div class="examples-content">
+                    <button class="btn close" type="button" id="closeExamples"><i class="fa-solid fa-xmark"></i></button>
                     <button class="btn example-btn" type="button" id="varsConstsDTsExampleBtn">
                         <span>Variables, Constants, Data Types</span>
                     </button>
@@ -374,13 +370,11 @@
 
         <!-- Footer -->
         <div class="footer">
-            <span>Made with
-                <i class="fas fa-heart"></i>
-                in India</span>
+            <span>Made with <i class="fas fa-heart"></i> in India</span>
         </div>
 
         <!-- JavaScript -->
-        <script src="script.js"></script>
+        <script type="module" src="script.js"></script>
     </div>
 </body>
 </html>
