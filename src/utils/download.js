@@ -26,7 +26,7 @@ export function initDownload({
     const downloadEditor = async () => {
         try {
             const code = getCode();
-            const filename = getActiveFileName();
+            const filename = getActiveFileName().replace(/\.psc$/i, '.txt'); // download .psc as .txt
             await saveTextAsFile(filename, code);
 
             // track code download analytics
