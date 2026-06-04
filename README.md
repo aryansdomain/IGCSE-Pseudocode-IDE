@@ -1,6 +1,6 @@
 # IGCSE Pseudocode IDE
 
-The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and additional features that helps students practice their code-writing skills and real-world computer literacy. It can be accessed at https://igcse-ide.com.
+The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGCSE Computer Science. It runs in-browser, and features an editor, console, and additional features that help students practice their code-writing skills and real-world computer literacy. It can be accessed at <https://igcse-ide.com>.
 The IDE is open-source, free-to-use, has no ads, and never collects your personal information without your consent.
 
 ## Language
@@ -9,7 +9,8 @@ Following are some guidelines that the interpreter uses, that do not directly fo
     * Constants can only be declared in the global scope, not in sub-scopes like procedures or loops.
     * Variables cannot be declared (or initialized without being declared) in sub-scopes.
 * Declaration
-    * Declaration is not needed for a variable, although initalization is still needed.
+    * Declaration is not needed for a variable, although initialization is still needed (`INPUT` and `READFILE` count as initialization).
+    * When assigning to an undeclared variable, its type is inferred from the value (`X <- 5` makes `X` an INTEGER, `X <- 5.0` makes it a REAL).
     * Multiple variables are allowed to be declared in one line (`DECLARE Var1, Var2, Var3 : INTEGER`)
     * Multiple constants are allowed to be declared in one line (`CONSTANT Const1, Const2, Const3 <- 5`)
 * Identifiers
@@ -31,11 +32,12 @@ Following are some guidelines that the interpreter uses, that do not directly fo
 * Conditionals
     * `CASE OF` can accept expressions (that evaluate to values) as the check value, not just variables.
     * `OTHERWISE` is not required to be the last case in a `CASE OF` block.
-* Loops
-    * In `FOR` loops, the `THEN` is allowed to be in the same line as the `IF`: `IF Num < 5 THEN`. Formatting still moves the `THEN` to the next line.
-    * After the `FOR` loop, the iterator variable is set to the end value of the `FOR` only if it ran.
     * Nested `CASE` blocks are not allowed.
-    * Loop size is limited to `1,000,000` loops.
+    * The `THEN` is allowed to be in the same line as the `IF`: `IF Num < 5 THEN`. Formatting still moves the `THEN` to the next line.
+* Loops
+    * `FOR` loops support negative `STEP` values.
+    * After a `FOR` loop, the iterator variable is set to the end value only if the loop ran.
+    * All loops are limited to `1,000,000` iterations.
 * Arrays
     * Arrays cannot be assigned directly (`A <- [1, 2, 3]`).
     * Total array size is limited to `1,000,000` elements.
@@ -43,6 +45,8 @@ Following are some guidelines that the interpreter uses, that do not directly fo
     * Procedures and functions do not have to be declared at the start of the program.
     * They can only be declared in the global scope, not in sub-scopes like conditionals or loops.
     * Parameters can share a name with a global variable, and the parameter takes precedence inside the procedure/function body.
+* File Handling
+    * File handling does not use the files on your device, but the file system built into the IDE.
 * Other
     * The assignment arrow can either be `<-`, `<--`, or `←`.
 
@@ -69,14 +73,15 @@ and see how it works.
 
 ## Console
 [XtermJS](https://xtermjs.org/) (MIT License) is used for the console. Type 'help' in the console for a list of all commands, which are:
-* __run:__ Run the code
-* __clear:__ Clear console
+* __run:__    Run the code
+* __clear:__  Clear console
 * __format:__ Format the code
-* __tab:__ Set the editor tab size (0-8 spaces)
-* __font:__ Set the editor font size (6-38 px)
-* __mode:__ Toggle the mode
-* __theme__ Change the editor theme
-* __help:__ Print a dialog containing the list of commands
+* __tab:__    Set the editor tab size (0-8 spaces)
+* __font:__   Set the editor font size (6-38 px)
+* __mode:__   Toggle the mode
+* __theme:__  Change the editor theme
+* __rename:__ Rename a file
+* __help:__   Print a dialog containing the list of commands
 
 ## Splitter and Resizing
 The splitter is a handle in between the editor and the console that allows you to resize them. Double click the splitter to reset to a 50-50 ratio.
@@ -89,13 +94,13 @@ Code output is written in the console, and you can input values there as well (j
 The code will either finish running successfully, run with warnings, or stop due to an error.
 
 ## Info and Code Examples
-If you ever want to see the official documentation of the language, click the info button on the top bar to acess the IGCSE pseudocode syllabus guide.
+If you ever want to see the official documentation of the language, click the info button on the top bar to access the IGCSE pseudocode syllabus guide.
 Click the code examples button (to the left of the info button) to see the different features and functions of the language. Press a button, and code gets filled into the editor. You can run the code, and see, for example, how arrays work.
 
 ## File System
-The editor supports multiple files, each able to store seperate code. A maximum of 7 files are allowed, and each one is saved to your computer (so reloading the page restores the code).
-The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file. The files can also be renamed by clicking `return` when focused on the files (not on the editor).
+The editor supports multiple files, each able to store separate code. A maximum of 7 files are allowed, and each one is saved to the device, so reloading the page restores all files and the active tab.
+File extensions can either be `.psc` (pseudocode) or `.txt` (plain text), with names up to 16 characters. The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file. The files can also be renamed by clicking `return` when focused on the files.
 
 ## Issue Report
 Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.
-If there are any issues that are not reportable using the Issue Report feature, email ascoder1248@gmail.com.
+If there are any issues that are not reportable using the Issue Report feature, email [ascoder1248@gmail.com](mailto:ascoder1248@gmail.com).
