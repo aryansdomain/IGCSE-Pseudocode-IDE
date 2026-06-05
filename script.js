@@ -351,7 +351,7 @@ UI.clearBtn.addEventListener('click', () => {
 
 // info button
 UI.infoBtn.addEventListener('click', () => {
-    window.open('rules.pdf', '_blank', 'noopener');
+    window.open('code.pdf', '_blank', 'noopener');
 });
 
 // signal that UI is ready
