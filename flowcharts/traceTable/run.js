@@ -11,6 +11,8 @@ let pendingInputVar = null;
 let seedSkip        = 0;     // number of prelude array-seed `variable` messages still to ignore
 let onInitialRow    = false; // true while runtime is still parked on row 0 (a row that was prefilled)
 let recording       = true;  // false once the table is full: the flowchart keeps running untraced
+let rowOpenedInNode = false; // a row was opened while the node that owes a loop boundary ran
+let iterationArmed  = false; // a loop boundary is owed and the node(s) it is owed to are running
 
 // whether row 0 holds values the *user* put there, as opposed to values a run wrote into
 // it. this cannot be answered by looking at the row: a run that began on row 0 leaves it
@@ -192,8 +194,9 @@ function ensureRuntimeRow() {
 // advance to the next row, reusing an existing (already-cleared) row before appending a new one.
 // filling the table stops the trace, never the flowchart: past the row limit the run carries on
 // untraced so it still reaches its OUTPUT, which keeps long loops and long charts usable
-export function addRunRow() {
-    onInitialRow = false; // any row advance leaves the initial row behind
+function addRunRow() {
+    onInitialRow    = false; // any row advance leaves the initial row behind
+    rowOpenedInNode = true;
     if (!recording) return true;
 
     const next = runRowIndex + 1;
@@ -213,6 +216,27 @@ export function addRunRow() {
     writtenThisRow = new Set();
     outputThisRow  = false;
     return true;
+}
+
+// a loop boundary is owed to the node about to run: watch whether that node opens a row.
+// a boundary deferred over several nodes re-announces itself for each of them, and they
+// are watched as one, so only the first arms it
+export function startIterationNode() {
+    if (iterationArmed) return;
+    iterationArmed  = true;
+    rowOpenedInNode = false;
+}
+
+// that node has finished, so the boundary falls due. a node whose own writes already
+// opened a row has drawn it — taking another would leave the row it opened holding only
+// the first of the node's variables, with the rest pushed a row down. that is what split
+// a loop head spread over several nodes (INPUT X, then INPUT Y) across two rows, where
+// the same statements sharing one node stayed on one
+export function endIterationNode() {
+    const opened = rowOpenedInNode;
+    iterationArmed  = false;
+    rowOpenedInNode = false;
+    return opened || addRunRow();
 }
 
 // prepare a locked table for a run; reuse the current rows (keeping their count) when the
@@ -264,6 +288,8 @@ export function beginRun(result) {
     writtenThisRow  = new Set();
     outputThisRow   = false;
     pendingInputVar = null;
+    rowOpenedInNode = false;
+    iterationArmed  = false;
     lockEditing(true);
     return true;
 }

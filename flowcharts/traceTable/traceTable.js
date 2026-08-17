@@ -3,7 +3,7 @@
 import { varsTable, outputTable, colId, addRow, clearRows, clearAllRows, syncNaturalRowHeight, updateAddBtn, updateRemoveRowBtns, fit } from './table.js';
 import { getArraySpecs }                                                  from './arrays.js';
 import { save, load, clear }                                              from './storage.js';
-import { makeTable, showError, beginRun, setVar, addRunRow, setOutput, focusInput, finishRun,
+import { makeTable, showError, beginRun, setVar, startIterationNode, endIterationNode, setOutput, focusInput, finishRun,
          isFirstRowPrefilled, resetFirstRowPrefilled, noteCellEdited, NOTHING_TO_TRACE } from './run.js';
 import { initCard }                                                       from './card.js';
 
@@ -89,5 +89,5 @@ export function initTraceTable(opts) {
     // auto restore on init
     load(getFileId());
 
-    return { clear, showError, makeTable, getArraySpecs, beginRun, setVar, addRunRow, setOutput, focusInput, finishRun };
+    return { clear, showError, makeTable, getArraySpecs, beginRun, setVar, startIterationNode, endIterationNode, setOutput, focusInput, finishRun };
 }

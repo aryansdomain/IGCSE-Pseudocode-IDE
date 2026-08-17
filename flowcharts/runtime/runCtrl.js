@@ -45,8 +45,12 @@ export function initRunCtrl({ traceRun, highlightNode, clearHighlight, showError
                     if (!traceRun.setVar(msg.name, msg.value, msg.index)) finishRun(localRunId); // set a variable, if error finish the run
                     break;
 
+                case 'iteration_start':
+                    traceRun.startIterationNode();
+                    break;
+
                 case 'iteration':
-                    if (!traceRun.addRunRow()) finishRun(localRunId); // loop boundary: start a new row
+                    if (!traceRun.endIterationNode()) finishRun(localRunId);
                     break;
 
                 case 'output':

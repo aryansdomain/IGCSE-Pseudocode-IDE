@@ -192,6 +192,13 @@ export async function runGraph(graph, arraySpecs = []) {
         const breakAfter = rowOwed;
         rowOwed = false;
 
+        // announce the node the boundary is owed to before it runs. a node that overwrites
+        // a variable already traced on the current row opens a row by itself, which draws
+        // the same boundary — the trace table needs the node's extent to tell that apart
+        // from a row it opened earlier in the iteration, and spend only one row either way.
+        // resent for every node of a deferred run (below); the trace table takes the first
+        if (breakAfter) self.postMessage({ type: 'iteration_start' });
+
         try {
             switch (node.type) {
                 case 'terminator': // STOP has no outgoing edge
@@ -229,6 +236,11 @@ export async function runGraph(graph, arraySpecs = []) {
             throw e;
         }
 
-        if (breakAfter) self.postMessage({ type: 'iteration' });
+        // a run of io nodes is one read as far as the trace table is concerned: a loop head
+        // written as INPUT X then INPUT Y over two nodes should trace like the same two
+        // statements sharing one node, so the boundary waits until the run is over rather
+        // than falling between them and splitting the read across two rows
+        if      (breakAfter && node.type === 'io' && nodeMap.get(cur)?.type === 'io' && !rowOwed) rowOwed = true;
+        else if (breakAfter) self.postMessage({ type: 'iteration' });
     }
 }
