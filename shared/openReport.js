@@ -9,8 +9,8 @@ function wireIssueButton() {
     el.addEventListener('click', (e) => {
         e.preventDefault();
 
-        // build report.html URL and fill data
-        const reportPath = '../report/report.html';
+        // make report page URL and fill data
+        const reportPath = '../report/';
         const url = new URL(reportPath, location.origin);
 
         // pass info to url
