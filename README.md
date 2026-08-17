@@ -4,13 +4,14 @@ The IGCSE Pseudocode IDE is an IDE specifically for the Pseudocode taught in IGC
 The IDE is open-source, free-to-use, has no ads, and never collects your personal information without your consent.
 
 ## Language
-Following are some guidelines that the interpreter uses, that do not directly follow from reading the [official rules](https://igcse-ide.com/rules.pdf).
+Following are some guidelines that the interpreter uses, that do not directly follow from reading the [official rules](https://igcse-ide.com/code/code.pdf).
 * Scopes
-    * Constants can only be declared in the global scope, not in sub-scopes like procedures or loops.
+    * Sub-scopes can be created inside procedures and functions, not in loops and conditionals.
+    * Constants can only be declared in the global scope, not in sub-scopes.
     * Variables cannot be declared (or initialized without being declared) in sub-scopes.
 * Declaration
-    * Declaration is not needed for a variable, although initialization is still needed (`INPUT` and `READFILE` count as initialization).
-    * When assigning to an undeclared variable, its type is inferred from the value (`X <- 5` makes `X` an INTEGER, `X <- 5.0` makes it a REAL).
+    * Declaration is not needed for a variable, although initialization is still required (`INPUT` and `READFILE` count as initialization).
+    * When assigning to an undeclared variable, its type is inferred from the value. The exception is that a whole number infers REAL rather than INTEGER (`X <- 5` and `X <- 5.0` both make `X` a REAL), so assigning it a decimal later is not an error.
     * Multiple variables are allowed to be declared in one line (`DECLARE Var1, Var2, Var3 : INTEGER`)
     * Multiple constants are allowed to be declared in one line (`CONSTANT Const1, Const2, Const3 <- 5`)
 * Identifiers
@@ -20,10 +21,12 @@ Following are some guidelines that the interpreter uses, that do not directly fo
 * Data Types
     * A char must be in single quotes, otherwise it will be considered a string.
     * A string can be in double quotes or single quotes.
-    * A real can be assigned an integer value (`Num <- 5`), but it will always be output in the real format, with numbers on both sides of the decimal point (`5.0`). An integer can be assigned a real value so long as that real is an integer (`5.0`).
+    * A real can be assigned an integer value (`Num <- 5`), but it will always be output in the real format, with numbers on both sides of the decimal point (`5.0`).
+    * An integer can be assigned a real value as long as that real is an integer.
     * Reals can be used in contexts where integers are supposed to be used, as long as the reals are integer-valued.
     * Similarly, a string can be assigned a char value. A char can be assigned a string value so long as that string is either empty or is a single character.
-    * Strings can be compared with characters, but arrays cannot be compared.
+    * Strings can be compared with characters.
+    * Two arrays cannot be compared.
     * Integers and reals can use scientific notation (`6.45e-3`).
     * Chars can be empty (`''`).
 * Builtins and Operators
@@ -100,6 +103,29 @@ Click the code examples button (to the left of the info button) to see the diffe
 ## File System
 The editor supports multiple files, each able to store separate code. A maximum of 7 files are allowed, and each one is saved to the device, so reloading the page restores all files and the active tab.
 File extensions can either be `.psc` (pseudocode) or `.txt` (plain text), with names up to 16 characters. The regular undo/redo commands can be used to recover deleted files, in addition to changing the code in each file. The files can also be renamed by clicking `return` when focused on the files.
+
+## Flowcharts
+The Flowcharts page (linked from the top bar) is a separate editor for creating another part of the IGCSE syllabus, built on [LogicFlow](https://logic-flow.cn/en/) (MIT License). A trace table alongside the canvas fills itself in as the flowchart runs.
+
+### Shapes
+* __Terminator__ (rounded box): marks the start and end of the flowchart. Exactly one must say `START` and have exactly one outgoing edge and no incoming edges; at least one must say `STOP` (or `END`) and have no outgoing edges.
+* __Process__ (rectangle): one or more assignment statements, one per line (`Count <- Count + 1`). Must have exactly one outgoing edge.
+* __Input / Output__ (parallelogram): one or more `INPUT`/`OUTPUT` statements, one per line. Every line must start with `INPUT` or `OUTPUT`. Must have exactly one outgoing edge.
+* __Decision__ (diamond): a condition, written with or without a leading `IS` and trailing `?` (`IS Count < 10?` and `Count < 10` both work). Must have exactly two outgoing edges, one labelled `YES` and one labelled `NO`.
+
+Every node must be reachable from `START`.
+
+### Arrays
+An array whose elements are only ever accessed with a literal index (`arr[1]`, `arr[2]`) is added to the trace table automatically. An array accessed with a variable index (`arr[i]`) is not automatically created, so it starts with no columns in the trace table. The __+__ button that appears next to the array's name must be clicked to add elements.
+
+### Trace Table
+Click __Make trace table__ to build a table of every variable and array element the chart uses, then __Run__ to execute the flowchart and fill it in as the flowchart runs. You can type an initial value in the table's first row.
+The trace table can have at most 30 rows.
+
+Columns can be reordered with the arrows next to their names, or removed with the x button.
+
+### File System
+Flowcharts are saved the same way code files are: up to 7 charts, autosaved to your device, undo/redo-able, and renamed by pressing `return` while a file tab is focused.
 
 ## Issue Report
 Clicking the 'Report an issue' button brings you to the report page. Fill out the details (it'll automatically detect the last JavaScript error and the last error output in the console, so you don't have to paste them). Then, you have two choices. Either open a GitHub Issues form with the same info or submit it directly from the website.

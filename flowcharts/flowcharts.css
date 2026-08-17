@@ -1,0 +1,516 @@
+
+/* ------------------------ Flowchart ------------------------ */
+
+#flowchartWorkspace {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: var(--topbar-h, 38px) 1fr;
+    min-height: 0;
+}
+
+#flowchartFilesBar {
+    grid-column: 2;
+    grid-row: 1;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    z-index: 1;
+}
+#flowchartFilesBar > .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    margin-right: 30px;
+}
+#flowchartFilesBar .btn {
+    color: var(--text);
+}
+
+#flowchartFilesBar .btn.toggle-trace {
+    margin-left: 12px;
+    position: relative;
+}
+#flowchartFilesBar .btn.toggle-trace::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1.5em;
+    height: 2px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    opacity: 0;
+    pointer-events: none;
+}
+#flowchartFilesBar .btn.toggle-trace.table-visible::after {
+    opacity: 1;
+}
+
+#flowchartFilesBar .btn i,
+#traceTableCardTop .btn:not(.run) i {
+    transition: transform 0.2s ease;
+}
+#flowchartFilesBar .btn:hover i,
+#traceTableCardTop .btn:not(.run):hover i {
+    transform: scale(1.15);
+}
+#traceTableCardTop .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+/* file tabs are locked while a flowchart runs */
+#flowchartFiles.locked {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+#flowchartMain {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    min-height: 0;
+    position: relative;
+}
+
+/* ------------------------ Shape Panel ------------------------ */
+
+#shapePanel {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 8px;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    overflow-y: auto;
+    z-index: 2;
+}
+
+.shape-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 6px;
+    cursor: grab;
+    user-select: none;
+    color: var(--text);
+}
+.shape-item:hover {
+    background: var(--border);
+}
+.shape-item:active {
+    cursor: grabbing;
+}
+.shape-item svg {
+    width: 100px;
+    height: auto;
+}
+.shape-item span {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* ------------------------ Canvas ------------------------ */
+
+#canvas {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+}
+
+/* canvas background */
+#canvas .lf-graph {
+    background: var(--bg);
+}
+
+/* ------------------------ Trace Table Card ------------------------ */
+
+#traceTableCard {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    min-width: 160px;
+    min-height: 80px;
+    cursor: grab;
+}
+#traceTableCard:active { cursor: grabbing; }
+#traceTableCard.hidden {
+    visibility: hidden;
+}
+
+.card-resize {
+    position: absolute;
+    z-index: 20;
+}
+.card-resize-top    { top: 0;   right: 0;             left: 0; height: 5px; cursor: n-resize; }
+.card-resize-bottom {           right: 0;  bottom: 0; left: 0; height: 5px; cursor: s-resize; }
+.card-resize-left   { top: 0;              bottom: 0; left: 0; width:  5px; cursor: w-resize; }
+.card-resize-right  { top: 0;   right: 0;  bottom: 0;          width:  5px; cursor: e-resize; }
+
+#traceTableCardTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+}
+
+#traceTableWrap {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
+    width: max-content;
+    min-width: 100%;
+}
+#traceTableWrap:empty                     { display: none; }
+#traceTableWrap:empty ~ #traceTableBottom { display: none; }
+
+#traceTableBottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 0 4px;
+}
+
+.trace-add-row {
+    background: transparent;
+    border: none;
+    color: var(--line-num-color);
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1;
+    padding: 0 6px;
+    cursor: pointer;
+}
+.trace-add-row:hover {
+    color: var(--green);
+}
+
+.btn.fit,
+.btn.clear-trace {
+    color: var(--text);
+    font-size: 16px;
+    padding: 2px 4px;
+}
+.btn.run,
+.btn.stop {
+    margin-left: auto;
+}
+.btn.fit i,
+.btn.clear-trace i {
+    transition: transform 0.2s ease;
+}
+.btn.fit:hover i,
+.btn.clear-trace:hover i {
+    transform: scale(1.15);
+}
+
+/* ------------------------ Trace Tables ------------------------ */
+
+#varsTable,
+#outputTable {
+    border-collapse: collapse;
+    font-size: 13px;
+    font-family: var(--mono);
+    cursor: auto;
+    table-layout: fixed;
+    min-width: 0;
+}
+#varsTable th,
+#varsTable td,
+#outputTable th,
+#outputTable td {
+    border: 1px solid var(--border);
+    text-align: center;
+    white-space: nowrap;
+}
+#varsTable   th,
+#outputTable th {
+    position: relative;
+    padding: 10px 10px;
+    background: var(--elev);
+    color: var(--muted);
+    font-weight: 600;
+}
+#varsTable th {
+    padding-right: 26px;
+}
+
+.col-label {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#outputTable th {
+    text-align: left;
+    padding-left: 8px;
+    padding-right: 26px;
+}
+.output-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#varsTable   td,
+#outputTable td {
+    position: relative;
+    padding: 2px 10px;
+    line-height: 1.15;
+    vertical-align: middle;
+}
+#varsTable   td:hover,
+#outputTable td:hover {
+    z-index: 1;
+}
+
+#varsTable   { border-right: none; }
+#outputTable { border-left: 2px solid var(--border); }
+
+#varsTable   td.col-remove,
+#outputTable td.col-remove {
+    padding: 0 8px;
+    border-left: none;
+}
+
+/* ------------------------ Column / Row Controls ------------------------ */
+
+.col-header {
+    display: flex;
+    align-items: center;
+}
+
+.col-move-btn {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 1px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.col-left:hover,
+.col-right:hover {
+    color: var(--blue);
+}
+
+.col-remove-col {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.col-remove-col:hover {
+    color: var(--red);
+}
+
+.col-resize-handle {
+    position: absolute;
+    right: -4px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: col-resize;
+    z-index: 20;
+}
+.row-resize-handle {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
+    height: 8px;
+    cursor: row-resize;
+    z-index: 20;
+}
+
+.cell-text {
+    display: block;
+    min-height: 1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    outline: none;
+}
+#outputTable td .cell-text {
+    white-space: pre;
+}
+.cell-text[contenteditable="true"] { cursor: text; }
+.trace-running .cell-text { pointer-events: none; }
+
+.trace-row-remove {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.trace-row-remove:hover {
+    color: var(--red);
+}
+
+.trace-error {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--red);
+    font-family: var(--mono);
+    cursor: text;
+}
+
+/* ------------------------ Running ------------------------ */
+
+/* hide editing controls on run */
+.trace-running .col-move-btn,
+.trace-running .col-resize-handle,
+.trace-running .row-resize-handle,
+.trace-running .trace-row-remove { display: none; }
+
+/* re-center column headings once the remove button is hidden */
+.trace-running #varsTable   th { padding-right: 10px;                   }
+.trace-running #outputTable th { padding-right: 8px;  text-align: center; }
+
+/* the cell being filled by INPUT */
+.trace-run-input {
+    display: block;
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.trace-notice {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+}
+.trace-notice.error {
+    color: var(--red);
+}
+
+/* array controls strip */
+.array-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px 0;
+}
+.array-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-family: var(--mono);
+}
+.array-control .array-name {
+    color: var(--muted);
+}
+.array-control .array-type {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 1px 2px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.array-control .array-add {
+    background: transparent;
+    border: none;
+    color: var(--line-num-color);
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 4px;
+    cursor: pointer;
+}
+.array-control .array-add:hover {
+    color: var(--green);
+}
+
+/* error */
+.flowchart-error-popover {
+    position: absolute;
+    transform: translate(-50%, 14px);
+    z-index: 20;
+    min-width: 1px;
+    max-width: 420px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: #fff;
+    background: var(--red);
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+
+/* tour restart button */
+.btn.replay-tour {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.btn.replay-tour:hover {
+    background: var(--elev);
+    border-color: var(--keyword-color);
+}
+.btn.replay-tour:focus {
+    outline: none;
+    border-color: var(--keyword-color);
+}
+.btn.replay-tour i {
+    font-size: 16px;
+}
+
+/* ------------------------ Text Editing ------------------------ */
+
+/* text editing input box */
+#canvas .lf-text-input {
+    color:        var(--text);
+    background:   var(--panel);
+    border-color: var(--border);
+    line-height:  1.15;
+}
+#canvas .lf-text-input > div {
+    line-height: inherit;
+}

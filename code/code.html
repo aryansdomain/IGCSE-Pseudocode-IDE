@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="description" content="Write, run, and share IGCSE/O-level Computer Science Pseudocode easily with this online compiler/interpreter.">
+    <title>IGCSE Pseudocode IDE</title>
+
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <script>try{if(localStorage.getItem('igcse_ide_mode_code')==='light')document.documentElement.classList.add('light')}catch{}</script>
+    <link rel="stylesheet" href="../style.css"/>
+    <link rel="stylesheet" href="code.css"/>
+
+    <!-- Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-V2QHS6XEKF');
+    </script>
+    <script src="../shared/analytics.js" defer></script>
+
+    <!-- Listener for JS errors -->
+    <script type="module">
+        if (!window.__errorTapInstalled) {
+            window.__errorTapInstalled = true;
+            window.__lastError = null;
+
+            // classic errors
+            window.addEventListener('error', function (e) {
+                if (e instanceof ErrorEvent) {
+                    window.__lastError = {
+                        type: 'runtime',
+                        message:  e.message,
+                        filename: e.filename,
+                        lineno:   e.lineno,
+                        colno:    e.colno,
+                        stack:    e.error && e.error.stack ? e.error.stack : null
+                    };
+                }
+            }, true);
+
+            // onerror fallback
+            window.onerror = function (message, source, lineno, colno, error) {
+                window.__lastError = {
+                    type: 'onerror',
+                    message, filename: source, lineno, colno,
+                    stack: error && error.stack ? error.stack : null
+                };
+                return false;
+            };
+
+            // unhandled promise rejection
+            window.addEventListener('unhandledrejection', function (e) {
+                var reason = e && e.reason;
+                window.__lastError = {
+                    type: 'unhandledrejection',
+                    message: reason && reason.message ? String(reason.message) : String(r),
+                    stack:   reason && reason.stack   ?        reason.stack    : null
+                };
+            });
+        }
+    </script>
+
+    <!-- Loading -->
+    <script type="module" src="../shared/loading.js"></script>
+
+    <!-- Tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js/minified/introjs.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
+    <script type="module" src="tour/tour.js"></script>
+    <link rel="stylesheet" href="tour/tour.css">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=IBM+Plex+Mono:wght@300..700&family=Inconsolata:wght@300..900&family=JetBrains+Mono:wght@100..800&family=PT+Mono&family=Roboto+Mono:wght@100..700&family=Source+Code+Pro:wght@200..900&family=Space+Mono:wght@400;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Issue Report -->
+    <script type="module" src="../shared/catchError.js" defer></script>
+    <script type="module" src="../shared/openReport.js" defer></script>
+
+    <!-- Editor -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-language_tools.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.8.1/ext-modelist.min.js"></script>
+    <script src="language/highlight.js"></script>
+    <script src="language/mode.js"></script>
+
+    <!-- Console -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/145a379a6e.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Editor Theme Button -->
+    <input id="editortheme" type="checkbox" hidden/>
+
+    <div class="app">
+
+        <!-- Utility Bar -->
+        <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
+            <div class="utilitybar-left">
+                <div class="page-selector">
+                    <button class="page-btn" title="Flowcharts" onclick="window.location.href='../flowcharts/flowcharts.html'">
+                        <i class="fa-solid fa-project-diagram"></i>
+                    </button>
+                    <button class="page-btn active" title="Code Editor">
+                        <i class="fa-solid fa-code"></i>
+                    </button>
+                </div>
+            <div class="controls">
+                <button class="btn settings" type="button" title="Settings" id="settingsBtn">
+                    <i class="fas fa-cog settings-icon"></i>
+                </button>
+                <button class="btn layout" type="button" title="Change layout" id="layoutBtn" aria-pressed="false">
+                    <i class="fas fa-columns"></i>
+                </button>
+                <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+            </div>
+            <div class="utilitybar-right">
+                <button id="examplesBtn" type="button" class="btn examples" title="View examples">
+                    <i class="fa-solid fa-code"></i>
+                </button>
+                <button id="infoBtn" type="button" class="btn info" title="View documentation">
+                    <i class="fa fa-info-circle"></i>
+                </button>
+                <a id="issueReportBtn" href="#" rel="noopener" target="_blank" class="btn issue-report" title="Report an issue">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Report an issue</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div class="workspace" id="workspace">
+            <div id="editorPane">
+                <div class="topbar" role="toolbar" id="topBar" aria-label="Top Bar">
+                    <div class="controls">
+                        <button class="btn expand-console" type="button"  title="Expand console (collapse editor)" id="editorExpandBtn">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                        </button>
+                        <button class="btn format"         type="button"  title="Format code"                      id="formatBtn">
+                            <span>Format</span>
+                        </button>
+                        <button class="btn copy"           type="button"  title="Copy code"                        id="editorCopyBtn">
+                            <i class="fas fa-clone"></i>
+                        </button>
+                        <button class="btn download"       type="button"  title="Download code"                    id="editorDownloadBtn">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn upload"         type="button"  title="Upload text file"                 id="uploadBtn">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        <input                             type="file"                                             id="fileInput" accept=".txt,.js,.py,.java,.cpp,.c,.h,.css,.html,.json,.xml,.md" style="display: none;">
+                    </div>
+
+                    <div class="files-bar" id="filesBar" role="tablist" aria-label="Editor files">
+                        <div class="filelist" id="files"></div>
+                    </div>
+                </div>
+
+                <div class="editor">
+                    <div id="code"></div>
+                </div>
+
+                <div class="bottombar" id="bottomBar" aria-live="polite">
+                    <div class="info">
+                        <span id="lineColInfo">Ln 1, Col 1</span>
+                        <span id="tabSpacesInfo">Tab Spaces: 4</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="splitter" aria-label="Resize editor / console" role="separator"></div>
+
+            <div id="consolePane">
+                <!-- Run Button -->
+                <div class="run-container">
+                    <button class="btn run" id="runBtn" type="button" title="Run code"><i class="fas fa-play"></i> Run</button>
+                </div>
+
+                <!-- Console -->
+                <section class="console" id="console">
+                    <div class="console-sidebar">
+                        <div class="console-controls">
+                            <button class="btn expand-editor" title="Expand editor (collapse console)" id="expandConsoleBtn">
+                                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                            </button>
+                            <button class="btn clear" title="Clear console" id="clearConsoleBtn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button class="btn copy" title="Copy console output" id="copyConsoleBtn">
+                                <i class="fas fa-clone"></i>
+                            </button>
+                            <button class="btn download" title="Download console output" id="downloadConsoleBtn">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="console-content">
+                        <div class="console-loadingbar" id="consoleLoadingBar" aria-hidden="true"></div>
+                        <div id="consoleViewport"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div id="settingsOverlay" class="settings-overlay" style="display: none;">
+            <div class="settings-panel">
+                <div class="settings-content">
+                    <div class="setting-group">
+                        <div class="settings-top-row">
+                            <label for="tabSpacesSlider">Tab Spaces: <span id="tabSpacesValue">4</span></label>
+                            <button class="btn close" type="button" id="closeSettings"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" id="tabSpacesSlider" min="0" max="8" value="4" step="1"/>
+                            <div class="slider-ticks tab-ticks">
+                                <span class="tick">0</span>
+                                <span class="tick">1</span>
+                                <span class="tick">2</span>
+                                <span class="tick">3</span>
+                                <span class="tick">4</span>
+                                <span class="tick">5</span>
+                                <span class="tick">6</span>
+                                <span class="tick">7</span>
+                                <span class="tick">8</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label for="editorThemeSelect">Editor Theme:</label>
+                        <select id="editorThemeSelect" class="font-select">
+                            <optgroup label="Light">
+                                <option value="ace/theme/chrome">Chrome</option>
+                                <option value="ace/theme/clouds">Clouds</option>
+                                <option value="ace/theme/dawn">Dawn</option>
+                                <option value="ace/theme/dreamweaver">Dreamweaver</option>
+                                <option value="ace/theme/eclipse">Eclipse</option>
+                                <option value="ace/theme/github">GitHub</option>
+                                <option value="ace/theme/gruvbox_light_hard">Gruvbox Light Hard</option>
+                                <option value="ace/theme/iplastic">iPlastic</option>
+                                <option value="ace/theme/katzenmilch">Katzenmilch</option>
+                                <option value="ace/theme/kuroir">Kuroir</option>
+                                <option value="ace/theme/solarized_light">Solarized Light</option>
+                                <option value="ace/theme/sqlserver">SQL Server</option>
+                                <option value="ace/theme/textmate">TextMate</option>
+                                <option value="ace/theme/tomorrow">Tomorrow</option>
+                                <option value="ace/theme/xcode">Xcode</option>
+                            </optgroup>
+                            <optgroup label="Dark">
+                                <option value="ace/theme/ambiance">Ambiance</option>
+                                <option value="ace/theme/chaos">Chaos</option>
+                                <option value="ace/theme/clouds_midnight">Clouds Midnight</option>
+                                <option value="ace/theme/cobalt">Cobalt</option>
+                                <option value="ace/theme/dracula">Dracula</option>
+                                <option value="ace/theme/gruvbox">Gruvbox</option>
+                                <option value="ace/theme/gruvbox_dark_hard">Gruvbox Dark Hard</option>
+                                <option value="ace/theme/idle_fingers">Idle Fingers</option>
+                                <option value="ace/theme/kr_theme">KR Theme</option>
+                                <option value="ace/theme/merbivore">Merbivore</option>
+                                <option value="ace/theme/monokai">Monokai (Default)</option>
+                                <option value="ace/theme/nord_dark">Nord Dark</option>
+                                <option value="ace/theme/one_dark">One Dark</option>
+                                <option value="ace/theme/pastel_on_dark">Pastel on Dark</option>
+                                <option value="ace/theme/solarized_dark">Solarized Dark</option>
+                                <option value="ace/theme/terminal">Terminal</option>
+                                <option value="ace/theme/tomorrow_night">Tomorrow Night</option>
+                                <option value="ace/theme/tomorrow_night_blue">Tomorrow Night Blue</option>
+                                <option value="ace/theme/tomorrow_night_bright">Tomorrow Night Bright</option>
+                                <option value="ace/theme/tomorrow_night_eighties">Tomorrow Night Eighties</option>
+                                <option value="ace/theme/twilight">Twilight</option>
+                                <option value="ace/theme/vibrant_ink">Vibrant Ink</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">14</span>px</label>
+                        <div class="slider-container">
+                            <input type="range" id="fontSizeSlider" min="6" max="38" value="14" step="1"/>
+                            <div class="slider-ticks font-ticks">
+                                <span class="tick">6</span>
+                                <span class="tick"></span>
+                                <span class="tick">10</span>
+                                <span class="tick"></span>
+                                <span class="tick">14</span>
+                                <span class="tick"></span>
+                                <span class="tick">18</span>
+                                <span class="tick"></span>
+                                <span class="tick">22</span>
+                                <span class="tick"></span>
+                                <span class="tick">26</span>
+                                <span class="tick"></span>
+                                <span class="tick">30</span>
+                                <span class="tick"></span>
+                                <span class="tick">34</span>
+                                <span class="tick"></span>
+                                <span class="tick">38</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label for="fontFamilySelect">Font Family:</label>
+                        <select id="fontFamilySelect" class="font-select">
+                            <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace" selected>ACE Monospace</option>
+                            <option value="'Courier New', Courier,                                               monospace"         >Courier New</option>
+                            <option value="'Lucida Console', Monaco,                                             monospace"         >Lucida Console</option>
+                            <option value="'Consolas', 'Courier New',                                            monospace"         >Consolas</option>
+                            <option value="'Monaco', 'Menlo',                                                    monospace"         >Monaco</option>
+                            <option value="'Source Code Pro',                                                    monospace"         >Source Code Pro</option>
+                            <option value="'Fira Code',                                                          monospace"         >Fira Code</option>
+                            <option value="'JetBrains Mono',                                                     monospace"         >JetBrains Mono</option>
+                            <option value="'Roboto Mono',                                                        monospace"         >Roboto Mono</option>
+                            <option value="'Ubuntu Mono',                                                        monospace"         >Ubuntu Mono</option>
+                            <option value="'Inconsolata',                                                        monospace"         >Inconsolata</option>
+                            <option value="'PT Mono',                                                            monospace"         >PT Mono</option>
+                            <option value="'Space Mono',                                                         monospace"         >Space Mono</option>
+                            <option value="'Hack',                                                               monospace"         >Hack</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <button class="btn replay-tour" type="button" id="restartTourBtn">
+                            <i class="fas fa-play"></i>
+                            <span>Replay Tour</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Examples -->
+        <div id="examplesOverlay" class="examples-overlay" style="display: none;">
+            <div class="examples-panel">
+                <div class="examples-content">
+                    <button class="btn close" type="button" id="closeExamples"><i class="fa-solid fa-xmark"></i></button>
+                    <button class="btn example-btn" type="button" id="varsConstsDTsExampleBtn">
+                        <span>Variables, Constants, Data Types</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="iOExampleBtn">
+                        <span>Input/Output</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="arithOpsExampleBtn">
+                        <span>Arithmetic Operations</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="strOpsExampleBtn">
+                        <span>String Operations</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="logicOpsExampleBtn">
+                        <span>Logical Operations</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="conditionalsExampleBtn">
+                        <span>Conditionals</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="loopsExampleBtn">
+                        <span>Loops</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="arraysExampleBtn">
+                        <span>Arrays</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="funcsProcsExampleBtn">
+                        <span>Functions & Procedures</span>
+                    </button>
+                    <button class="btn example-btn" type="button" id="fileHandlingExampleBtn">
+                        <span>File Handling</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span>Made with <i class="fas fa-heart"></i> in India</span>
+        </div>
+
+        <script type="module" src="code.js"></script>
+    </div>
+</body>
+</html>

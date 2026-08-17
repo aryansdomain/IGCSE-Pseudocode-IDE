@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="description" content="Draw, run, and trace IGCSE/O-level Computer Science flowcharts online, with a trace table that fills itself in as the flowchart runs.">
+    <title>Flowcharts | IGCSE Pseudocode IDE</title>
+
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <script>
+        const saved = localStorage.getItem('igcse_ide_mode_flowcharts');
+        const light = saved ? saved === 'light' : !window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (light) document.documentElement.classList.add('light');
+    </script>
+    <link rel="stylesheet" href="../style.css"/>
+    <link rel="stylesheet" href="flowcharts.css"/>
+
+    <!-- Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-V2QHS6XEKF');
+    </script>
+    <script src="../shared/analytics.js" defer></script>
+
+    <!-- Loading -->
+    <script type="module" src="../shared/loading.js"></script>
+
+    <!-- Issue Report -->
+    <script type="module" src="../shared/catchError.js" defer></script>
+    <script type="module" src="../shared/openReport.js" defer></script>
+
+    <!-- Tour -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intro.js/minified/introjs.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/intro.js/minified/intro.min.js"></script>
+    <script type="module" src="tour/tour.js"></script>
+    <link rel="stylesheet" href="tour/tour.css">
+
+    <!-- LogicFlow -->
+    <link href="https://cdn.jsdelivr.net/npm/@logicflow/core/lib/style/index.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/145a379a6e.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- Utility Bar -->
+        <div class="utilitybar" role="toolbar" aria-label="Utility Toolbar">
+            <div class="utilitybar-left">
+                <div class="page-selector">
+                    <button class="page-btn active" title="Flowcharts">
+                        <i class="fa-solid fa-project-diagram"></i>
+                    </button>
+                    <button class="page-btn" title="Code Editor" onclick="window.location.href='../index.html'">
+                        <i class="fa-solid fa-code"></i>
+                    </button>
+                </div>
+                <div class="controls">
+                    <button class="btn settings" type="button" title="Settings" id="settingsBtn">
+                        <i class="fas fa-cog settings-icon"></i>
+                    </button>
+                    <button class="btn mode" type="button" title="Toggle Light/Dark Mode" id="modeBtn">
+                        <i class="fas fa-sun"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="utilitybar-right">
+                <a id="issueReportBtn" href="../report/report.html" rel="noopener" target="_blank" class="btn issue-report" title="Report an issue">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    <span>Report an issue</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div id="flowchartWorkspace">
+
+            <!-- Shape Panel -->
+            <div id="shapePanel">
+                    <div class="shape-item" data-type="process" data-text="Process">
+                        <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="96" height="56" fill="none" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span>Process</span>
+                    </div>
+
+                    <div class="shape-item" data-type="io" data-text="Input / Output">
+                        <svg viewBox="0 0 100 60" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="18,2 98,2 82,58 2,58" fill="none" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span>Input / Output</span>
+                    </div>
+
+                    <div class="shape-item" data-type="decision" data-text="Decision">
+                        <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">
+                            <polygon points="50,2 98,40 50,78 2,40" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"/>
+                        </svg>
+                        <span>Decision</span>
+                    </div>
+
+                    <div class="shape-item" data-type="terminator" data-text="Terminator">
+                        <svg viewBox="0 0 100 44" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="2" width="96" height="40" rx="20" ry="20" fill="none" stroke="currentColor" stroke-width="2"/>
+                        </svg>
+                        <span>Terminator</span>
+                    </div>
+                </div>
+
+            <!-- Files Bar -->
+            <div class="files-bar" id="flowchartFilesBar" role="tablist" aria-label="Flowchart files">
+                <div class="controls">
+                    <button class="btn" type="button" title="Arrange flowchart" id="arrangeBtn">
+                        <span>Arrange</span>
+                    </button>
+                    <button class="btn download" type="button" title="Download image" id="downloadBtn">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn toggle-trace" type="button" title="Hide trace table" id="toggleTraceTableBtn">
+                        <i class="fas fa-table"></i>
+                    </button>
+                </div>
+                <div class="filelist" id="flowchartFiles"></div>
+            </div>
+
+            <!-- Main Area -->
+            <div id="flowchartMain">
+                <div id="canvas"></div>
+
+                <div id="traceTableCard">
+                    <div id="traceTableCardTop">
+                        <button class="btn"       type="button" title="Make trace table"  id="makeTraceTableBtn"> <i class="fas fa-table">              </i> Make trace table</button>
+                        <button class="btn clear" type="button" title="Clear trace table" id="clearTraceTableBtn"><i class="fas fa-trash">              </i>                 </button>
+                        <button class="btn fit"   type="button" title="Fit to content"    id="fitBtn">            <i class="fas fa-compress-arrows-alt"></i>                 </button>
+                        <button class="btn run"   type="button" title="Run flowchart"     id="runBtn">            <i class="fas fa-play" >              </i> Run             </button>
+                    </div>
+                    <div id="traceTableWrap"></div>
+                    <div id="traceTableBottom">
+                        <button class="trace-add-row" type="button" title="Add row" id="addRowBtn">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settingsOverlay" class="settings-overlay" style="display: none;">
+        <div class="settings-panel">
+            <div class="settings-content">
+                <div class="setting-group">
+                    <div class="settings-top-row">
+                        <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">14</span>px</label>
+                        <button class="btn close" type="button" id="closeSettings"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" id="fontSizeSlider" min="6" max="38" value="14" step="1"/>
+                        <div class="slider-ticks font-ticks">
+                            <span class="tick">6</span>
+                            <span class="tick"></span>
+                            <span class="tick">10</span>
+                            <span class="tick"></span>
+                            <span class="tick">14</span>
+                            <span class="tick"></span>
+                            <span class="tick">18</span>
+                            <span class="tick"></span>
+                            <span class="tick">22</span>
+                            <span class="tick"></span>
+                            <span class="tick">26</span>
+                            <span class="tick"></span>
+                            <span class="tick">30</span>
+                            <span class="tick"></span>
+                            <span class="tick">34</span>
+                            <span class="tick"></span>
+                            <span class="tick">38</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <label for="fontFamilySelect">Font Family:</label>
+                    <select id="fontFamilySelect" class="font-select">
+                        <option value="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace" selected>ACE Monospace</option>
+                        <option value="'Courier New', Courier,                                               monospace"         >Courier New</option>
+                        <option value="'Lucida Console', Monaco,                                             monospace"         >Lucida Console</option>
+                        <option value="'Consolas', 'Courier New',                                            monospace"         >Consolas</option>
+                        <option value="'Monaco', 'Menlo',                                                    monospace"         >Monaco</option>
+                        <option value="'Source Code Pro',                                                    monospace"         >Source Code Pro</option>
+                        <option value="'Fira Code',                                                          monospace"         >Fira Code</option>
+                        <option value="'JetBrains Mono',                                                     monospace"         >JetBrains Mono</option>
+                        <option value="'Roboto Mono',                                                        monospace"         >Roboto Mono</option>
+                        <option value="'Ubuntu Mono',                                                        monospace"         >Ubuntu Mono</option>
+                        <option value="'Inconsolata',                                                        monospace"         >Inconsolata</option>
+                        <option value="'PT Mono',                                                            monospace"         >PT Mono</option>
+                        <option value="'Space Mono',                                                         monospace"         >Space Mono</option>
+                        <option value="'Hack',                                                               monospace"         >Hack</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <button class="btn replay-tour" type="button" id="restartTourBtn">
+                        <i class="fas fa-play"></i>
+                        <span>Replay Tour</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="flowcharts.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>IGCSE IDE - Report an issue</title>
+
+    <!-- Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-V2QHS6XEKF"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-V2QHS6XEKF');
+    </script>
+    <script src="../shared/analytics.js" defer></script>
+
+    <!-- Report CSS -->
+    <link rel="stylesheet" href="report.css"/>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+
+<body>
+    <div class="report-wrap">
+        <section class="dialog-card" role="dialog" aria-labelledby="br-title">
+            <header class="header">
+                <div class="header-buttons">
+                    <button class="btn mode" id="mode" title="Toggle dark/light mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button class="btn close" id="closeBtn" title="Close"><i class="fas fa-xmark"></i></button>
+                </div>
+                <div class="error-dialog" id="errorDialog"></div>
+            </header>
+
+            <div class="dialog-content">
+                <div class="field">
+                    <label class="label" for="br-title">Title</label>
+                    <input id="br-title" class="input" placeholder="[Issue] "/>
+                </div>
+                <div class="field drop-zone">
+                    <label class="label" for="br-body">Details</label>
+                    <div class="textarea-wrap">
+                        <textarea id="br-body" class="textarea" spellcheck="true"></textarea>
+                        <div class="drop-overlay" id="dropOverlay">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Drop files to attach</span>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="br-files" class="file-input" accept="file/*" multiple style="display:none">
+                <div class="file-preview-container" id="filePreviewContainer"></div>
+
+                <div class="actions-row">
+                    <div class="attach-row">
+                        <button class="attach-btn" type="button" id="attachBtn">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Paste, drop, or click to add files</span>
+                        </button>
+                    </div>
+
+                    <div class="actions">
+                        <button id="openGithub" class="btn secondary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in GitHub (requires account)</button>
+                        <button id="submit" class="btn primary">Submit anonymously</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script type="module" src="report.js"></script>
+</body>
+</html>
