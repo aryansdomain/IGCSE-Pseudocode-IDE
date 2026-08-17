@@ -3,6 +3,11 @@ let shown = false;
 let timer;
 let loadingEl = null;
 
+// ready to resolve?
+let readyResolve;
+const readyPromise = new Promise(resolve => { readyResolve = resolve; });
+export function whenAppReady() { return readyPromise; }
+
 // style for dots and text
 const style = document.createElement('style');
 style.setAttribute('data-boot-style', 'true');
@@ -82,6 +87,7 @@ window.addEventListener('unhandledrejection', onError);
 // signal that app is usable
 export function setAppReady() {
     appReady = true;
+    readyResolve();
 
     // remove error listeners
     window.removeEventListener('error', onError, true);

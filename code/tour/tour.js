@@ -1,3 +1,5 @@
+import { whenAppReady } from '../../shared/loading.js';
+
 const STORAGE_KEY = 'igcse_ide_tour_seen';
 
 // ------------------------ localStorage ------------------------
@@ -123,6 +125,7 @@ const SELECTORS = STEPS.filter(s => s.element).map(s => s.element);
 let startTutorial = null;
 
 onWindowReady(async () => {
+    await whenAppReady();
     try { await whenIntroReady(); } catch { return; }
 
     const { ready } = await waitForUsable(SELECTORS, 12000);
