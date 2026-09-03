@@ -24,8 +24,8 @@ export function getStringInputs(lines) {
             if (arr[2].toUpperCase() === 'STRING') stringArrays.push(arr[1].toLowerCase());
             continue;
         }
-        const scalar = line.match(/^DECLARE\s+(\w+)\s*:\s*([A-Za-z]+)\s*$/i);
-        if (scalar) explicitlyDeclared.add(scalar[1].toLowerCase());
+        const scalar = line.match(/^DECLARE\s+([\w\s,]+?)\s*:\s*([A-Za-z]+)\s*$/i);
+        if (scalar) scalar[1].split(',').forEach(n => explicitlyDeclared.add(n.trim().toLowerCase()));
     }
 
     // pass 2: INPUT targets + string evidence
