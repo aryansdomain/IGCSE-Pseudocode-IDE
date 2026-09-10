@@ -419,6 +419,18 @@ export function checkSyntax(text, baseCol, isStatement = false) {
                      'Did you mean <- or <--?');
         }
     }
+    //    array declaration written as assignment
+    //    ARRAY         [    OF
+    if (/^ARRAY\b(?=\s*\[|\s+OF\b)/i.test(text)) {
+        //                                                              ----------name---------   ----arrow---
+        const name = (lines[currentLineNum - 1]?.text ?? '').match(/^\s*([A-Za-z][A-Za-z0-9_]*)\s*(?:←|<--|<-)/)?.[1];
+        if (name) {
+            throwErr('SyntaxError',
+                     'invalid array declaration',
+                     currentLineNum, baseCol ?? '', text.length,
+                     `Did you mean DECLARE ${name} : ${text.trim()}?`);
+        }
+    }
 
     const unmatched = findUnmatched(text, baseCol);
     if (unmatched) {
