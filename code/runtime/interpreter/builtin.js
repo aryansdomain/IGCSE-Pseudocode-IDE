@@ -112,12 +112,11 @@ export const NUM = {
     },
 
     ADD: (a, b, aText = String(a), bText = String(b)) => {
-        if (typeof a === 'string' || typeof b === 'string') { // concatenation
-            return toString(a) + toString(b);
-        }
-        
-        assertNum('+ argument', a, aText);
-        assertNum('+ argument', b, bText);
+        // if + used for concatenation instead of ,
+        const hint = (typeof a === 'string' || typeof b === 'string') ? `Did you mean ${aText}, ${bText}?` : '';
+
+        assertNum('+ argument', a, aText, undefined, hint);
+        assertNum('+ argument', b, bText, undefined, hint);
 
         return a + b;
     },

@@ -30,7 +30,7 @@ Following are some guidelines that the interpreter uses, that do not directly fo
     * Integers and reals can use scientific notation (`6.45e-3`).
     * Chars can be empty (`''`).
 * Builtins and Operators
-    * The operations `,` or `+` can be used for concatenating two operands if either is a string or char. Non-string and non-char operands will be converted to strings in the operation.
+    * The operation `,` can be used for concatenating two operands. Non-string and non-char operands will be converted to strings in the operation.
     * `AND` and `OR` are "eager" - they evaluate both operands before executing the operation and do not short-circuit when the first operand itself is enough to determine the result of the operation. 
 * Conditionals
     * `CASE OF` can accept expressions (that evaluate to values) as the check value, not just variables.
