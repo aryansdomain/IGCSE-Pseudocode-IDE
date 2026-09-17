@@ -25,8 +25,8 @@ let replaced = [];
 // protect strings temporarily so they are not affected by operations
 function replace(text) {
     return String(text)
-        //         ? d.  .?d. | .d. eE  += -d.
-        .replace(/(?:\d+\.?\d*|\.\d+)[eE][+-]\d+/g, (num) => { // protect scientific notation
+        //         ?  -----var-----  ? -d. .?-d.| .-d.  eE  +- -d.
+        .replace(/(?<![A-Za-z0-9_.])(?:\d+\.?\d*|\.\d+)[eE][+-]\d+/g, (num) => { // protect scientific notation
             replaced.push(num);
             return `${LITERAL_START}${replaced.length - 1}${LITERAL_END}`;
         })
@@ -534,20 +534,20 @@ export function getLeftOperand( text, opText, opStartCol, baseCol) {
     if (text[i] === ')' || text[i] === ']') {
         j = (text[i] === ']') ? scanGroupedLeft(text, i, '[', ']') - 1  // j = before opening bracket, i = closing bracket
                               : scanGroupedLeft(text, i, '(', ')') - 1;
-
-        // scan for text before
-        while (j >= 0 && /[A-Za-z0-9_.]/.test(text[j])) j--; // read numbers, letters, _.
-        return { start: j + 1, text: text.slice(j + 1, i + 1).trim() };
     }
+    else j = i; // j = operand start, i = operand end
 
-    j = i;                                               // j = operand start, i = operand end
+    // look for text before
     while (j >= 0 && /[A-Za-z0-9_.]/.test(text[j])) j--; // read numbers, letters, _.
+
+    // if logical operand is a negative sign
+    if (text[opStartCol] === '-' && /^(AND|OR|NOT)$/i.test(text.slice(j + 1, i + 1))) return { start: '', text: '' };
 
     // negative sign (or subtraction) found, determine which one
     if (j >= 0 && text[j] === '-') {
-        let k = j - 1;                                     // k = next non-space token
-        while (k >= 0 && text[k] === ' ') k--;             // skip spaces
-        if (k < 0 || /[,(\[+\-*/^<>=]/.test(text[k])) j--; // include negative sign, not part of subtraction
+        let k = j - 1;                                                                                                      // k = next non-space token
+        while (k >= 0 && text[k] === ' ') k--;                                                                              // skip spaces
+        if (k < 0 || /[,(\[+\-*/^<>=]/.test(text[k]) || /(?<![A-Za-z0-9_.])(AND|OR|NOT)$/i.test(text.slice(0, k + 1))) j--; // include negative sign, not part of subtraction
     }
 
     return { start: j + 1, text: text.slice(j + 1, i + 1).trim() };
@@ -566,11 +566,15 @@ export function getRightOperand(text, opText, opEndCol,   baseCol) {
 
     let j; // pointer for end of operand
 
+    //                  NOT before operand
+    const notMatch = /^(NOT\b\s*)+/i.exec(text.slice(i));
+    if (notMatch) i += notMatch[0].length;
+
     // literal seen, return that
     if (text[i] === LITERAL_START) {
-        j = i + 1;                                                // i = literal start, j = literal end
-        while (j < text.length && text[j] !== LITERAL_END) j++;   // read whole literal
-        return { end: j + 1, text: text.slice(i, j + 1).trim() }; // include literal start/end
+        j = i + 1;                                                           // i = literal start, j = literal end
+        while (j < text.length && text[j] !== LITERAL_END) j++;              // read whole literal
+        return { end: j + 1, text: text.slice(opEndCol + 1, j + 1).trim() }; // include literal start/end
     }
 
     // opening bracket seen, return contents of brackets (and after)
@@ -578,7 +582,7 @@ export function getRightOperand(text, opText, opEndCol,   baseCol) {
         j = (text[i] === '(') ? scanGroupedRight(text, i, '(', ')')  // i = opening bracket, j = closing bracket
                               : scanGroupedRight(text, i, '[', ']');
 
-        return { end: j, text: text.slice(i, j).trim() };
+        return { end: j, text: text.slice(opEndCol + 1, j).trim() };
     }
 
     if (text[i] === '-') i++;                                     // read negative sign
@@ -650,8 +654,7 @@ function replaceBinaryOp(text, opRegex, replacement, associativity = 'left', bas
         text = `${before}${inserted}${after}`;
 
         // recalculate nextCol
-        nextCol = associativity === 'right' ? left.start
-                                            : before.length + inserted.length;
+        nextCol = before.length + replaceText.length + 1 + left.text.length;
     }
     return text;
 }
@@ -781,12 +784,13 @@ function replaceArithOps(     text, baseCol) {
 
 // =, <>, <=, >=, <, >
 function replaceCompOps(      text, baseCol) {
-    text = replaceBinaryOp(text, /(?<![<>])=/g, '__CMP.EQ', 'left', baseCol);  // =, but not <=, >=
-    text = replaceBinaryOp(text, /<>/g,         '__CMP.NE', 'left', baseCol); // <>
-    text = replaceBinaryOp(text, /<=/g,         '__CMP.LE', 'left', baseCol); // <=
-    text = replaceBinaryOp(text, />=/g,         '__CMP.GE', 'left', baseCol); // >=
-    text = replaceBinaryOp(text, /</g,          '__CMP.LT', 'left', baseCol); // <
-    text = replaceBinaryOp(text, />/g,          '__CMP.GT', 'left', baseCol); // >
+    text = replaceBinaryOp(text, /<>|<=|>=|(?<![<>])=|<|>/g,
+        (op) => ({ '=' : '__CMP.EQ',
+                   '<>': '__CMP.NE',
+                   '<' : '__CMP.LT',
+                   '>' : '__CMP.GT',
+                   '<=': '__CMP.LE',
+                   '>=': '__CMP.GE' })[op], 'left', baseCol);
 
     return text;
 }
@@ -864,7 +868,7 @@ function replaceArrAccess(    text, baseCol) {
         }
 
         // get arguments
-        const indices = splitList(text.slice(openCol + 1, closeCol - 1), baseCol != null ? baseCol + openCol + 1 : openCol + 1);
+        const indices = splitList(replaceArrAccess(text.slice(openCol + 1, closeCol - 1), baseCol), baseCol != null ? baseCol + openCol + 1 : openCol + 1);
         // wrong number of indices
         if (indices.length < 1 || indices.length > 2) {
             const col = baseCol != null ? baseCol + nameCol : nameCol;

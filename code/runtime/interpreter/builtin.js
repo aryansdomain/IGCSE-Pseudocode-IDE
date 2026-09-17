@@ -27,7 +27,7 @@ export const BUILTIN = {
         }
 
         const f = Math.pow(10, p);
-        return Math.round(n * f) / f;
+        return Math.sign(n) * Math.round(Number((Math.abs(n) * f).toPrecision(15))) / f;
     },
 
     LENGTH(s, sText = String(s)) {
@@ -152,7 +152,7 @@ export const NUM = {
     POW: (a, b, aText = String(a), bText = String(b)) => {
         assertNum('base', a, aText);
         assertNum('exponent', b, bText);
-        if (a == 0 && b <= 0) {
+        if (a == 0 && b < 0) {
             const aPos = findPos(lines[currentLineNum - 1].text, aText);
             const bPos = findPos(lines[currentLineNum - 1].text, bText);
             throwErr('ZeroDivisionError',

@@ -949,6 +949,14 @@ export async function runCode(scope, code, allowReturn = false) {
                 // otherwise
                 if (/^OTHERWISE\b/i.test(caseLine)) {
                     const otherwiseText = caseLine.slice('OTHERWISE'.length).trim();
+                    // error if otherwise has colon
+                    if (otherwiseText.startsWith(':')) {
+                        const pos = findPos(caseLineWithComments, ':');
+                        throwErr('SyntaxError',
+                                 'unexpected token :',
+                                 caseLineNum, pos.col, pos.len);
+                    }
+
                     if (currentCase) cases.push(currentCase); // end of previous case
                     currentCase = {
                         otherwise: true,
