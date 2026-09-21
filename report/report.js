@@ -4,7 +4,7 @@ const { initModeCtrl }   = await import('../shared/modeCtrl.js');
 // API vars
 const GH_OWNER   = 'aryansdomain';
 const GH_REPO    = 'IGCSE-Pseudocode-IDE';
-const WORKER_URL = 'https://igcse-issue-worker.aryansdomain.workers.dev';
+const WORKER_URL = 'https://api.igcse-ide.com';
 
 (function init() {
 
