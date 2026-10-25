@@ -131,11 +131,21 @@ html.mode-switching *::after {
     flex-direction: column;
 }
 
+.field.contact {
+    margin: 20px 0 0;
+}
+
 .label {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
     color: var(--text);
+}
+
+.label-note {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--muted);
 }
 
 .input, .textarea {

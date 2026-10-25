@@ -21,6 +21,7 @@ const WORKER_URL = 'https://api.igcse-ide.com';
     const errorDialog = $('errorDialog');
     const title       = $('br-title');
     const body        = $('br-body');
+    const contact     = $('br-contact');
 
     // ------------------------ Utilities ------------------------
 
@@ -35,6 +36,12 @@ const WORKER_URL = 'https://api.igcse-ide.com';
             errorDialog.classList.remove('visible');
             setTimeout(() => { errorDialog.textContent = ''; }, 300);
         }, duration);
+    }
+
+    // add contact information to the body
+    function bodyPlusContact() {
+        const c = contact.value.replace(/\s+/g, ' ').trim();
+        return c ? `**Contact:** ${c}\n\n${body.value}` : body.value;
     }
 
     // upload files and append to body
@@ -136,7 +143,7 @@ const WORKER_URL = 'https://api.igcse-ide.com';
             gh.searchParams.set('labels', 'issue');
 
             // add files to issue message
-            let newBody = await uploadFiles(body.value);
+            let newBody = await uploadFiles(bodyPlusContact());
             gh.searchParams.set('body', newBody);
 
             // open the page
@@ -167,7 +174,7 @@ const WORKER_URL = 'https://api.igcse-ide.com';
             }
 
             // add files to issue message
-            let newBody = await uploadFiles(body.value);
+            let newBody = await uploadFiles(bodyPlusContact());
 
             // talk to api to post to GitHub
             const res = await fetch(WORKER_URL, {
