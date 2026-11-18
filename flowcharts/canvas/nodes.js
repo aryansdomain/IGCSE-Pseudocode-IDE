@@ -1,4 +1,4 @@
-import { h, RectNode, RectNodeModel } from 'https://esm.sh/@logicflow/core';
+import { h, RectNode, RectNodeModel } from 'https://esm.sh/@logicflow/core@2.2.5?deps=preact@10.29.8';
 import { getNodeDims                } from './text.js';
 import { getFont                    } from '../../shared/font.js';
 

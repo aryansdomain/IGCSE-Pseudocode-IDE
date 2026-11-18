@@ -1,5 +1,5 @@
-import LogicFlow    from 'https://esm.sh/@logicflow/core';
-import { Snapshot } from 'https://esm.sh/@logicflow/extension'; LogicFlow.use(Snapshot);
+import LogicFlow    from 'https://esm.sh/@logicflow/core@2.2.5?deps=preact@10.29.8';
+import { Snapshot } from 'https://esm.sh/@logicflow/extension@2.3.1?deps=preact@10.29.8'; LogicFlow.use(Snapshot);
 
 import { getNodeDims } from './text.js';
 import { GRID        } from './mode.js';
