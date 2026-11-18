@@ -1,57 +1,11 @@
-# System files
+# system/vscode
 .DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-.Spotlight-V100
-.Trashes
-.fseventsd
-
-# VSCode files
 .vscode/*
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 
-# Cursor files
-.cursorignore
-.cursorindexingignore
-.cursorrules
-
-# Logs, temporary files
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Dependency directories
-node_modules/
-jspm_packages/
-bower_components/
-
-# Build outputs
-dist/
-build/
-out/
-tmp/
-temp/
-
-# Environment
+# environment
 .env
 .env.*
 !.env.example
 
-# Cloudflare Wrangler
+# cloudflare wrangler
 .wrangler/
-
-# Misc/other
-*.swp
-*.swo
-*.bak
-*.tmp
-*.pid
-*.seed
-*.tgz
-CLAUDE.md
