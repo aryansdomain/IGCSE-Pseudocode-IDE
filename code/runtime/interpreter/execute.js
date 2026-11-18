@@ -473,6 +473,13 @@ export async function runCode(scope, code, allowReturn = false) {
             continue;
         }
 
+        // no space between OUTPUT and a string
+        if (/^OUTPUT["']/i.test(line)) {
+            throwErr('SyntaxError',
+                     'missing space after OUTPUT',
+                     lineNum, 'OUTPUT'.length, 1);
+        }
+
         // output
         //                   OUTPUT   vars
         if (r = line.match(/^OUTPUT\s+(.+)$/i)) {
