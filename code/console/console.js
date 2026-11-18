@@ -21,6 +21,16 @@ export function initConsole({
     xterm.open(container);
     xterm.focus();
 
+    // if on windows/linux, make ctrl-c copy only if text is selected, otherwise stop
+    xterm.attachCustomKeyEventHandler((e) => {
+        if (/Mac|iPhone|iPad/.test(navigator.platform) || e.type !== 'keydown' || !xterm.hasSelection()) return true;
+        if (!e.ctrlKey || e.shiftKey || e.altKey || e.metaKey || e.key.toLowerCase() !== 'c') return true;
+
+        navigator.clipboard?.writeText(xterm.getSelection()).catch(() => {});
+        xterm.clearSelection();
+        return false;
+    });
+
     // dependencies provided later
     let deps = {
         consoleOutput: undefined,
