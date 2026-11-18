@@ -1,4 +1,5 @@
 import { isDeclared, isInitialized, getValType } from './scope.js';
+import { removeComments }                        from './execute.js';
 
 export let currentLineNum = 0;
 export let lines = [];
@@ -241,6 +242,19 @@ export function assertLiteral(           name,      valText,           line = li
              `${String(name)} must be a literal`,
              currentLineNum, pos.col, pos.len,
              hint);
+}
+
+// colon after a line that begins a subroutine, like python
+export function assertNoBlockColons(lines) {
+    for (const { lineNum, text } of lines) {
+        const line = removeComments(text).trim();
+        const r = line.match(/^(IF|THEN|ELSE|WHILE|FOR|REPEAT|CASE|OTHERWISE|PROCEDURE|FUNCTION)\b.*:$/i);
+        if (!r) continue;
+
+        throwErr('SyntaxError',
+                 `unexpected token : after ${r[1].toUpperCase()}`,
+                 lineNum, line.length - 1, 1);
+    }
 }
 
 export function assertArgCount(          name, expected, receivedArgs, line = lines[currentLineNum - 1].text                    ) {

@@ -1,9 +1,9 @@
-import { files, initFileHandling } from './fileHandling.js';
-import { runCode, removeComments } from './execute.js';
-import { globalScope, initScope }  from './scope.js';
-import { initError, throwErr }     from './error.js';
-import { getStringInputs }         from '../../../shared/infer.js';
-import { getProcFuncs }            from './procsFuncs.js';
+import { files, initFileHandling                  } from './fileHandling.js';
+import { runCode, removeComments                  } from './execute.js';
+import { globalScope, initScope                   } from './scope.js';
+import { initError, throwErr, assertNoBlockColons } from './error.js';
+import { getStringInputs                          } from '../../../shared/infer.js';
+import { getProcFuncs                             } from './procsFuncs.js';
 
 export async function interpret(code) {
     // init
@@ -15,6 +15,8 @@ export async function interpret(code) {
     initError(linesWithComments); // error.js
     initScope();                  // scope.js
     initFileHandling()            // fileHandling.js
+
+    assertNoBlockColons(lines);
 
     // run
     getProcFuncs(lines); // extract proc/func bodies
