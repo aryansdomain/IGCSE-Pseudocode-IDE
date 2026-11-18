@@ -383,7 +383,7 @@ export async function runCode(scope, code, allowReturn = false) {
 
         // constant
         //                   CONSTANT   names   ----arrow---   -val
-        if (r = line.match(/^CONSTANT\s+(.+?)\s*(?:←|<-|<--)\s*(.+)$/i)) {
+        if (r = line.match(/^CONSTANT\s+(.+?)\s*(?:←|<--|<-)\s*(.+)$/i)) {
             // declared in a subscope
             if (scope !== globalScope) {
                 const pos = findPos(lineWithComments, /\bCONSTANT\b/i);
@@ -605,7 +605,7 @@ export async function runCode(scope, code, allowReturn = false) {
 
         // for (this has to be before assignment case due to the vvvvv)
         //                   FOR   ----------var----------   ----arrow---   -val-   TO   -val- ?    STEP   -val
-        if (r = line.match(/^FOR\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:←|<-|<--)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i)) {
+        if (r = line.match(/^FOR\s+([A-Za-z][A-Za-z0-9_]*)\s*(?:←|<--|<-)\s*(.+?)\s+TO\s*(.+?)(?:\s+STEP\s+(.+))?\s*$/i)) {
             const name      = r[1];
             const startText = r[2];
             const endText   = r[3];

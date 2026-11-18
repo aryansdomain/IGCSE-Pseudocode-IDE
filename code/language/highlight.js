@@ -32,7 +32,7 @@ function(require, exports, module) {
                     { token: 'string.quoted.single',      regex: /'[^']*'/ },                               // char (single quotes)
                     { token: 'string.quoted.double',      regex: '"', next: 'string_dq' },                  // strings (double quotes)
                     { token: 'constant.numeric',          regex: /\b(?:\d+\.\d+|\d+)(?:[eE][+-]?\d+)?\b/ }, // integer, real, scientific notation
-                    { token: 'keyword.operator',          regex: /<-|<--|←/ },                              // assignment
+                    { token: 'keyword.operator',          regex: /<--|<-|←/ },                              // assignment
                     { token: 'keyword.operator',          regex: /<=|>=|<>|<|>|=/ },                        // comparison
                     { token: 'keyword.operator',          regex: /\+|\-|\*|\/|\^/ },                        // arithmetic
                     { token: 'keyword.operator',          regex: /\b(?:AND|OR|NOT)\b/i },                   // logical
